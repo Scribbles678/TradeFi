@@ -76,6 +76,31 @@ export interface TradeStats {
   avg_loss: number;
 }
 
+export interface Strategy {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  description: string | null;
+  asset_class: AssetClass | null;
+  status: 'active' | 'inactive' | 'testing';
+  pine_script: string | null;
+  pine_script_version: string | null;
+  success_rate: number | null;
+  avg_profit: number | null;
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  risk_level: 'low' | 'medium' | 'high' | null;
+  max_position_size_usd: number | null;
+  stop_loss_percent: number | null;
+  take_profit_percent: number | null;
+  timeframe: string | null;
+  symbols: string[] | null;
+  webhook_secret: string | null;
+  notes: string | null;
+}
+
 /**
  * Fetch all open positions
  */
@@ -245,5 +270,139 @@ export async function getTodaysStats(assetClass?: AssetClass) {
     winRate: parseFloat(winRate.toFixed(2)),
     totalTrades: todaysTrades.length,
   };
+}
+
+/**
+ * =======================
+ * STRATEGIES FUNCTIONS
+ * =======================
+ */
+
+/**
+ * Fetch all strategies
+ */
+export async function getStrategies(assetClass?: AssetClass): Promise<Strategy[]> {
+  let query = supabase
+    .from('strategies')
+    .select('*');
+
+  if (assetClass) {
+    query = query.eq('asset_class', assetClass);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching strategies:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Fetch a single strategy by ID
+ */
+export async function getStrategy(id: string): Promise<Strategy | null> {
+  const { data, error } = await supabase
+    .from('strategies')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching strategy:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Create a new strategy
+ */
+export async function createStrategy(strategy: Partial<Strategy>): Promise<Strategy | null> {
+  const { data, error } = await supabase
+    .from('strategies')
+    .insert([strategy])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating strategy:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Update a strategy
+ */
+export async function updateStrategy(id: string, updates: Partial<Strategy>): Promise<Strategy | null> {
+  const { data, error } = await supabase
+    .from('strategies')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating strategy:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Update Pine Script for a strategy
+ */
+export async function updateStrategyPineScript(id: string, pineScript: string, version: string = 'v5'): Promise<boolean> {
+  const { error } = await supabase
+    .from('strategies')
+    .update({ 
+      pine_script: pineScript,
+      pine_script_version: version
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error updating Pine Script:', error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Delete a strategy
+ */
+export async function deleteStrategy(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('strategies')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting strategy:', error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Toggle strategy status (active/inactive)
+ */
+export async function toggleStrategyStatus(id: string): Promise<Strategy | null> {
+  // First get the current strategy
+  const strategy = await getStrategy(id);
+  if (!strategy) return null;
+
+  // Toggle status
+  const newStatus = strategy.status === 'active' ? 'inactive' : 'active';
+
+  return await updateStrategy(id, { status: newStatus });
 }
 
