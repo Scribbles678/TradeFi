@@ -19,93 +19,111 @@
       <UCard
         v-for="strategy in strategies"
         :key="strategy.id"
-        class="hover:shadow-lg transition-shadow"
+        class="hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
       >
         <template #header>
-          <div class="flex items-center justify-between">
-            <h4 class="font-semibold text-lg">{{ strategy.name }}</h4>
-            <UBadge :color="getStatusColor(strategy.status)">
-              {{ strategy.status }}
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+              <h4 class="font-bold text-lg text-gray-900 dark:text-white">{{ strategy.name }}</h4>
+              <!-- Asset Class Badge -->
+              <div v-if="strategy.asset_class" class="mt-2">
+                <UBadge color="neutral" variant="outline" size="xs">
+                  {{ strategy.asset_class.toUpperCase() }}
+                </UBadge>
+              </div>
+            </div>
+            <UBadge :color="getStatusColor(strategy.status)" size="sm">
+              {{ strategy.status.toUpperCase() }}
             </UBadge>
           </div>
         </template>
 
         <div class="space-y-4">
           <!-- Description -->
-          <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-            {{ strategy.description || 'No description' }}
+          <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 min-h-[60px]">
+            {{ strategy.description || 'No description provided for this strategy.' }}
           </p>
 
-          <!-- Asset Class Badge -->
-          <div v-if="strategy.asset_class">
-            <UBadge color="neutral" variant="outline">
-              {{ strategy.asset_class.toUpperCase() }}
-            </UBadge>
-          </div>
-
           <!-- Performance Metrics -->
-          <div class="space-y-2">
+          <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2.5">
             <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Success Rate:</span>
-              <span class="font-medium">{{ strategy.success_rate?.toFixed(1) || '0.0' }}%</span>
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Success Rate</span>
+              <span class="font-bold text-gray-900 dark:text-white">{{ strategy.success_rate?.toFixed(1) || '0.0' }}%</span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Avg Profit:</span>
-              <span :class="['font-medium', (strategy.avg_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600']">
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Avg Profit</span>
+              <span :class="['font-bold', (strategy.avg_profit || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']">
                 {{ (strategy.avg_profit || 0) >= 0 ? '+' : '' }}{{ strategy.avg_profit?.toFixed(2) || '0.00' }}%
               </span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Total Trades:</span>
-              <span class="font-medium">{{ strategy.total_trades || 0 }}</span>
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Total Trades</span>
+              <span class="font-bold text-gray-900 dark:text-white">{{ strategy.total_trades || 0 }}</span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Risk Level:</span>
-              <span class="font-medium capitalize">{{ strategy.risk_level || 'N/A' }}</span>
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Risk Level</span>
+              <UBadge 
+                :color="strategy.risk_level === 'low' ? 'success' : strategy.risk_level === 'high' ? 'error' : 'warning'"
+                size="xs"
+                variant="soft"
+              >
+                {{ (strategy.risk_level || 'N/A').toUpperCase() }}
+              </UBadge>
             </div>
           </div>
 
           <!-- Pine Script Status -->
-          <div class="flex items-center gap-2 text-sm">
-            <UIcon
-              :name="strategy.pine_script ? 'i-heroicons-document-text' : 'i-heroicons-document'"
-              :class="strategy.pine_script ? 'text-green-600' : 'text-gray-400'"
-            />
-            <span :class="strategy.pine_script ? 'text-green-600' : 'text-gray-500'">
-              {{ strategy.pine_script ? 'Pine Script Added' : 'No Pine Script' }}
-            </span>
+          <div :class="[
+            'flex items-center justify-between gap-2 p-3 rounded-lg text-sm font-medium',
+            strategy.pine_script 
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
+              : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
+          ]">
+            <div class="flex items-center gap-2">
+              <UIcon
+                :name="strategy.pine_script ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-circle'"
+                class="text-lg"
+              />
+              <span>{{ strategy.pine_script ? 'Pine Script Added' : 'No Pine Script' }}</span>
+            </div>
+            <UIcon name="i-heroicons-chevron-right" class="text-xs" />
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex gap-2 pt-2 border-t dark:border-gray-700">
-            <!-- Pine Script Button -->
+          <div class="flex flex-col gap-2 pt-4 border-t dark:border-gray-700">
+            <!-- Pine Script Button - Primary Action -->
             <UButton
               icon="i-heroicons-code-bracket"
               color="primary"
-              variant="outline"
               size="sm"
-              label="Pine Script"
-              class="flex-1"
+              label="View/Edit Pine Script"
+              class="w-full justify-center"
               @click="openPineScriptModal(strategy)"
             />
             
-            <!-- Toggle Status Button -->
-            <UButton
-              :icon="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'"
-              :color="strategy.status === 'active' ? 'warning' : 'success'"
-              variant="ghost"
-              size="sm"
-              @click="toggleStatus(strategy.id)"
-            />
-            
-            <!-- Edit Button -->
-            <UButton
-              icon="i-heroicons-pencil"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              @click="openEditStrategyModal(strategy)"
-            />
+            <div class="flex gap-2">
+              <!-- Toggle Status Button -->
+              <UButton
+                :icon="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                :color="strategy.status === 'active' ? 'warning' : 'success'"
+                variant="outline"
+                size="sm"
+                :label="strategy.status === 'active' ? 'Pause' : 'Activate'"
+                class="flex-1 justify-center"
+                @click="toggleStatus(strategy.id)"
+              />
+              
+              <!-- Edit Button -->
+              <UButton
+                icon="i-heroicons-pencil"
+                color="neutral"
+                variant="outline"
+                size="sm"
+                label="Edit"
+                class="flex-1 justify-center"
+                @click="openEditStrategyModal(strategy)"
+              />
+            </div>
           </div>
         </div>
       </UCard>
