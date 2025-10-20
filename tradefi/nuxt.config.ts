@@ -5,12 +5,10 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/ui',
     '@nuxt/eslint',
-    '@nuxt/content',
     '@nuxt/fonts',
     '@nuxt/icon',
     '@nuxt/image',
-    '@nuxt/scripts',
-    '@nuxt/test-utils'
+    '@nuxt/scripts'
   ],
 
   css: ['~/assets/css/main.css'],
