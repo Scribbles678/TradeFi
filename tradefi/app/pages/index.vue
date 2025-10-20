@@ -3,12 +3,26 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">Sparky Trading Bot</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Real-time analytics and performance tracking</p>
+        <h1 class="text-3xl font-bold">Dashboard Overview</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Real-time analytics across all trading bots</p>
       </div>
       <UBadge :color="isConnected ? 'success' : 'error'" size="lg">
         {{ isConnected ? 'Connected' : 'Disconnected' }}
       </UBadge>
+    </div>
+
+    <!-- Asset Class Filter -->
+    <div class="flex gap-2">
+      <UButton
+        v-for="asset in assetClasses"
+        :key="asset.value"
+        :color="selectedAssetClass === asset.value ? 'primary' : 'neutral'"
+        :variant="selectedAssetClass === asset.value ? 'solid' : 'outline'"
+        @click="selectAssetClass(asset.value)"
+        size="md"
+      >
+        {{ asset.label }}
+      </UButton>
     </div>
 
     <!-- Real-Time Stats Overview -->
@@ -73,32 +87,32 @@
       </template>
       <UTable :columns="positionColumns" :rows="openPositions">
         <template #symbol-data="{ row }">
-          <span class="font-mono font-semibold">{{ row.symbol }}</span>
+          <span class="font-mono font-semibold">{{ (row as unknown as Position).symbol }}</span>
         </template>
         <template #side-data="{ row }">
-          <UBadge :color="row.side === 'BUY' ? 'green' : 'red'">
-            {{ row.side }}
+          <UBadge :color="(row as unknown as Position).side === 'BUY' ? 'success' : 'error'">
+            {{ (row as unknown as Position).side }}
           </UBadge>
         </template>
         <template #entry_price-data="{ row }">
-          <span class="font-mono">${{ parseFloat(row.entry_price).toFixed(2) }}</span>
+          <span class="font-mono">${{ parseFloat((row as unknown as Position).entry_price.toString()).toFixed(2) }}</span>
         </template>
         <template #current_price-data="{ row }">
-          <span class="font-mono">${{ parseFloat(row.current_price || row.entry_price).toFixed(2) }}</span>
+          <span class="font-mono">${{ parseFloat(((row as unknown as Position).current_price || (row as unknown as Position).entry_price).toString()).toFixed(2) }}</span>
         </template>
         <template #unrealized_pnl_usd-data="{ row }">
           <span :class="[
             'font-mono font-semibold',
-            (row.unrealized_pnl_usd || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+            ((row as unknown as Position).unrealized_pnl_usd || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
           ]">
-            {{ (row.unrealized_pnl_usd || 0) >= 0 ? '+' : '' }}${{ (row.unrealized_pnl_usd || 0).toFixed(2) }}
+            {{ ((row as unknown as Position).unrealized_pnl_usd || 0) >= 0 ? '+' : '' }}${{ ((row as unknown as Position).unrealized_pnl_usd || 0).toFixed(2) }}
             <span class="text-sm">
-              ({{ (row.unrealized_pnl_percent || 0).toFixed(2) }}%)
+              ({{ ((row as unknown as Position).unrealized_pnl_percent || 0).toFixed(2) }}%)
             </span>
           </span>
         </template>
         <template #time_open-data="{ row }">
-          <span class="text-sm text-gray-500">{{ formatDuration(row.entry_time) }}</span>
+          <span class="text-sm text-gray-500">{{ formatDuration((row as unknown as Position).entry_time) }}</span>
         </template>
       </UTable>
     </UCard>
@@ -123,14 +137,14 @@
             <h3 class="text-lg font-semibold">Cumulative P&L</h3>
             <div class="flex gap-2">
               <UButton
-                :color="chartDays === 7 ? 'primary' : 'gray'"
+                :color="chartDays === 7 ? 'primary' : 'neutral'"
                 size="xs"
                 @click="chartDays = 7; loadChartData()"
               >
                 7D
               </UButton>
               <UButton
-                :color="chartDays === 30 ? 'primary' : 'gray'"
+                :color="chartDays === 30 ? 'primary' : 'neutral'"
                 size="xs"
                 @click="chartDays = 30; loadChartData()"
               >
@@ -157,7 +171,7 @@
             class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
           >
             <div class="flex items-center gap-3">
-              <UBadge :color="trade.side === 'BUY' ? 'green' : 'red'" size="xs">
+              <UBadge :color="trade.side === 'BUY' ? 'success' : 'error'" size="xs">
                 {{ trade.side }}
               </UBadge>
               <span class="font-mono font-semibold">{{ trade.symbol }}</span>
@@ -194,12 +208,22 @@ import {
   getTodaysStats,
   getCumulativePnL,
   type Position,
-  type Trade
+  type Trade,
+  type AssetClass
 } from '~/utils/supabase';
 import Chart from 'chart.js/auto';
 
+// Asset Classes
+const assetClasses = [
+  { label: 'All', value: 'all' as const },
+  { label: 'Forex', value: 'forex' as const },
+  { label: 'Crypto', value: 'crypto' as const },
+  { label: 'Options', value: 'options' as const },
+];
+
 // State
 const isConnected = ref(true);
+const selectedAssetClass = ref<'all' | AssetClass>('all');
 const openPositions = ref<Position[]>([]);
 const recentTrades = ref<Trade[]>([]);
 const todaysStats = ref({
@@ -222,16 +246,25 @@ const positionColumns = [
   { key: 'time_open', label: 'Time Open' },
 ];
 
+// Asset class selection
+function selectAssetClass(assetClass: 'all' | AssetClass) {
+  selectedAssetClass.value = assetClass;
+  loadData();
+  loadChartData();
+}
+
 // Load data
 async function loadData() {
   try {
     isConnected.value = true;
     
+    const assetFilter = selectedAssetClass.value === 'all' ? undefined : selectedAssetClass.value;
+    
     // Load all data in parallel
     const [positions, trades, stats] = await Promise.all([
-      getOpenPositions(),
-      getRecentTrades(20),
-      getTodaysStats(),
+      getOpenPositions(assetFilter),
+      getRecentTrades(20, assetFilter),
+      getTodaysStats(assetFilter),
     ]);
 
     openPositions.value = positions;
@@ -246,7 +279,8 @@ async function loadData() {
 // Load chart data
 async function loadChartData() {
   try {
-    const data = await getCumulativePnL(chartDays.value);
+    const assetFilter = selectedAssetClass.value === 'all' ? undefined : selectedAssetClass.value;
+    const data = await getCumulativePnL(chartDays.value, assetFilter);
     renderChart(data);
   } catch (error) {
     console.error('Error loading chart data:', error);
@@ -272,8 +306,8 @@ function renderChart(data: Array<{ date: string; cumulative_pnl: number }>) {
       datasets: [{
         label: 'Cumulative P&L',
         data: data.map(d => d.cumulative_pnl),
-        borderColor: data.length > 0 && data[data.length - 1].cumulative_pnl >= 0 ? '#10b981' : '#ef4444',
-        backgroundColor: data.length > 0 && data[data.length - 1].cumulative_pnl >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+        borderColor: (data[data.length - 1]?.cumulative_pnl ?? 0) >= 0 ? '#10b981' : '#ef4444',
+        backgroundColor: (data[data.length - 1]?.cumulative_pnl ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
         borderWidth: 2,
         fill: true,
         tension: 0.4,
@@ -347,8 +381,8 @@ onUnmounted(() => {
 
 // Initial load
 definePageMeta({
-  title: 'Sparky Dashboard',
-  description: 'Real-time analytics for Sparky trading bot'
+  title: 'TradeFI Dashboard',
+  description: 'Real-time analytics across all trading bots'
 });
 </script>
 

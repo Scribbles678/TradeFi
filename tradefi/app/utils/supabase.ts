@@ -10,12 +10,16 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Asset Class Type
+export type AssetClass = 'forex' | 'crypto' | 'options';
+
 // Types for database tables
 export interface Trade {
   id: string;
   created_at: string;
   symbol: string;
   side: 'BUY' | 'SELL';
+  asset_class: AssetClass | null;
   entry_price: number;
   entry_time: string;
   exit_price: number;
@@ -40,6 +44,7 @@ export interface Position {
   updated_at: string;
   symbol: string;
   side: 'BUY' | 'SELL';
+  asset_class: AssetClass | null;
   entry_price: number;
   entry_time: string;
   quantity: number;
@@ -74,11 +79,16 @@ export interface TradeStats {
 /**
  * Fetch all open positions
  */
-export async function getOpenPositions(): Promise<Position[]> {
-  const { data, error } = await supabase
+export async function getOpenPositions(assetClass?: AssetClass): Promise<Position[]> {
+  let query = supabase
     .from('positions')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .select('*');
+
+  if (assetClass) {
+    query = query.eq('asset_class', assetClass);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching positions:', error);
@@ -91,10 +101,16 @@ export async function getOpenPositions(): Promise<Position[]> {
 /**
  * Fetch recent trades (limit 20 by default)
  */
-export async function getRecentTrades(limit = 20): Promise<Trade[]> {
-  const { data, error } = await supabase
+export async function getRecentTrades(limit = 20, assetClass?: AssetClass): Promise<Trade[]> {
+  let query = supabase
     .from('trades')
-    .select('*')
+    .select('*');
+
+  if (assetClass) {
+    query = query.eq('asset_class', assetClass);
+  }
+
+  const { data, error } = await query
     .order('exit_time', { ascending: false })
     .limit(limit);
 
@@ -128,15 +144,20 @@ export async function getTradesByDateRange(startDate: string, endDate: string): 
 /**
  * Fetch today's trades
  */
-export async function getTodaysTrades(): Promise<Trade[]> {
+export async function getTodaysTrades(assetClass?: AssetClass): Promise<Trade[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  const { data, error } = await supabase
+  let query = supabase
     .from('trades')
     .select('*')
-    .gte('exit_time', today.toISOString())
-    .order('exit_time', { ascending: false });
+    .gte('exit_time', today.toISOString());
+
+  if (assetClass) {
+    query = query.eq('asset_class', assetClass);
+  }
+
+  const { data, error } = await query.order('exit_time', { ascending: false });
 
   if (error) {
     console.error('Error fetching today\'s trades:', error);
@@ -166,15 +187,20 @@ export async function getTradeStats(): Promise<TradeStats | null> {
 /**
  * Calculate cumulative P&L over time for chart
  */
-export async function getCumulativePnL(days = 30): Promise<Array<{ date: string; cumulative_pnl: number }>> {
+export async function getCumulativePnL(days = 30, assetClass?: AssetClass): Promise<Array<{ date: string; cumulative_pnl: number }>> {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('trades')
     .select('exit_time, pnl_usd')
-    .gte('exit_time', startDate.toISOString())
-    .order('exit_time', { ascending: true });
+    .gte('exit_time', startDate.toISOString());
+
+  if (assetClass) {
+    query = query.eq('asset_class', assetClass);
+  }
+
+  const { data, error } = await query.order('exit_time', { ascending: true });
 
   if (error) {
     console.error('Error fetching cumulative P&L:', error);
@@ -199,8 +225,8 @@ export async function getCumulativePnL(days = 30): Promise<Array<{ date: string;
 /**
  * Get today's statistics
  */
-export async function getTodaysStats() {
-  const todaysTrades = await getTodaysTrades();
+export async function getTodaysStats(assetClass?: AssetClass) {
+  const todaysTrades = await getTodaysTrades(assetClass);
   
   if (todaysTrades.length === 0) {
     return {

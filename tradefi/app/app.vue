@@ -69,7 +69,6 @@ const navigationItems = [
   { name: 'Dashboard', to: '/', icon: 'i-heroicons-home' },
   { name: 'Trading Bots', to: '/tradingbots', icon: 'i-heroicons-cpu-chip' },
   { name: 'Strategies', to: '/strategies', icon: 'i-heroicons-chart-bar' },
-  { name: 'Trade', to: '/trade', icon: 'i-heroicons-arrow-path' },
   { name: 'Account', to: '/account', icon: 'i-heroicons-user-circle' },
 ]
 </script>
