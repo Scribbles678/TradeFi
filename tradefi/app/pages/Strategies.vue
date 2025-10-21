@@ -15,6 +15,76 @@
       />
     </div>
 
+    <!-- Fear and Greed Index Card -->
+    <UCard class="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-2 border-purple-500/30">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <UIcon name="i-heroicons-chart-pie" class="w-8 h-8 text-purple-400" />
+            <div>
+              <h3 class="text-xl font-bold text-white">Crypto Fear & Greed Index</h3>
+              <p class="text-sm text-gray-300 mt-1">Real-time market sentiment indicator</p>
+            </div>
+          </div>
+          <UButton
+            icon="i-heroicons-arrow-path"
+            size="sm"
+            class="bg-purple-600 hover:bg-purple-700 text-white"
+            :loading="loadingFearGreed"
+            @click="loadFearGreedIndex"
+          >
+            Refresh
+          </UButton>
+        </div>
+      </template>
+
+      <div v-if="fearGreedData" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Index Value Display -->
+        <div class="flex flex-col items-center justify-center bg-black/30 rounded-xl p-6">
+          <div class="text-6xl font-bold mb-2" :class="getFearGreedColor(fearGreedData.value)">
+            {{ fearGreedData.value }}
+          </div>
+          <div class="text-xl font-semibold text-white mb-1">
+            {{ fearGreedData.value_classification }}
+          </div>
+          <div class="text-sm text-gray-400">
+            Index Score
+          </div>
+        </div>
+
+        <!-- Visual Gauge -->
+        <div class="flex flex-col justify-center">
+          <div class="relative h-4 bg-gradient-to-r from-red-600 via-yellow-500 to-green-600 rounded-full overflow-hidden">
+            <div 
+              class="absolute top-0 h-full w-1 bg-white shadow-lg"
+              :style="{ left: `${fearGreedData.value}%` }"
+            ></div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-400 mt-2">
+            <span>0 - Extreme Fear</span>
+            <span>50 - Neutral</span>
+            <span>100 - Extreme Greed</span>
+          </div>
+        </div>
+
+        <!-- Interpretation -->
+        <div class="bg-black/30 rounded-xl p-4">
+          <h4 class="font-semibold text-white mb-2">Market Sentiment</h4>
+          <p class="text-sm text-gray-300">
+            {{ getFearGreedInterpretation(fearGreedData.value_classification) }}
+          </p>
+          <div class="mt-3 text-xs text-gray-400">
+            <p>Last updated: {{ formatTimestamp(fearGreedData.timestamp) }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="text-center py-8">
+        <UIcon name="i-heroicons-signal-slash" class="w-12 h-12 text-gray-500 mx-auto mb-3" />
+        <p class="text-gray-400">Loading Fear & Greed Index...</p>
+      </div>
+    </UCard>
+
     <!-- Strategy List Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <UCard
@@ -305,6 +375,10 @@ const pineScriptCode = ref('');
 const pineScriptVersion = ref('v5');
 const saving = ref(false);
 
+// Fear and Greed Index state
+const fearGreedData = ref<any>(null);
+const loadingFearGreed = ref(false);
+
 // Form state
 const strategyForm = ref({
   name: '',
@@ -341,6 +415,50 @@ const timeframeOptions = [
 // Load strategies
 async function loadStrategies() {
   strategies.value = await getStrategies();
+}
+
+// Load Fear and Greed Index
+async function loadFearGreedIndex() {
+  loadingFearGreed.value = true;
+  try {
+    const response = await fetch('https://api.alternative.me/fng/');
+    const data = await response.json();
+    if (data.data && data.data.length > 0) {
+      fearGreedData.value = data.data[0];
+    }
+  } catch (error) {
+    console.error('Error fetching Fear & Greed Index:', error);
+  } finally {
+    loadingFearGreed.value = false;
+  }
+}
+
+// Get color based on Fear & Greed value
+function getFearGreedColor(value: string) {
+  const numValue = parseInt(value);
+  if (numValue <= 25) return 'text-red-500';
+  if (numValue <= 45) return 'text-orange-500';
+  if (numValue <= 55) return 'text-yellow-500';
+  if (numValue <= 75) return 'text-green-500';
+  return 'text-emerald-500';
+}
+
+// Get interpretation based on classification
+function getFearGreedInterpretation(classification: string) {
+  const interpretations: Record<string, string> = {
+    'Extreme Fear': 'Market is in extreme fear. This could indicate a buying opportunity as prices may be undervalued.',
+    'Fear': 'Market sentiment is fearful. Investors are worried, which might present good entry points.',
+    'Neutral': 'Market sentiment is balanced. Neither fear nor greed is dominating the market.',
+    'Greed': 'Market sentiment is greedy. Be cautious as prices might be getting overvalued.',
+    'Extreme Greed': 'Market is in extreme greed. High risk of correction. Consider taking profits or being more cautious.'
+  };
+  return interpretations[classification] || 'Market sentiment indicator for crypto markets.';
+}
+
+// Format timestamp
+function formatTimestamp(timestamp: string) {
+  const date = new Date(parseInt(timestamp) * 1000);
+  return date.toLocaleString();
 }
 
 // Open Pine Script Modal
@@ -468,6 +586,7 @@ function getStatusColor(status: string) {
 // Initial load
 onMounted(async () => {
   await loadStrategies();
+  await loadFearGreedIndex();
 });
 
 // Page meta
