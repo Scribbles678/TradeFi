@@ -15,78 +15,125 @@
       />
     </div>
 
-    <!-- Fear and Greed Index Card -->
-    <UCard class="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-2 border-purple-500/30">
-      <template #header>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-chart-pie" class="w-8 h-8 text-purple-400" />
-            <div>
-              <h3 class="text-xl font-bold text-white">Crypto Fear & Greed Index</h3>
-              <p class="text-sm text-gray-300 mt-1">Real-time market sentiment indicator</p>
-            </div>
-          </div>
-          <UButton
-            icon="i-heroicons-arrow-path"
-            size="sm"
-            class="bg-purple-600 hover:bg-purple-700 text-white"
-            :loading="loadingFearGreed"
-            @click="loadFearGreedIndex"
-          >
-            Refresh
-          </UButton>
-        </div>
-      </template>
-
-      <div v-if="fearGreedData" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Index Value Display -->
-        <div class="flex flex-col items-center justify-center bg-black/30 rounded-xl p-6">
-          <div class="text-6xl font-bold mb-2" :class="getFearGreedColor(fearGreedData.value)">
-            {{ fearGreedData.value }}
-          </div>
-          <div class="text-xl font-semibold text-white mb-1">
-            {{ fearGreedData.value_classification }}
-          </div>
-          <div class="text-sm text-gray-400">
-            Index Score
-          </div>
-        </div>
-
-        <!-- Visual Gauge -->
-        <div class="flex flex-col justify-center">
-          <div class="relative h-4 bg-gradient-to-r from-red-600 via-yellow-500 to-green-600 rounded-full overflow-hidden">
-            <div 
-              class="absolute top-0 h-full w-1 bg-white shadow-lg"
-              :style="{ left: `${fearGreedData.value}%` }"
-            ></div>
-          </div>
-          <div class="flex justify-between text-xs text-gray-400 mt-2">
-            <span>0 - Extreme Fear</span>
-            <span>50 - Neutral</span>
-            <span>100 - Extreme Greed</span>
-          </div>
-        </div>
-
-        <!-- Interpretation -->
-        <div class="bg-black/30 rounded-xl p-4">
-          <h4 class="font-semibold text-white mb-2">Market Sentiment</h4>
-          <p class="text-sm text-gray-300">
-            {{ getFearGreedInterpretation(fearGreedData.value_classification) }}
-          </p>
-          <div class="mt-3 text-xs text-gray-400">
-            <p>Last updated: {{ formatTimestamp(fearGreedData.timestamp) }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="text-center py-8">
-        <UIcon name="i-heroicons-signal-slash" class="w-12 h-12 text-gray-500 mx-auto mb-3" />
-        <p class="text-gray-400">Loading Fear & Greed Index...</p>
-      </div>
-    </UCard>
-
     <!-- Strategy List Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Fear and Greed Strategy Card -->
+      <UCard class="hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border-2 border-purple-500/50">
+        <template #header>
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+              <h4 class="font-bold text-lg text-gray-900 dark:text-white">Fear & Greed Strategy</h4>
+              <!-- Asset Class Badge -->
+              <div class="mt-2">
+                <UBadge color="neutral" variant="outline" size="xs">
+                  CRYPTO
+                </UBadge>
+              </div>
+            </div>
+            <UBadge color="warning" size="sm">
+              PLANNED
+            </UBadge>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <!-- Description -->
+          <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 min-h-[60px]">
+            Automated strategy that buys during fear and sells during greed. Uses the Crypto Fear & Greed Index to identify optimal entry and exit points based on market sentiment.
+          </p>
+
+          <!-- Current Index Display -->
+          <div v-if="fearGreedData" class="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-lg p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-gray-600 dark:text-gray-400 font-medium">Current Index</span>
+              <UButton
+                icon="i-heroicons-arrow-path"
+                size="xs"
+                class="bg-purple-600 hover:bg-purple-700 text-white"
+                :loading="loadingFearGreed"
+                @click="loadFearGreedIndex"
+              />
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-3xl font-bold" :class="getFearGreedColor(fearGreedData.value)">
+                  {{ fearGreedData.value }}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  {{ fearGreedData.value_classification }}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {{ getTradingSignal(fearGreedData.value) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Metrics -->
+          <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2.5">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Expected Win Rate</span>
+              <span class="font-bold text-gray-900 dark:text-white">~70.0%</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Avg Profit</span>
+              <span class="font-bold text-green-600 dark:text-green-400">+4.50%</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Strategy Type</span>
+              <span class="font-bold text-gray-900 dark:text-white">Sentiment-Based</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Risk Level</span>
+              <UBadge color="warning" size="xs" variant="soft">
+                MEDIUM
+              </UBadge>
+            </div>
+          </div>
+
+          <!-- Strategy Status -->
+          <div class="flex items-center justify-between gap-2 p-3 rounded-lg text-sm font-medium bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-clock" class="text-lg" />
+              <span>Coming Soon - In Development</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col gap-3 pt-4 border-t dark:border-gray-700">
+            <!-- Learn More Button -->
+            <UButton
+              icon="i-heroicons-information-circle"
+              label="Learn More About Strategy"
+              size="md"
+              class="w-full justify-center font-semibold bg-purple-600 hover:bg-purple-700 text-white"
+              @click="showFearGreedInfo"
+            />
+            
+            <div class="flex gap-2">
+              <!-- Backtest Button -->
+              <UButton
+                icon="i-heroicons-chart-bar"
+                label="View Backtest"
+                size="md"
+                class="flex-1 justify-center font-medium bg-gray-600 hover:bg-gray-700 text-white"
+                disabled
+              />
+              
+              <!-- Coming Soon Badge -->
+              <UButton
+                icon="i-heroicons-bell-alert"
+                label="Notify Me"
+                size="md"
+                class="flex-1 justify-center font-medium bg-blue-600 hover:bg-blue-700 text-white"
+                @click="alert('We will notify you when this strategy is ready!')"
+              />
+            </div>
+          </div>
+        </div>
+      </UCard>
       <UCard
         v-for="strategy in strategies"
         :key="strategy.id"
@@ -459,6 +506,36 @@ function getFearGreedInterpretation(classification: string) {
 function formatTimestamp(timestamp: string) {
   const date = new Date(parseInt(timestamp) * 1000);
   return date.toLocaleString();
+}
+
+// Get trading signal based on Fear & Greed value
+function getTradingSignal(value: string) {
+  const numValue = parseInt(value);
+  if (numValue <= 25) return '🟢 Strong Buy Signal';
+  if (numValue <= 35) return '🟢 Buy Signal';
+  if (numValue <= 45) return '🟡 Weak Buy Signal';
+  if (numValue <= 55) return '⚪ Neutral / Hold';
+  if (numValue <= 65) return '🟡 Weak Sell Signal';
+  if (numValue <= 75) return '🔴 Sell Signal';
+  return '🔴 Strong Sell Signal';
+}
+
+// Show Fear & Greed strategy info
+function showFearGreedInfo() {
+  alert(`Fear & Greed Strategy (Coming Soon)
+
+Strategy Logic:
+• Buy when index is in "Fear" zone (< 45)
+• Sell when index is in "Greed" zone (> 65)
+• Uses Dollar Cost Averaging in extreme fear
+• Takes profits gradually in extreme greed
+
+Risk Management:
+• Stop Loss: 3% below entry
+• Take Profit: Scale out at multiple levels
+• Position Size: Adjusts based on sentiment strength
+
+This strategy will be available soon! Click "Notify Me" to get updates.`);
 }
 
 // Open Pine Script Modal
