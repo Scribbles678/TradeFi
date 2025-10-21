@@ -10,6 +10,8 @@
         icon="i-heroicons-plus"
         label="Add Strategy"
         color="primary"
+        variant="solid"
+        size="md"
         @click="openAddStrategyModal"
       />
     </div>
@@ -90,14 +92,15 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col gap-2 pt-4 border-t dark:border-gray-700">
+          <div class="flex flex-col gap-3 pt-4 border-t dark:border-gray-700">
             <!-- Pine Script Button - Primary Action -->
             <UButton
               icon="i-heroicons-code-bracket"
               color="primary"
-              size="sm"
+              variant="solid"
+              size="md"
               label="View/Edit Pine Script"
-              class="w-full justify-center"
+              class="w-full justify-center font-semibold"
               @click="openPineScriptModal(strategy)"
             />
             
@@ -106,10 +109,10 @@
               <UButton
                 :icon="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'"
                 :color="strategy.status === 'active' ? 'warning' : 'success'"
-                variant="outline"
-                size="sm"
+                variant="solid"
+                size="md"
                 :label="strategy.status === 'active' ? 'Pause' : 'Activate'"
-                class="flex-1 justify-center"
+                class="flex-1 justify-center font-medium"
                 @click="toggleStatus(strategy.id)"
               />
               
@@ -117,10 +120,10 @@
               <UButton
                 icon="i-heroicons-pencil"
                 color="neutral"
-                variant="outline"
-                size="sm"
+                variant="solid"
+                size="md"
                 label="Edit"
-                class="flex-1 justify-center"
+                class="flex-1 justify-center font-medium"
                 @click="openEditStrategyModal(strategy)"
               />
             </div>
@@ -136,6 +139,8 @@
           <UButton
             label="Add Your First Strategy"
             color="primary"
+            variant="solid"
+            size="lg"
             class="mt-4"
             @click="openAddStrategyModal"
           />
@@ -197,16 +202,19 @@
         </div>
 
         <template #footer>
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end gap-3">
             <UButton
               label="Cancel"
               color="neutral"
               variant="outline"
+              size="md"
               @click="showPineScriptModal = false"
             />
             <UButton
               label="Save Pine Script"
               color="primary"
+              variant="solid"
+              size="md"
               :loading="saving"
               @click="savePineScript"
             />
@@ -261,17 +269,20 @@
             />
           </UFormGroup>
 
-          <div class="flex justify-end gap-2 pt-4">
+          <div class="flex justify-end gap-3 pt-4">
             <UButton
               label="Cancel"
               color="neutral"
               variant="outline"
+              size="md"
               @click="showStrategyModal = false"
             />
             <UButton
               type="submit"
-              :label="editingStrategy ? 'Update' : 'Create'"
+              :label="editingStrategy ? 'Update Strategy' : 'Create Strategy'"
               color="primary"
+              variant="solid"
+              size="md"
               :loading="saving"
             />
           </div>
