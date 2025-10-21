@@ -155,8 +155,8 @@
             </div>
             <UButton
               icon="i-heroicons-x-mark"
-              color="neutral"
-              variant="ghost"
+              size="sm"
+              class="bg-gray-600 hover:bg-gray-700 text-white"
               @click="showPineScriptModal = false"
             />
           </div>
@@ -355,6 +355,11 @@ function openPineScriptModal(strategy: Strategy) {
 async function savePineScript() {
   if (!selectedStrategy.value) return;
 
+  if (!pineScriptCode.value.trim()) {
+    alert('Please enter Pine Script code');
+    return;
+  }
+
   saving.value = true;
   try {
     const success = await updateStrategyPineScript(
@@ -366,8 +371,13 @@ async function savePineScript() {
     if (success) {
       showPineScriptModal.value = false;
       await loadStrategies();
-      // You can add a toast notification here
+      alert('Pine Script saved successfully!');
+    } else {
+      alert('Error saving Pine Script. Please check the console for details.');
     }
+  } catch (error) {
+    console.error('Error saving Pine Script:', error);
+    alert('Error saving Pine Script. Please make sure the database is set up correctly.');
   } finally {
     saving.value = false;
   }
@@ -401,21 +411,35 @@ function openEditStrategyModal(strategy: Strategy) {
 
 // Save Strategy (Create or Update)
 async function saveStrategy() {
+  if (!strategyForm.value.name) {
+    alert('Please enter a strategy name');
+    return;
+  }
+
   saving.value = true;
   try {
+    let result;
     if (editingStrategy.value) {
       // Update existing strategy
-      await updateStrategy(editingStrategy.value.id, strategyForm.value);
+      result = await updateStrategy(editingStrategy.value.id, strategyForm.value);
     } else {
       // Create new strategy
-      await createStrategy({
+      result = await createStrategy({
         ...strategyForm.value,
         status: 'inactive',
       });
     }
     
-    showStrategyModal.value = false;
-    await loadStrategies();
+    if (result) {
+      showStrategyModal.value = false;
+      await loadStrategies();
+      alert(editingStrategy.value ? 'Strategy updated successfully!' : 'Strategy created successfully!');
+    } else {
+      alert('Error saving strategy. Please check the console for details.');
+    }
+  } catch (error) {
+    console.error('Error saving strategy:', error);
+    alert('Error saving strategy. Please make sure the database is set up correctly.');
   } finally {
     saving.value = false;
   }
