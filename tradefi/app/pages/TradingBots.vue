@@ -8,6 +8,8 @@
             <UButton
               icon="i-heroicons-plus"
               label="Create Bot"
+              size="md"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               @click="showCreateBotModal = true"
             />
           </div>
@@ -33,14 +35,14 @@
             <div class="flex space-x-2">
               <UButton
                 :icon="(row as any).status === 'Running' ? 'i-heroicons-pause' : 'i-heroicons-play'"
-                color="neutral"
-                variant="ghost"
+                size="sm"
+                :class="(row as any).status === 'Running' ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'"
                 @click="toggleBotStatus(Number((row as any).id))"
               />
               <UButton
                 icon="i-heroicons-cog-6-tooth"
-                color="neutral"
-                variant="ghost"
+                size="sm"
+                class="bg-gray-600 hover:bg-gray-700 text-white"
                 @click="editBot(Number((row as any).id))"
               />
             </div>
@@ -76,17 +78,18 @@
               />
             </UFormGroup>
   
-            <div class="flex justify-end space-x-2">
+            <div class="flex justify-end gap-3">
               <UButton
                 label="Cancel"
-                color="neutral"
-                variant="ghost"
+                size="md"
+                class="bg-gray-600 hover:bg-gray-700 text-white"
                 @click="showCreateBotModal = false"
               />
               <UButton
                 type="submit"
-                label="Create"
-                color="primary"
+                label="Create Bot"
+                size="md"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               />
             </div>
           </form>

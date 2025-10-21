@@ -9,9 +9,8 @@
       <UButton
         icon="i-heroicons-plus"
         label="Add Strategy"
-        color="primary"
-        variant="solid"
         size="md"
+        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
         @click="openAddStrategyModal"
       />
     </div>
@@ -96,11 +95,9 @@
             <!-- Pine Script Button - Primary Action -->
             <UButton
               icon="i-heroicons-code-bracket"
-              color="primary"
-              variant="solid"
-              size="md"
               label="View/Edit Pine Script"
-              class="w-full justify-center font-semibold"
+              size="md"
+              class="w-full justify-center font-semibold bg-blue-600 hover:bg-blue-700 text-white"
               @click="openPineScriptModal(strategy)"
             />
             
@@ -108,22 +105,23 @@
               <!-- Toggle Status Button -->
               <UButton
                 :icon="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'"
-                :color="strategy.status === 'active' ? 'warning' : 'success'"
-                variant="solid"
-                size="md"
                 :label="strategy.status === 'active' ? 'Pause' : 'Activate'"
-                class="flex-1 justify-center font-medium"
+                size="md"
+                :class="[
+                  'flex-1 justify-center font-medium text-white',
+                  strategy.status === 'active' 
+                    ? 'bg-yellow-600 hover:bg-yellow-700' 
+                    : 'bg-green-600 hover:bg-green-700'
+                ]"
                 @click="toggleStatus(strategy.id)"
               />
               
               <!-- Edit Button -->
               <UButton
                 icon="i-heroicons-pencil"
-                color="neutral"
-                variant="solid"
-                size="md"
                 label="Edit"
-                class="flex-1 justify-center font-medium"
+                size="md"
+                class="flex-1 justify-center font-medium bg-gray-600 hover:bg-gray-700 text-white"
                 @click="openEditStrategyModal(strategy)"
               />
             </div>
@@ -138,10 +136,8 @@
           <p class="text-gray-500 dark:text-gray-400">No strategies yet</p>
           <UButton
             label="Add Your First Strategy"
-            color="primary"
-            variant="solid"
             size="lg"
-            class="mt-4"
+            class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
             @click="openAddStrategyModal"
           />
         </div>
@@ -205,16 +201,14 @@
           <div class="flex justify-end gap-3">
             <UButton
               label="Cancel"
-              color="neutral"
-              variant="outline"
               size="md"
+              class="bg-gray-600 hover:bg-gray-700 text-white"
               @click="showPineScriptModal = false"
             />
             <UButton
               label="Save Pine Script"
-              color="primary"
-              variant="solid"
               size="md"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               :loading="saving"
               @click="savePineScript"
             />
@@ -272,17 +266,15 @@
           <div class="flex justify-end gap-3 pt-4">
             <UButton
               label="Cancel"
-              color="neutral"
-              variant="outline"
               size="md"
+              class="bg-gray-600 hover:bg-gray-700 text-white"
               @click="showStrategyModal = false"
             />
             <UButton
               type="submit"
               :label="editingStrategy ? 'Update Strategy' : 'Create Strategy'"
-              color="primary"
-              variant="solid"
               size="md"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               :loading="saving"
             />
           </div>

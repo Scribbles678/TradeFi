@@ -57,6 +57,8 @@
             <UButton
               icon="i-heroicons-plus"
               label="Add API Key"
+              size="md"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               @click="showAddApiKeyModal = true"
             />
           </div>
@@ -82,14 +84,14 @@
             <div class="flex space-x-2">
               <UButton
                 icon="i-heroicons-pencil"
-                color="neutral"
-                variant="ghost"
+                size="sm"
+                class="bg-gray-600 hover:bg-gray-700 text-white"
                 @click="editApiKey(Number((row as any).id))"
               />
               <UButton
                 icon="i-heroicons-trash"
-                color="error"
-                variant="ghost"
+                size="sm"
+                class="bg-red-600 hover:bg-red-700 text-white"
                 @click="deleteApiKey(Number((row as any).id))"
               />
             </div>
@@ -118,17 +120,18 @@
               />
             </UFormGroup>
   
-            <div class="flex justify-end space-x-2">
+            <div class="flex justify-end gap-3">
               <UButton
                 label="Cancel"
-                color="neutral"
-                variant="ghost"
+                size="md"
+                class="bg-gray-600 hover:bg-gray-700 text-white"
                 @click="showAddApiKeyModal = false"
               />
               <UButton
                 type="submit"
-                label="Add"
-                color="primary"
+                label="Add API Key"
+                size="md"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               />
             </div>
           </form>

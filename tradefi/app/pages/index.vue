@@ -16,10 +16,14 @@
       <UButton
         v-for="asset in assetClasses"
         :key="asset.value"
-        :color="selectedAssetClass === asset.value ? 'primary' : 'neutral'"
-        :variant="selectedAssetClass === asset.value ? 'solid' : 'outline'"
         @click="selectAssetClass(asset.value)"
         size="md"
+        :class="[
+          'font-semibold',
+          selectedAssetClass === asset.value 
+            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+            : 'bg-gray-600 hover:bg-gray-700 text-white'
+        ]"
       >
         {{ asset.label }}
       </UButton>
@@ -137,16 +141,26 @@
             <h3 class="text-lg font-semibold">Cumulative P&L</h3>
             <div class="flex gap-2">
               <UButton
-                :color="chartDays === 7 ? 'primary' : 'neutral'"
-                size="xs"
+                size="sm"
                 @click="chartDays = 7; loadChartData()"
+                :class="[
+                  'font-medium',
+                  chartDays === 7 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                ]"
               >
                 7D
               </UButton>
               <UButton
-                :color="chartDays === 30 ? 'primary' : 'neutral'"
-                size="xs"
+                size="sm"
                 @click="chartDays = 30; loadChartData()"
+                :class="[
+                  'font-medium',
+                  chartDays === 30 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                ]"
               >
                 30D
               </UButton>
