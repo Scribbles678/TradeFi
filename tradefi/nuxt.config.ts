@@ -11,6 +11,11 @@ export default defineNuxtConfig({
     '@nuxt/scripts'
   ],
 
+  icon: {
+    serverBundle: 'local',
+    collections: ['heroicons', 'lucide', 'simple-icons']
+  },
+
   css: ['~/assets/css/main.css'],
 
   future: {
@@ -20,14 +25,17 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-27',
 
   runtimeConfig: {
-    apexApiKey: process.env.APEX_API_KEY,
-    apexApiSecret: process.env.APEX_API_SECRET,
-    apexApiPassphrase: process.env.APEX_API_PASSPHRASE,
+    // Aster DEX (Crypto) - for account balances
+    asterApiKey: process.env.ASTER_API_KEY,
+    asterApiSecret: process.env.ASTER_API_SECRET,
+    // Tradier (Stocks/Options) - for account balances
     tradierToken: process.env.TRADIER_TOKEN,
     tradierAccountId: process.env.TRADIER_ACCOUNT_ID,
+    // OANDA (Forex) - for account balances
     oandaApiKey: process.env.OANDA_API_KEY,
     oandaAccountId: process.env.OANDA_ACCOUNT_ID,
     oandaBaseUrl: process.env.OANDA_BASE_URL || 'https://api-fxtrade.oanda.com',
+    // Sparky Bot (for health checks)
     sparkyBotUrl: process.env.SPARKY_BOT_URL || 'http://localhost:3000',
     public: {
       supabaseUrl: process.env.SUPABASE_URL || 'https://yfzfdvghkhctzqjtwajy.supabase.co',
@@ -45,6 +53,9 @@ export default defineNuxtConfig({
         target: 'http://localhost:3001',
         changeOrigin: true
       }
+    },
+    experimental: {
+      wasm: true
     }
   },
 
@@ -56,5 +67,6 @@ export default defineNuxtConfig({
         protocol: 'ws'
       }
     }
-  }
+  },
+
 })

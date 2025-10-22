@@ -2,7 +2,7 @@ import { defineEventHandler } from '#imports'
 
 export default defineEventHandler(async (event) => {
   const results = await Promise.all([
-    $fetch('/api/balance/apex'),
+    $fetch('/api/balance/aster'),
     $fetch('/api/balance/tradier'),
     $fetch('/api/balance/oanda')
   ]).catch(() => [null, null, null])
@@ -26,4 +26,4 @@ export default defineEventHandler(async (event) => {
     balances,
     total: hasNonNull ? total : null
   }
-}) 
+})

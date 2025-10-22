@@ -2,7 +2,12 @@ import { defineEventHandler, useRuntimeConfig } from '#imports'
 
 interface OandaAccount {
   balance: string
-  // Add other account properties as needed
+  unrealizedPL: string
+  NAV: string
+  marginUsed: string
+  marginAvailable: string
+  currency: string
+  hedgingEnabled: boolean
 }
 
 interface OandaResponse {
@@ -51,12 +56,25 @@ export default defineEventHandler(async (event) => {
     }
 
     const balance = parseFloat(response.account.balance)
+    const unrealizedPL = parseFloat(response.account.unrealizedPL)
+    const nav = parseFloat(response.account.NAV)
+    const marginUsed = parseFloat(response.account.marginUsed)
+    const marginAvailable = parseFloat(response.account.marginAvailable)
+    
     console.log('OANDA balance:', balance)
+    console.log('OANDA unrealized P&L:', unrealizedPL)
+    console.log('OANDA NAV:', nav)
 
     return {
       success: true,
       exchange: 'OANDA',
-      balance
+      balance,
+      unrealizedPL,
+      nav,
+      marginUsed,
+      marginAvailable,
+      currency: response.account.currency,
+      hedgingEnabled: response.account.hedgingEnabled
     }
   } catch (error: unknown) {
     console.error('OANDA balance error:', error)
@@ -67,4 +85,4 @@ export default defineEventHandler(async (event) => {
       error: errorMessage
     }
   }
-}) 
+})
