@@ -31,6 +31,18 @@
 
     <!-- Real-Time Stats Overview -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Total Portfolio -->
+      <UCard>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Total Portfolio</p>
+            <p class="text-2xl font-bold mt-1">${{ totalBalance.toFixed(2) }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Across all exchanges</p>
+          </div>
+          <UIcon name="i-heroicons-currency-dollar" class="w-10 h-10 text-blue-500" />
+        </div>
+      </UCard>
+
       <!-- Today's P&L -->
       <UCard>
         <div class="flex items-center justify-between">
@@ -42,19 +54,9 @@
             ]">
               {{ todaysStats.todayPnL >= 0 ? '+' : '' }}${{ todaysStats.todayPnL.toFixed(2) }}
             </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Win rate: {{ todaysStats.winRate.toFixed(1) }}%</p>
           </div>
-          <UIcon name="i-heroicons-currency-dollar" class="w-10 h-10 text-gray-400" />
-        </div>
-      </UCard>
-
-      <!-- Win Rate -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Win Rate</p>
-            <p class="text-2xl font-bold mt-1">{{ todaysStats.winRate.toFixed(1) }}%</p>
-          </div>
-          <UIcon name="i-heroicons-chart-bar" class="w-10 h-10 text-gray-400" />
+          <UIcon name="i-heroicons-chart-bar" class="w-10 h-10 text-green-500" />
         </div>
       </UCard>
 
@@ -64,19 +66,21 @@
           <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">Open Positions</p>
             <p class="text-2xl font-bold mt-1">{{ openPositions.length }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ todaysStats.totalTrades }} trades today</p>
           </div>
-          <UIcon name="i-heroicons-shopping-cart" class="w-10 h-10 text-gray-400" />
+          <UIcon name="i-heroicons-shopping-cart" class="w-10 h-10 text-orange-500" />
         </div>
       </UCard>
 
-      <!-- Total Trades Today -->
+      <!-- Active Exchanges -->
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Trades Today</p>
-            <p class="text-2xl font-bold mt-1">{{ todaysStats.totalTrades }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Active Exchanges</p>
+            <p class="text-2xl font-bold mt-1">{{ activeExchanges }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Connected & Trading</p>
           </div>
-          <UIcon name="i-heroicons-arrows-right-left" class="w-10 h-10 text-gray-400" />
+          <UIcon name="i-heroicons-arrows-right-left" class="w-10 h-10 text-purple-500" />
         </div>
       </UCard>
     </div>
@@ -91,7 +95,12 @@
       </template>
       <UTable :columns="positionColumns" :rows="openPositions">
         <template #symbol-data="{ row }">
-          <span class="font-mono font-semibold">{{ (row as unknown as Position).symbol }}</span>
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-semibold">{{ (row as unknown as Position).symbol }}</span>
+            <UBadge v-if="(row as unknown as Position).exchange" size="xs" color="neutral">
+              {{ getExchangeLabel((row as unknown as Position).exchange!) }}
+            </UBadge>
+          </div>
         </template>
         <template #side-data="{ row }">
           <UBadge :color="(row as unknown as Position).side === 'BUY' ? 'success' : 'error'">
@@ -189,6 +198,9 @@
                 {{ trade.side }}
               </UBadge>
               <span class="font-mono font-semibold">{{ trade.symbol }}</span>
+              <UBadge v-if="trade.exchange" size="xs" color="neutral">
+                {{ getExchangeLabel(trade.exchange) }}
+              </UBadge>
               <span class="text-sm text-gray-500">
                 {{ formatTime(trade.exit_time) }}
               </span>
@@ -248,6 +260,8 @@ const todaysStats = ref({
 const chartDays = ref(7);
 const pnlChart = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart | null = null;
+const totalBalance = ref(0);
+const activeExchanges = ref(0);
 
 // Table columns
 const positionColumns = [
@@ -260,11 +274,34 @@ const positionColumns = [
   { key: 'time_open', label: 'Time Open' },
 ];
 
+// Helper to get exchange label
+function getExchangeLabel(exchange: string): string {
+  const labels: Record<string, string> = {
+    'aster': 'Crypto',
+    'oanda': 'Forex',
+    'tradier': 'Stocks'
+  };
+  return labels[exchange] || exchange;
+}
+
 // Asset class selection
 function selectAssetClass(assetClass: 'all' | AssetClass) {
   selectedAssetClass.value = assetClass;
   loadData();
   loadChartData();
+}
+
+// Load account balances
+async function loadBalances() {
+  try {
+    const result = await $fetch('/api/balances');
+    if (result && result.success && result.total) {
+      totalBalance.value = result.total;
+      activeExchanges.value = result.balances.filter((b: any) => b.balance !== null).length;
+    }
+  } catch (error) {
+    console.error('Error loading balances:', error);
+  }
 }
 
 // Load data
@@ -379,9 +416,13 @@ let refreshInterval: NodeJS.Timeout | null = null;
 onMounted(async () => {
   await loadData();
   await loadChartData();
+  await loadBalances();
   
   // Set up auto-refresh
-  refreshInterval = setInterval(loadData, 30000); // 30 seconds
+  refreshInterval = setInterval(() => {
+    loadData();
+    loadBalances();
+  }, 30000); // 30 seconds
 });
 
 onUnmounted(() => {

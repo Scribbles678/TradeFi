@@ -12,6 +12,20 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Asset Class Type
 export type AssetClass = 'forex' | 'crypto' | 'options';
+export type Exchange = 'aster' | 'oanda' | 'tradier';
+
+// Exchange to Asset Class mapping
+export const exchangeToAssetClass: Record<Exchange, AssetClass> = {
+  'aster': 'crypto',
+  'oanda': 'forex',
+  'tradier': 'options'
+};
+
+export const assetClassToExchange: Record<AssetClass, Exchange> = {
+  'crypto': 'aster',
+  'forex': 'oanda',
+  'options': 'tradier'
+};
 
 // Types for database tables
 export interface Trade {
@@ -20,6 +34,7 @@ export interface Trade {
   symbol: string;
   side: 'BUY' | 'SELL';
   asset_class: AssetClass | null;
+  exchange: Exchange | null;
   entry_price: number;
   entry_time: string;
   exit_price: number;
@@ -45,6 +60,7 @@ export interface Position {
   symbol: string;
   side: 'BUY' | 'SELL';
   asset_class: AssetClass | null;
+  exchange: Exchange | null;
   entry_price: number;
   entry_time: string;
   quantity: number;
@@ -103,6 +119,7 @@ export interface Strategy {
 
 /**
  * Fetch all open positions
+ * Filters by exchange (aster, oanda, tradier) or asset_class (crypto, forex, options)
  */
 export async function getOpenPositions(assetClass?: AssetClass): Promise<Position[]> {
   let query = supabase
@@ -110,7 +127,9 @@ export async function getOpenPositions(assetClass?: AssetClass): Promise<Positio
     .select('*');
 
   if (assetClass) {
-    query = query.eq('asset_class', assetClass);
+    // Try to filter by exchange first (new bot format), fall back to asset_class
+    const exchange = assetClassToExchange[assetClass];
+    query = query.or(`exchange.eq.${exchange},asset_class.eq.${assetClass}`);
   }
 
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -125,6 +144,7 @@ export async function getOpenPositions(assetClass?: AssetClass): Promise<Positio
 
 /**
  * Fetch recent trades (limit 20 by default)
+ * Filters by exchange (aster, oanda, tradier) or asset_class (crypto, forex, options)
  */
 export async function getRecentTrades(limit = 20, assetClass?: AssetClass): Promise<Trade[]> {
   let query = supabase
@@ -132,7 +152,9 @@ export async function getRecentTrades(limit = 20, assetClass?: AssetClass): Prom
     .select('*');
 
   if (assetClass) {
-    query = query.eq('asset_class', assetClass);
+    // Try to filter by exchange first (new bot format), fall back to asset_class
+    const exchange = assetClassToExchange[assetClass];
+    query = query.or(`exchange.eq.${exchange},asset_class.eq.${assetClass}`);
   }
 
   const { data, error } = await query
@@ -168,6 +190,7 @@ export async function getTradesByDateRange(startDate: string, endDate: string): 
 
 /**
  * Fetch today's trades
+ * Filters by exchange (aster, oanda, tradier) or asset_class (crypto, forex, options)
  */
 export async function getTodaysTrades(assetClass?: AssetClass): Promise<Trade[]> {
   const today = new Date();
@@ -179,7 +202,9 @@ export async function getTodaysTrades(assetClass?: AssetClass): Promise<Trade[]>
     .gte('exit_time', today.toISOString());
 
   if (assetClass) {
-    query = query.eq('asset_class', assetClass);
+    // Try to filter by exchange first (new bot format), fall back to asset_class
+    const exchange = assetClassToExchange[assetClass];
+    query = query.or(`exchange.eq.${exchange},asset_class.eq.${assetClass}`);
   }
 
   const { data, error } = await query.order('exit_time', { ascending: false });
@@ -211,6 +236,7 @@ export async function getTradeStats(): Promise<TradeStats | null> {
 
 /**
  * Calculate cumulative P&L over time for chart
+ * Filters by exchange (aster, oanda, tradier) or asset_class (crypto, forex, options)
  */
 export async function getCumulativePnL(days = 30, assetClass?: AssetClass): Promise<Array<{ date: string; cumulative_pnl: number }>> {
   const startDate = new Date();
@@ -222,7 +248,9 @@ export async function getCumulativePnL(days = 30, assetClass?: AssetClass): Prom
     .gte('exit_time', startDate.toISOString());
 
   if (assetClass) {
-    query = query.eq('asset_class', assetClass);
+    // Try to filter by exchange first (new bot format), fall back to asset_class
+    const exchange = assetClassToExchange[assetClass];
+    query = query.or(`exchange.eq.${exchange},asset_class.eq.${assetClass}`);
   }
 
   const { data, error } = await query.order('exit_time', { ascending: true });
