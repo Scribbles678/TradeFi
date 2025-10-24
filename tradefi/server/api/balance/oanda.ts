@@ -21,12 +21,6 @@ export default defineEventHandler(async (event) => {
     const apiKey = config.oandaApiKey
     const baseUrl = config.oandaBaseUrl
 
-    console.log('OANDA Config:', { 
-      hasAccountId: !!accountId, 
-      hasApiKey: !!apiKey, 
-      baseUrl 
-    })
-
     if (!accountId || !apiKey || !baseUrl) {
       console.log('OANDA missing config')
       return {
@@ -36,18 +30,19 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log('OANDA Fetching balance...')
-    const response = await $fetch<OandaResponse>(`${baseUrl}/v3/accounts/${accountId}`, {
+    // Ensure baseUrl doesn't end with slash to avoid double slashes
+    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+    const response = await $fetch<OandaResponse>(`${cleanBaseUrl}/v3/accounts/${accountId}`, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       }
     })
 
-    console.log('OANDA Response:', response)
+    // Only log essential balance info to avoid console flooding
+    console.log('OANDA Balance:', response?.account?.balance)
 
     if (!response?.account) {
-      console.log('OANDA invalid response')
       return {
         success: false,
         exchange: 'OANDA',
@@ -60,10 +55,6 @@ export default defineEventHandler(async (event) => {
     const nav = parseFloat(response.account.NAV)
     const marginUsed = parseFloat(response.account.marginUsed)
     const marginAvailable = parseFloat(response.account.marginAvailable)
-    
-    console.log('OANDA balance:', balance)
-    console.log('OANDA unrealized P&L:', unrealizedPL)
-    console.log('OANDA NAV:', nav)
 
     return {
       success: true,

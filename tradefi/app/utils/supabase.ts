@@ -134,6 +134,14 @@ export async function getOpenPositions(assetClass?: AssetClass): Promise<Positio
 
   const { data, error } = await query.order('created_at', { ascending: false });
 
+  // Debug logging to see what's in the database
+  console.log('Supabase Positions Query:', {
+    assetClass,
+    exchange: assetClass ? assetClassToExchange[assetClass] : 'all',
+    dataCount: data?.length || 0,
+    error: error?.message || 'none'
+  });
+
   if (error) {
     console.error('Error fetching positions:', error);
     return [];

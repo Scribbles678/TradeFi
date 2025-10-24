@@ -37,7 +37,7 @@
           <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">Total Portfolio</p>
             <p class="text-2xl font-bold mt-1">${{ totalBalance.toFixed(2) }}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Across all exchanges</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ portfolioDescription }}</p>
           </div>
           <UIcon name="i-heroicons-currency-dollar" class="w-10 h-10 text-blue-500" />
         </div>
@@ -263,6 +263,16 @@ let chartInstance: Chart | null = null;
 const totalBalance = ref(0);
 const activeExchanges = ref(0);
 
+// Computed property for portfolio description
+const portfolioDescription = computed(() => {
+  switch (selectedAssetClass.value) {
+    case 'forex': return 'OANDA Forex only';
+    case 'crypto': return 'Aster DEX Crypto only';
+    case 'options': return 'Tradier Stocks/Options only';
+    default: return 'Across all exchanges';
+  }
+});
+
 // Table columns
 const positionColumns = [
   { key: 'symbol', label: 'Symbol' },
@@ -289,18 +299,39 @@ function selectAssetClass(assetClass: 'all' | AssetClass) {
   selectedAssetClass.value = assetClass;
   loadData();
   loadChartData();
+  loadBalances(); // Reload balances when filter changes
 }
 
 // Load account balances
 async function loadBalances() {
   try {
     const result = await $fetch('/api/balances');
-    if (result && result.success && result.total) {
-      totalBalance.value = result.total;
-      activeExchanges.value = result.balances.filter((b: any) => b.balance !== null).length;
+    if (result && result.success) {
+      // Filter balances based on selected asset class
+      let filteredBalances = result.balances;
+      
+      if (selectedAssetClass.value !== 'all') {
+        const exchangeMapping = {
+          'forex': 'OANDA',
+          'crypto': 'Aster DEX', 
+          'options': 'Tradier'
+        };
+        const targetExchange = exchangeMapping[selectedAssetClass.value];
+        filteredBalances = result.balances.filter((b: any) => b.exchange === targetExchange);
+      }
+      
+      // Calculate total from filtered balances
+      const total = filteredBalances
+        .filter((b: any) => b.balance !== null)
+        .reduce((sum: number, b: any) => sum + b.balance, 0);
+      
+      totalBalance.value = total;
+      activeExchanges.value = filteredBalances.filter((b: any) => b.balance !== null).length;
     }
   } catch (error) {
     console.error('Error loading balances:', error);
+    totalBalance.value = 0;
+    activeExchanges.value = 0;
   }
 }
 
@@ -311,12 +342,17 @@ async function loadData() {
     
     const assetFilter = selectedAssetClass.value === 'all' ? undefined : selectedAssetClass.value;
     
+    console.log('Dashboard: Loading data with filter:', assetFilter);
+    
     // Load all data in parallel
     const [positions, trades, stats] = await Promise.all([
       getOpenPositions(assetFilter),
       getRecentTrades(20, assetFilter),
       getTodaysStats(assetFilter),
     ]);
+
+    console.log('Dashboard: Loaded positions:', positions.length);
+    console.log('Dashboard: Loaded trades:', trades.length);
 
     openPositions.value = positions;
     recentTrades.value = trades;
@@ -414,12 +450,17 @@ function formatTime(isoString: string): string {
 let refreshInterval: NodeJS.Timeout | null = null;
 
 onMounted(async () => {
+  console.log('Dashboard: Component mounted, starting data load...');
+  
   await loadData();
   await loadChartData();
   await loadBalances();
   
+  console.log('Dashboard: Initial load complete, setting up auto-refresh...');
+  
   // Set up auto-refresh
   refreshInterval = setInterval(() => {
+    console.log('Dashboard: Auto-refresh triggered...');
     loadData();
     loadBalances();
   }, 30000); // 30 seconds

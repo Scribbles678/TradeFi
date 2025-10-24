@@ -34,7 +34,7 @@ export default defineNuxtConfig({
     // OANDA (Forex) - for account balances
     oandaApiKey: process.env.OANDA_API_KEY,
     oandaAccountId: process.env.OANDA_ACCOUNT_ID,
-    oandaBaseUrl: process.env.OANDA_BASE_URL || 'https://api-fxtrade.oanda.com',
+    oandaBaseUrl: process.env.OANDA_BASE_URL || 'https://api-fxpractice.oanda.com',
     // Sparky Bot (for health checks)
     sparkyBotUrl: process.env.SPARKY_BOT_URL || 'http://localhost:3000',
     public: {
@@ -48,12 +48,6 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    devProxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true
-      }
-    },
     experimental: {
       wasm: true
     }

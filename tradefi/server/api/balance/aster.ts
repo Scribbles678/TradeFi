@@ -7,9 +7,9 @@ export default defineEventHandler(async (event): Promise<any> => {
   const apiSecret = config.asterApiSecret
 
   try {
-    // Prepare request details for Aster DEX
+    // Prepare request details for Aster DEX - use v4/account endpoint for comprehensive balance data
     const baseUrl = 'https://fapi.asterdex.com'
-    const endpoint = '/fapi/v1/account'
+    const endpoint = '/fapi/v4/account'
     const url = baseUrl + endpoint
     const method = 'GET'
     const timestamp = Date.now().toString()
@@ -27,10 +27,15 @@ export default defineEventHandler(async (event): Promise<any> => {
       }
     })
 
-    console.log('Aster DEX API Response:', response)
-
-    // Parse the response - using totalWalletBalance as the balance
-    const balance = response?.totalWalletBalance ? parseFloat(response.totalWalletBalance) : null
+    // Parse the response from v4/account endpoint - has comprehensive balance data
+    // Only log essential balance info to avoid console flooding
+    console.log('Aster DEX Balance:', response?.totalMarginBalance)
+    
+    // Use totalMarginBalance from v4/account endpoint (this should be the total account balance)
+    const balance = response?.totalMarginBalance ? parseFloat(response.totalMarginBalance) : 0
+    
+    // Only log the final balance to avoid console flooding
+    console.log('Aster DEX Final Balance:', balance)
 
     return {
       success: true,
