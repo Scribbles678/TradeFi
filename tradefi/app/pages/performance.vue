@@ -163,7 +163,7 @@
       <template #header>
         <h3 class="text-lg font-semibold">Asset Class Performance</h3>
       </template>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <UIcon name="i-heroicons-currency-dollar" class="w-8 h-8 text-green-500 mx-auto mb-2" />
           <p class="text-sm text-gray-500 dark:text-gray-400">Crypto</p>
@@ -192,6 +192,16 @@
             stocksPnL >= 0 ? 'text-green-500' : 'text-red-500'
           ]">
             {{ stocksPnL >= 0 ? '+' : '' }}${{ stocksPnL.toFixed(2) }}
+          </p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <UIcon name="i-heroicons-chart-line" class="w-8 h-8 text-indigo-500 mx-auto mb-2" />
+          <p class="text-sm text-gray-500 dark:text-gray-400">Futures</p>
+          <p :class="[
+            'text-lg font-bold',
+            futuresPnL >= 0 ? 'text-green-500' : 'text-red-500'
+          ]">
+            {{ futuresPnL >= 0 ? '+' : '' }}${{ futuresPnL.toFixed(2) }}
           </p>
         </div>
       </div>
@@ -270,6 +280,12 @@ const forexPnL = computed(() => {
 const stocksPnL = computed(() => {
   return recentTrades.value
     .filter(trade => trade.asset_class === 'stocks')
+    .reduce((sum, trade) => sum + (trade.pnl_usd || 0), 0)
+})
+
+const futuresPnL = computed(() => {
+  return recentTrades.value
+    .filter(trade => trade.asset_class === 'futures')
     .reduce((sum, trade) => sum + (trade.pnl_usd || 0), 0)
 })
 

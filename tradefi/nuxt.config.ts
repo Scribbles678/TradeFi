@@ -35,6 +35,12 @@ export default defineNuxtConfig({
     oandaApiKey: process.env.OANDA_API_KEY,
     oandaAccountId: process.env.OANDA_ACCOUNT_ID,
     oandaBaseUrl: process.env.OANDA_BASE_URL || 'https://api-fxpractice.oanda.com',
+    // Tasty Trade (Futures) - OAuth2 credentials
+    tastytradeClientId: process.env.TASTYTRADE_CLIENT_ID,
+    tastytradeClientSecret: process.env.TASTYTRADE_CLIENT_SECRET,
+    tastytradeUsername: process.env.TASTYTRADE_USERNAME,
+    tastytradePassword: process.env.TASTYTRADE_PASSWORD,
+    tastytradeAccountId: process.env.TASTYTRADE_ACCOUNT_ID,
     // Sparky Bot (for health checks)
     sparkyBotUrl: process.env.SPARKY_BOT_URL || 'http://localhost:3000',
     public: {

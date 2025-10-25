@@ -11,21 +11,23 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Asset Class Type
-export type AssetClass = 'forex' | 'crypto' | 'options' | 'stocks';
-export type Exchange = 'aster' | 'oanda' | 'tradier';
+export type AssetClass = 'forex' | 'crypto' | 'options' | 'stocks' | 'futures';
+export type Exchange = 'aster' | 'oanda' | 'tradier' | 'tastytrade';
 
 // Exchange to Asset Class mapping
 export const exchangeToAssetClass: Record<Exchange, AssetClass[]> = {
   'aster': ['crypto'],
   'oanda': ['forex'],
-  'tradier': ['options', 'stocks']
+  'tradier': ['options', 'stocks'],
+  'tastytrade': ['futures']
 };
 
 export const assetClassToExchange: Record<AssetClass, Exchange> = {
   'crypto': 'aster',
   'forex': 'oanda',
   'options': 'tradier',
-  'stocks': 'tradier'
+  'stocks': 'tradier',
+  'futures': 'tastytrade'
 };
 
 // Types for database tables

@@ -30,7 +30,7 @@
     </UCard>
 
     <!-- Exchange Balances -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- Aster DEX (Crypto) -->
       <UCard>
         <template #header>
@@ -151,6 +151,43 @@
           </div>
         </div>
       </UCard>
+
+      <!-- Tasty Trade (Futures) -->
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold flex items-center gap-2">
+              <UIcon name="i-heroicons-chart-line" class="text-indigo-500" />
+              Tasty Trade
+            </h3>
+            <UBadge :color="tastytradeBalance.success ? 'success' : 'error'" size="sm">
+              {{ tastytradeBalance.success ? 'Connected' : 'Error' }}
+            </UBadge>
+          </div>
+        </template>
+        <div class="space-y-4">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Total Equity</p>
+            <p class="text-2xl font-bold mt-1">
+              ${{ tastytradeBalance.balance?.toFixed(2) ?? '---' }}
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p class="text-gray-500 dark:text-gray-400">Available Funds</p>
+              <p class="font-semibold">${{ tastytradeBalance.availableFunds?.toFixed(2) ?? '---' }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400">Buying Power</p>
+              <p class="font-semibold">${{ tastytradeBalance.buyingPower?.toFixed(2) ?? '---' }}</p>
+            </div>
+          </div>
+          <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-xs text-gray-500">Asset Class: <span class="font-semibold">Futures</span></p>
+            <p class="text-xs text-gray-500">Market: <span class="font-semibold">Extended Hours</span></p>
+          </div>
+        </div>
+      </UCard>
     </div>
 
     <!-- Error Messages -->
@@ -167,6 +204,9 @@
         </div>
         <div v-if="!tradierBalance.success" class="text-sm">
           <span class="font-semibold">Tradier:</span> {{ tradierBalance.error }}
+        </div>
+        <div v-if="!tastytradeBalance.success" class="text-sm">
+          <span class="font-semibold">Tasty Trade:</span> {{ tastytradeBalance.error }}
         </div>
       </div>
     </UCard>
@@ -189,6 +229,7 @@ const isLoading = ref(false)
 const asterBalance = ref<ExchangeBalance>({ success: false })
 const oandaBalance = ref<ExchangeBalance>({ success: false })
 const tradierBalance = ref<ExchangeBalance>({ success: false })
+const tastytradeBalance = ref<ExchangeBalance>({ success: false })
 const lastUpdate = ref('')
 
 // Computed
@@ -197,11 +238,12 @@ const totalBalance = computed(() => {
   if (asterBalance.value.success && asterBalance.value.balance) total += asterBalance.value.balance
   if (oandaBalance.value.success && oandaBalance.value.balance) total += oandaBalance.value.balance
   if (tradierBalance.value.success && tradierBalance.value.balance) total += tradierBalance.value.balance
+  if (tastytradeBalance.value.success && tastytradeBalance.value.balance) total += tastytradeBalance.value.balance
   return total
 })
 
 const hasErrors = computed(() => {
-  return !asterBalance.value.success || !oandaBalance.value.success || !tradierBalance.value.success
+  return !asterBalance.value.success || !oandaBalance.value.success || !tradierBalance.value.success || !tastytradeBalance.value.success
 })
 
 // Load balances from APIs
@@ -209,15 +251,17 @@ async function loadBalances() {
   isLoading.value = true
   try {
     // Fetch all balances in parallel
-    const [aster, oanda, tradier] = await Promise.all([
+    const [aster, oanda, tradier, tastytrade] = await Promise.all([
       $fetch('/api/balance/aster').catch(e => ({ success: false, error: e.message })),
       $fetch('/api/balance/oanda').catch(e => ({ success: false, error: e.message })),
-      $fetch('/api/balance/tradier').catch(e => ({ success: false, error: e.message }))
+      $fetch('/api/balance/tradier').catch(e => ({ success: false, error: e.message })),
+      $fetch('/api/balance/tastytrade').catch(e => ({ success: false, error: e.message }))
     ])
 
     asterBalance.value = aster as ExchangeBalance
     oandaBalance.value = oanda as ExchangeBalance
     tradierBalance.value = tradier as ExchangeBalance
+    tastytradeBalance.value = tastytrade as ExchangeBalance
 
     lastUpdate.value = new Date().toLocaleString()
   } catch (error) {

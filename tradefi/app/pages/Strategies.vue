@@ -430,7 +430,7 @@ const loadingFearGreed = ref(false);
 const strategyForm = ref({
   name: '',
   description: '',
-  asset_class: null as 'forex' | 'crypto' | 'options' | null,
+  asset_class: null as 'forex' | 'crypto' | 'options' | 'futures' | null,
   risk_level: null as 'low' | 'medium' | 'high' | null,
   timeframe: null as string | null,
 });
@@ -440,6 +440,7 @@ const assetClassOptions = [
   { label: 'Forex', value: 'forex' },
   { label: 'Crypto', value: 'crypto' },
   { label: 'Options', value: 'options' },
+  { label: 'Futures', value: 'futures' },
 ];
 
 const riskLevelOptions = [

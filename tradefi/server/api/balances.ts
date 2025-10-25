@@ -4,8 +4,9 @@ export default defineEventHandler(async (event) => {
   const results = await Promise.all([
     $fetch('/api/balance/aster'),
     $fetch('/api/balance/tradier'),
-    $fetch('/api/balance/oanda')
-  ]).catch(() => [null, null, null])
+    $fetch('/api/balance/oanda'),
+    $fetch('/api/balance/tastytrade')
+  ]).catch(() => [null, null, null, null])
 
   const balances = []
   let total = 0

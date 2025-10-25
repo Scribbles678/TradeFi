@@ -238,7 +238,7 @@
               </UBadge>
               <span class="font-mono font-semibold">{{ trade.symbol }}</span>
               <UBadge v-if="trade.exchange" size="xs" color="neutral">
-                {{ trade.exchange === 'aster' ? 'Crypto' : trade.exchange === 'oanda' ? 'Forex' : trade.exchange === 'tradier' ? 'Stocks' : trade.exchange }}
+                {{ trade.exchange === 'aster' ? 'Crypto' : trade.exchange === 'oanda' ? 'Forex' : trade.exchange === 'tradier' ? 'Stocks' : trade.exchange === 'tastytrade' ? 'Futures' : trade.exchange }}
               </UBadge>
               <span class="text-sm text-gray-500">
                 {{ formatTime(trade.exit_time) }}
@@ -285,6 +285,7 @@ const assetClasses = [
   { label: 'Crypto', value: 'crypto' as const, exchange: 'Aster DEX' },
   { label: 'Stocks', value: 'stocks' as const, exchange: 'Tradier' },
   { label: 'Options', value: 'options' as const, exchange: 'Tradier' },
+  { label: 'Futures', value: 'futures' as const, exchange: 'Tasty Trade' },
 ];
 
 // State
@@ -306,7 +307,8 @@ const activeExchanges = ref(0);
 const exchangeStatuses = ref([
   { name: 'Aster DEX', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null },
   { name: 'OANDA', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null },
-  { name: 'Tradier', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null }
+  { name: 'Tradier', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null },
+  { name: 'Tasty Trade', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null }
 ]);
 
 // Computed property for portfolio description
@@ -316,6 +318,7 @@ const portfolioDescription = computed(() => {
     case 'crypto': return 'Aster DEX Crypto only';
     case 'stocks': return 'Tradier Stocks only';
     case 'options': return 'Tradier Options only';
+    case 'futures': return 'Tasty Trade Futures only';
     default: return 'Across all exchanges';
   }
 });
@@ -353,6 +356,7 @@ function updateExchangeStatuses(balances: any[]) {
         case 'Aster DEX': return b.exchange === 'aster';
         case 'OANDA': return b.exchange === 'oanda';
         case 'Tradier': return b.exchange === 'tradier';
+        case 'Tasty Trade': return b.exchange === 'tastytrade';
         default: return false;
       }
     });
@@ -375,7 +379,8 @@ async function testExchangeConnections() {
   const tests = [
     { name: 'Aster DEX', test: () => $fetch('/api/balance/aster') },
     { name: 'OANDA', test: () => $fetch('/api/balance/oanda') },
-    { name: 'Tradier', test: () => $fetch('/api/balance/tradier') }
+    { name: 'Tradier', test: () => $fetch('/api/balance/tradier') },
+    { name: 'Tasty Trade', test: () => $fetch('/api/balance/tastytrade') }
   ];
   
   for (const test of tests) {
@@ -416,7 +421,8 @@ async function loadBalances() {
           'forex': 'OANDA',
           'crypto': 'Aster DEX', 
           'stocks': 'Tradier',
-          'options': 'Tradier'
+          'options': 'Tradier',
+          'futures': 'Tasty Trade'
         };
         const targetExchange = exchangeMapping[selectedAssetClass.value];
         filteredBalances = result.balances.filter((b: any) => b.exchange === targetExchange);
