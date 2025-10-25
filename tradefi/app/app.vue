@@ -67,6 +67,7 @@ const $route = useRoute()
 
 const navigationItems = [
   { name: 'Dashboard', to: '/', icon: 'i-heroicons-home' },
+  { name: 'Performance', to: '/performance', icon: 'i-heroicons-chart-pie' },
   { name: 'Strategies', to: '/strategies', icon: 'i-heroicons-chart-bar' },
   { name: 'Account', to: '/account', icon: 'i-heroicons-user-circle' },
 ]

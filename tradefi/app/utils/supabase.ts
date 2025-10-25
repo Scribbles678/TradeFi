@@ -11,20 +11,21 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Asset Class Type
-export type AssetClass = 'forex' | 'crypto' | 'options';
+export type AssetClass = 'forex' | 'crypto' | 'options' | 'stocks';
 export type Exchange = 'aster' | 'oanda' | 'tradier';
 
 // Exchange to Asset Class mapping
-export const exchangeToAssetClass: Record<Exchange, AssetClass> = {
-  'aster': 'crypto',
-  'oanda': 'forex',
-  'tradier': 'options'
+export const exchangeToAssetClass: Record<Exchange, AssetClass[]> = {
+  'aster': ['crypto'],
+  'oanda': ['forex'],
+  'tradier': ['options', 'stocks']
 };
 
 export const assetClassToExchange: Record<AssetClass, Exchange> = {
   'crypto': 'aster',
   'forex': 'oanda',
-  'options': 'tradier'
+  'options': 'tradier',
+  'stocks': 'tradier'
 };
 
 // Types for database tables
@@ -127,9 +128,8 @@ export async function getOpenPositions(assetClass?: AssetClass): Promise<Positio
     .select('*');
 
   if (assetClass) {
-    // Try to filter by exchange first (new bot format), fall back to asset_class
-    const exchange = assetClassToExchange[assetClass];
-    query = query.or(`exchange.eq.${exchange},asset_class.eq.${assetClass}`);
+    // For now, use asset_class filtering since exchange column might not be set for existing data
+    query = query.eq('asset_class', assetClass);
   }
 
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -137,7 +137,6 @@ export async function getOpenPositions(assetClass?: AssetClass): Promise<Positio
   // Debug logging to see what's in the database
   console.log('Supabase Positions Query:', {
     assetClass,
-    exchange: assetClass ? assetClassToExchange[assetClass] : 'all',
     dataCount: data?.length || 0,
     error: error?.message || 'none'
   });
@@ -160,9 +159,8 @@ export async function getRecentTrades(limit = 20, assetClass?: AssetClass): Prom
     .select('*');
 
   if (assetClass) {
-    // Try to filter by exchange first (new bot format), fall back to asset_class
-    const exchange = assetClassToExchange[assetClass];
-    query = query.or(`exchange.eq.${exchange},asset_class.eq.${assetClass}`);
+    // For now, use asset_class filtering since exchange column might not be set for existing data
+    query = query.eq('asset_class', assetClass);
   }
 
   const { data, error } = await query
@@ -210,9 +208,8 @@ export async function getTodaysTrades(assetClass?: AssetClass): Promise<Trade[]>
     .gte('exit_time', today.toISOString());
 
   if (assetClass) {
-    // Try to filter by exchange first (new bot format), fall back to asset_class
-    const exchange = assetClassToExchange[assetClass];
-    query = query.or(`exchange.eq.${exchange},asset_class.eq.${assetClass}`);
+    // For now, use asset_class filtering since exchange column might not be set for existing data
+    query = query.eq('asset_class', assetClass);
   }
 
   const { data, error } = await query.order('exit_time', { ascending: false });
@@ -256,9 +253,8 @@ export async function getCumulativePnL(days = 30, assetClass?: AssetClass): Prom
     .gte('exit_time', startDate.toISOString());
 
   if (assetClass) {
-    // Try to filter by exchange first (new bot format), fall back to asset_class
-    const exchange = assetClassToExchange[assetClass];
-    query = query.or(`exchange.eq.${exchange},asset_class.eq.${assetClass}`);
+    // For now, use asset_class filtering since exchange column might not be set for existing data
+    query = query.eq('asset_class', assetClass);
   }
 
   const { data, error } = await query.order('exit_time', { ascending: true });
@@ -385,6 +381,81 @@ export async function updateStrategy(id: string, updates: Partial<Strategy>): Pr
 
   if (error) {
     console.error('Error updating strategy:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Save a trade to the database
+ */
+export async function saveTrade(trade: Partial<Trade>): Promise<Trade | null> {
+  const { data, error } = await supabase
+    .from('trades')
+    .insert([trade])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error saving trade:', error);
+    return null;
+  }
+
+  console.log('Trade saved successfully:', data);
+  return data;
+}
+
+/**
+ * Save multiple trades to the database
+ */
+export async function saveTrades(trades: Partial<Trade>[]): Promise<Trade[] | null> {
+  const { data, error } = await supabase
+    .from('trades')
+    .insert(trades)
+    .select();
+
+  if (error) {
+    console.error('Error saving trades:', error);
+    return null;
+  }
+
+  console.log(`${trades.length} trades saved successfully`);
+  return data;
+}
+
+/**
+ * Save a position to the database
+ */
+export async function savePosition(position: Partial<Position>): Promise<Position | null> {
+  const { data, error } = await supabase
+    .from('positions')
+    .insert([position])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error saving position:', error);
+    return null;
+  }
+
+  console.log('Position saved successfully:', data);
+  return data;
+}
+
+/**
+ * Update an existing position
+ */
+export async function updatePosition(id: string, updates: Partial<Position>): Promise<Position | null> {
+  const { data, error } = await supabase
+    .from('positions')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating position:', error);
     return null;
   }
 
