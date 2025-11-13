@@ -19,19 +19,18 @@
         @click="selectAssetClass(asset.value)"
         size="md"
         :class="[
-          'font-semibold flex flex-col items-center py-3 px-4 min-w-[100px] transition-all duration-200',
+          'font-semibold py-3 px-4 min-w-[100px] transition-all duration-200',
           selectedAssetClass === asset.value 
             ? 'bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25 border border-blue-500/30' 
             : 'bg-gradient-to-br from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white border border-gray-500/30'
         ]"
       >
-        <span class="text-sm font-bold">{{ asset.label }}</span>
-        <span class="text-xs opacity-80 mt-1">{{ asset.exchange }}</span>
+        <span class="text-base font-bold">{{ asset.label }}</span>
       </UButton>
     </div>
 
     <!-- Real-Time Stats Overview -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <!-- Total Portfolio -->
       <UCard class="bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-500/20 shadow-lg shadow-blue-500/10">
         <div class="text-center space-y-6 h-full flex flex-col justify-center">
@@ -51,52 +50,149 @@
         </div>
       </UCard>
 
-      <!-- Today's P&L -->
+      <!-- P&L Card -->
       <UCard class="bg-gradient-to-br from-green-900/20 to-emerald-800/10 border border-green-500/20 shadow-lg shadow-green-500/10">
+        <template #header>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-green-400" />
+              <p class="text-sm text-green-300 font-medium">P&L</p>
+            </div>
+            <div class="flex gap-2">
+              <UButton
+                size="sm"
+                @click="pnlView = 'realized'"
+                :class="[
+                  'font-medium transition-all',
+                  pnlView === 'realized'
+                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg' 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                ]"
+              >
+                Realized
+              </UButton>
+              <UButton
+                size="sm"
+                @click="pnlView = 'unrealized'"
+                :class="[
+                  'font-medium transition-all',
+                  pnlView === 'unrealized'
+                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg' 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                ]"
+              >
+                Unrealized
+              </UButton>
+            </div>
+          </div>
+        </template>
         <div class="text-center space-y-4">
-          <div class="flex items-center justify-center gap-2">
-            <UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-green-400" />
-            <p class="text-sm text-green-300 font-medium">Today's P&L</p>
+          <!-- Realized P&L View -->
+          <div v-if="pnlView === 'realized'">
+            <div>
+              <p class="text-xs text-green-200/70 mb-1">Today's Realized P&L</p>
+              <p :class="[
+                'text-3xl font-bold',
+                isLoading ? 'text-gray-400' : (todaysStats.todayPnL >= 0 ? 'text-green-400' : 'text-red-400')
+              ]">
+                <span v-if="isLoading" class="animate-pulse">Loading...</span>
+                <span v-else>{{ todaysStats.todayPnL >= 0 ? '+' : '' }}${{ todaysStats.todayPnL.toFixed(2) }}</span>
+              </p>
+            </div>
+            
+            <div>
+              <div class="flex items-center justify-center gap-2 mb-2">
+                <UIcon name="i-heroicons-target" class="w-4 h-4 text-green-400" />
+                <p class="text-sm text-green-300 font-medium">Win Rate</p>
+              </div>
+              <div 
+                v-if="isLoading"
+                class="text-3xl font-bold text-gray-400 animate-pulse"
+              >
+                Loading...
+              </div>
+              <div 
+                v-else
+                class="text-3xl font-bold"
+                :class="{
+                  'text-green-400': todaysStats.winRate >= 70,
+                  'text-yellow-400': todaysStats.winRate >= 50 && todaysStats.winRate < 70,
+                  'text-red-400': todaysStats.winRate < 50,
+                  'text-gray-400': todaysStats.totalTrades === 0
+                }"
+              >
+                {{ todaysStats.winRate.toFixed(1) }}%
+              </div>
+              <div class="text-sm text-green-200/70 mt-1">
+                {{ Math.round(todaysStats.totalTrades * todaysStats.winRate / 100) }}/{{ todaysStats.totalTrades }} trades
+              </div>
+            </div>
           </div>
           
-          <div>
-            <p :class="[
-              'text-3xl font-bold',
-              isLoading ? 'text-gray-400' : (todaysStats.todayPnL >= 0 ? 'text-green-400' : 'text-red-400')
-            ]">
-              <span v-if="isLoading" class="animate-pulse">Loading...</span>
-              <span v-else>{{ todaysStats.todayPnL >= 0 ? '+' : '' }}${{ todaysStats.todayPnL.toFixed(2) }}</span>
-            </p>
+          <!-- Unrealized P&L View -->
+          <div v-else-if="pnlView === 'unrealized'">
+            <div>
+              <p class="text-xs text-green-200/70 mb-1">Current Unrealized P&L</p>
+              <p :class="[
+                'text-3xl font-bold',
+                isLoading ? 'text-gray-400' : (totalUnrealizedPnl >= 0 ? 'text-green-400' : 'text-red-400')
+              ]">
+                <span v-if="isLoading" class="animate-pulse">Loading...</span>
+                <span v-else>{{ totalUnrealizedPnl >= 0 ? '+' : '' }}${{ totalUnrealizedPnl.toFixed(2) }}</span>
+              </p>
+            </div>
+            
+            <div>
+              <div class="flex items-center justify-center gap-2 mb-2">
+                <UIcon name="i-heroicons-shopping-cart" class="w-4 h-4 text-green-400" />
+                <p class="text-sm text-green-300 font-medium">Open Positions</p>
+              </div>
+              <div 
+                v-if="isLoading"
+                class="text-3xl font-bold text-gray-400 animate-pulse"
+              >
+                Loading...
+              </div>
+              <div 
+                v-else
+                class="text-3xl font-bold text-white"
+              >
+                {{ filteredOpenPositions.length }}
+              </div>
+              <div class="text-sm text-green-200/70 mt-1">
+                {{ filteredOpenPositions.length === 1 ? 'position' : 'positions' }}
+              </div>
+            </div>
+            
+            <div>
+              <div class="flex items-center justify-center gap-2 mb-2">
+                <UIcon name="i-heroicons-chart-bar-square" class="w-4 h-4 text-green-400" />
+                <p class="text-sm text-green-300 font-medium">Avg P&L %</p>
+              </div>
+              <div 
+                v-if="isLoading"
+                class="text-2xl font-bold text-gray-400 animate-pulse"
+              >
+                Loading...
+              </div>
+              <div 
+                v-else-if="filteredOpenPositions.length === 0"
+                class="text-2xl font-bold text-gray-400"
+              >
+                N/A
+              </div>
+              <div 
+                v-else
+                class="text-2xl font-bold"
+                :class="{
+                  'text-green-400': averageUnrealizedPnlPercent >= 0,
+                  'text-red-400': averageUnrealizedPnlPercent < 0
+                }"
+              >
+                {{ averageUnrealizedPnlPercent >= 0 ? '+' : '' }}{{ averageUnrealizedPnlPercent.toFixed(2) }}%
+              </div>
+            </div>
           </div>
-          
-          <div>
-            <div class="flex items-center justify-center gap-2 mb-2">
-              <UIcon name="i-heroicons-target" class="w-4 h-4 text-green-400" />
-              <p class="text-sm text-green-300 font-medium">Win Rate</p>
-            </div>
-            <div 
-              v-if="isLoading"
-              class="text-3xl font-bold text-gray-400 animate-pulse"
-            >
-              Loading...
-            </div>
-            <div 
-              v-else
-              class="text-3xl font-bold"
-              :class="{
-                'text-green-400': todaysStats.winRate >= 70,
-                'text-yellow-400': todaysStats.winRate >= 50 && todaysStats.winRate < 70,
-                'text-red-400': todaysStats.winRate < 50,
-                'text-gray-400': todaysStats.totalTrades === 0
-              }"
-            >
-              {{ todaysStats.winRate.toFixed(1) }}%
-            </div>
-            <div class="text-sm text-green-200/70 mt-1">
-              {{ Math.round(todaysStats.totalTrades * todaysStats.winRate / 100) }}/{{ todaysStats.totalTrades }} trades
-            </div>
-          </div>
-          
         </div>
       </UCard>
 
@@ -109,7 +205,7 @@
           </div>
           
           <div>
-            <p class="text-4xl font-bold text-white">{{ openPositions.length }}</p>
+            <p class="text-4xl font-bold text-white">{{ filteredOpenPositions.length }}</p>
             <p class="text-sm text-orange-200/70 mt-1">Active Positions</p>
           </div>
           
@@ -118,59 +214,6 @@
             <p class="text-sm text-orange-200/70">Today's Trades</p>
           </div>
           
-        </div>
-      </UCard>
-
-      <!-- Active Exchanges -->
-      <UCard class="bg-gradient-to-br from-purple-900/20 to-violet-800/10 border border-purple-500/20 shadow-lg shadow-purple-500/10">
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <p class="text-sm text-purple-300 font-medium">Exchange Status</p>
-            <div class="p-2 bg-purple-500/20 rounded-full">
-              <UIcon name="i-heroicons-arrows-right-left" class="w-5 h-5 text-purple-400" />
-            </div>
-          </div>
-          
-          <div class="space-y-1">
-            <div 
-              v-for="exchange in exchangeStatuses" 
-              :key="exchange.name"
-              class="flex items-center justify-between py-2 px-3 rounded-lg backdrop-blur-sm"
-              :class="exchange.status === 'connected' ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'"
-            >
-              <div class="flex items-center gap-3">
-                <div 
-                  class="w-3 h-3 rounded-full shadow-sm"
-                  :class="exchange.status === 'connected' ? 'bg-green-400 shadow-green-400/50' : 'bg-red-400 shadow-red-400/50'"
-                ></div>
-                <span class="text-sm font-medium text-white">{{ exchange.name }}</span>
-              </div>
-              
-              <div class="text-right">
-                <div 
-                  class="text-sm font-semibold"
-                  :class="exchange.status === 'connected' ? 'text-green-400' : 'text-red-400'"
-                >
-                  {{ exchange.status === 'connected' ? 'Connected' : 'Disconnected' }}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="text-xs text-purple-200/70 text-center">
-            {{ activeExchanges }} of {{ exchangeStatuses.length }} exchanges active
-          </div>
-          
-          <div class="flex justify-center">
-            <UButton 
-              @click="testExchangeConnections" 
-              size="xs" 
-              class="bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 hover:text-purple-200 text-xs"
-            >
-              <UIcon name="i-heroicons-arrow-path" class="w-3 h-3 mr-1" />
-              Refresh Status
-            </UButton>
-          </div>
         </div>
       </UCard>
     </div>
@@ -208,6 +251,36 @@
               >
                 30D
               </UButton>
+              <div class="flex gap-2">
+                <UButton
+                  size="sm"
+                  @click="syncTrades"
+                  :disabled="isSyncingTrades || isFixingPnl"
+                  :class="[
+                    'font-medium',
+                    (isSyncingTrades || isFixingPnl)
+                      ? 'bg-gray-500 cursor-not-allowed text-white' 
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  ]"
+                >
+                  <span v-if="isSyncingTrades">Syncing...</span>
+                  <span v-else>Sync Trades</span>
+                </UButton>
+                <UButton
+                  size="sm"
+                  @click="fixPnl"
+                  :disabled="isSyncingTrades || isFixingPnl"
+                  :class="[
+                    'font-medium',
+                    (isSyncingTrades || isFixingPnl)
+                      ? 'bg-gray-500 cursor-not-allowed text-white' 
+                      : 'bg-orange-600 hover:bg-orange-700 text-white'
+                  ]"
+                >
+                  <span v-if="isFixingPnl">Fixing...</span>
+                  <span v-else>Fix P&L</span>
+                </UButton>
+              </div>
             </div>
           </div>
         </template>
@@ -217,12 +290,42 @@
         </div>
       </UCard>
 
-      <!-- Recent Trades -->
+      <!-- Recent Trades / Open Trades -->
       <UCard class="bg-gradient-to-br from-indigo-900/20 to-purple-800/10 border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
         <template #header>
-          <h3 class="text-lg font-semibold text-indigo-300">Recent Trades</h3>
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-indigo-300">Trades</h3>
+            <div class="flex gap-2">
+              <UButton
+                size="sm"
+                @click="tradeView = 'recent'"
+                :class="[
+                  'font-medium transition-all',
+                  tradeView === 'recent'
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg' 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                ]"
+              >
+                Recent Trades
+              </UButton>
+              <UButton
+                size="sm"
+                @click="tradeView = 'open'"
+                :class="[
+                  'font-medium transition-all',
+                  tradeView === 'open'
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg' 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                ]"
+              >
+                Open Trades
+              </UButton>
+            </div>
+          </div>
         </template>
-        <div class="space-y-2 max-h-64 overflow-y-auto">
+        
+        <!-- Recent Trades View -->
+        <div v-if="tradeView === 'recent'" class="space-y-2 max-h-72 overflow-y-auto">
           <div v-if="isLoading" class="text-center py-8 text-gray-500">
             <div class="animate-pulse">Loading trades...</div>
           </div>
@@ -230,15 +333,15 @@
             v-else-if="recentTrades.length > 0"
             v-for="trade in recentTrades"
             :key="trade.id"
-            class="flex items-center justify-between p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm"
+            class="flex items-center justify-between p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm hover:bg-indigo-500/20 transition-colors"
           >
             <div class="flex items-center gap-3">
               <UBadge :color="trade.side === 'BUY' ? 'success' : 'error'" size="xs">
                 {{ trade.side }}
               </UBadge>
               <span class="font-mono font-semibold">{{ trade.symbol }}</span>
-              <UBadge v-if="trade.exchange" size="xs" color="neutral">
-                {{ trade.exchange === 'aster' ? 'Crypto' : trade.exchange === 'oanda' ? 'Forex' : trade.exchange === 'tradier' ? 'Stocks' : trade.exchange === 'tastytrade' ? 'Futures' : trade.exchange }}
+              <UBadge v-if="trade.asset_class || trade.exchange" size="xs" color="neutral">
+                {{ getAssetClassLabel(trade.asset_class, trade.exchange) }}
               </UBadge>
               <span class="text-sm text-gray-500">
                 {{ formatTime(trade.exit_time) }}
@@ -256,8 +359,95 @@
               </div>
             </div>
           </div>
-          <div v-if="recentTrades.length === 0" class="text-center py-8 text-gray-500">
+          <div v-else-if="recentTrades.length === 0" class="text-center py-8 text-gray-500">
             No trades yet
+          </div>
+        </div>
+
+        <!-- Open Trades View -->
+        <div v-else-if="tradeView === 'open'" class="space-y-3 max-h-96 overflow-y-auto">
+          <div v-if="isLoading" class="text-center py-8 text-gray-500">
+            <div class="animate-pulse">Loading positions...</div>
+          </div>
+          <template v-else-if="filteredOpenPositions.length > 0">
+            <div
+              v-for="position in filteredOpenPositions"
+              :key="position.id"
+              class="p-4 rounded-lg bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm hover:bg-indigo-500/20 transition-colors"
+            >
+              <!-- Header Row -->
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-3">
+                  <UBadge :color="position.side === 'BUY' ? 'success' : 'error'" size="sm">
+                    {{ position.side }}
+                  </UBadge>
+                  <span class="font-mono font-bold text-lg">{{ position.symbol }}</span>
+                  <UBadge v-if="position.asset_class || position.exchange" size="xs" color="neutral">
+                    {{ getAssetClassLabel(position.asset_class, position.exchange) }}
+                  </UBadge>
+                </div>
+                <div class="text-right">
+                  <div :class="[
+                    'font-mono font-bold text-lg',
+                    (position.unrealized_pnl_usd ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                  ]">
+                    {{ (position.unrealized_pnl_usd ?? 0) >= 0 ? '+' : '' }}${{ (position.unrealized_pnl_usd ?? 0).toFixed(2) }}
+                  </div>
+                  <div :class="[
+                    'text-sm font-semibold',
+                    (position.unrealized_pnl_percent ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                  ]">
+                    {{ (position.unrealized_pnl_percent ?? 0) >= 0 ? '+' : '' }}{{ (position.unrealized_pnl_percent ?? 0).toFixed(2) }}%
+                  </div>
+                </div>
+              </div>
+
+              <!-- Details Grid -->
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <div class="space-y-2">
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Entry Price:</span>
+                    <span class="font-semibold text-white">${{ (position.entry_price || 0).toFixed(2) }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Current Price:</span>
+                    <span class="font-semibold text-white">${{ (position.current_price || position.entry_price || 0).toFixed(2) }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Quantity:</span>
+                    <span class="font-semibold text-white">{{ (position.quantity || 0).toFixed(4) }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Position Size:</span>
+                    <span class="font-semibold text-white">${{ (position.position_size_usd || 0).toFixed(2) }}</span>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Time Open:</span>
+                    <span class="font-semibold text-white">{{ formatDuration(position.entry_time) }}</span>
+                  </div>
+                  <div v-if="position.stop_loss_price != null" class="flex justify-between">
+                    <span class="text-gray-400">Stop Loss:</span>
+                    <span class="font-semibold text-red-400">${{ position.stop_loss_price.toFixed(2) }}</span>
+                  </div>
+                  <div v-if="position.take_profit_price != null" class="flex justify-between">
+                    <span class="text-gray-400">Take Profit:</span>
+                    <span class="font-semibold text-green-400">${{ position.take_profit_price.toFixed(2) }}</span>
+                  </div>
+                  <div v-if="position.stop_loss_percent != null || position.take_profit_percent != null" class="flex justify-between">
+                    <span class="text-gray-400">Risk/Reward:</span>
+                    <span class="font-semibold text-white">
+                      {{ position.stop_loss_percent != null ? `-${position.stop_loss_percent}%` : 'N/A' }} / 
+                      {{ position.take_profit_percent != null ? `+${position.take_profit_percent}%` : 'N/A' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-else class="text-center py-8 text-gray-500">
+            No open positions
           </div>
         </div>
       </UCard>
@@ -303,13 +493,10 @@ const chartDays = ref(7);
 const pnlChart = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart | null = null;
 const totalBalance = ref(0);
-const activeExchanges = ref(0);
-const exchangeStatuses = ref([
-  { name: 'Aster DEX', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null },
-  { name: 'OANDA', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null },
-  { name: 'Tradier', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null },
-  { name: 'Tasty Trade', status: 'disconnected' as 'connected' | 'disconnected', balance: null as number | null, lastCheck: null as Date | null }
-]);
+const tradeView = ref<'recent' | 'open'>('recent');
+const pnlView = ref<'realized' | 'unrealized'>('realized');
+const isSyncingTrades = ref(false);
+const isFixingPnl = ref(false);
 
 // Computed property for portfolio description
 const portfolioDescription = computed(() => {
@@ -321,6 +508,66 @@ const portfolioDescription = computed(() => {
     case 'futures': return 'Tasty Trade Futures only';
     default: return 'Across all exchanges';
   }
+});
+
+// Computed property for filtered open positions (based on asset class filter)
+const filteredOpenPositions = computed(() => {
+  if (selectedAssetClass.value === 'all') {
+    return openPositions.value;
+  }
+  return openPositions.value.filter(pos => {
+    // Match by asset class
+    if (pos.asset_class === selectedAssetClass.value) {
+      return true;
+    }
+    // Fallback to exchange mapping if asset_class doesn't match
+    const exchangeMapping: Record<string, string> = {
+      'forex': 'oanda',
+      'crypto': 'aster',
+      'stocks': 'tradier',
+      'options': 'tradier',
+      'futures': 'tastytrade'
+    };
+    const expectedExchange = exchangeMapping[selectedAssetClass.value];
+    return pos.exchange === expectedExchange;
+  });
+});
+
+// Computed property for total unrealized P&L
+const totalUnrealizedPnl = computed(() => {
+  const total = filteredOpenPositions.value.reduce((sum, pos) => {
+    const pnl = pos.unrealized_pnl_usd ?? 0;
+    return sum + pnl;
+  }, 0);
+  return total;
+});
+
+// Computed property for average unrealized P&L percentage
+const averageUnrealizedPnlPercent = computed(() => {
+  const positions = filteredOpenPositions.value;
+  if (positions.length === 0) {
+    return 0;
+  }
+  
+  // Calculate weighted average based on position size
+  let totalWeightedPnl = 0;
+  let totalPositionSize = 0;
+  
+  positions.forEach(pos => {
+    const positionSize = pos.position_size_usd ?? 0;
+    const pnlPercent = pos.unrealized_pnl_percent ?? 0;
+    
+    if (positionSize > 0) {
+      totalWeightedPnl += pnlPercent * positionSize;
+      totalPositionSize += positionSize;
+    }
+  });
+  
+  if (totalPositionSize === 0) {
+    return 0;
+  }
+  
+  return totalWeightedPnl / totalPositionSize;
 });
 
 
@@ -344,68 +591,6 @@ function selectAssetClass(assetClass: 'all' | AssetClass) {
   }).finally(() => {
     isLoading.value = false;
   });
-}
-
-// Update individual exchange statuses
-function updateExchangeStatuses(balances: any[]) {
-  const now = new Date();
-  
-  exchangeStatuses.value.forEach(exchange => {
-    const balance = balances.find(b => {
-      switch (exchange.name) {
-        case 'Aster DEX': return b.exchange === 'aster';
-        case 'OANDA': return b.exchange === 'oanda';
-        case 'Tradier': return b.exchange === 'tradier';
-        case 'Tasty Trade': return b.exchange === 'tastytrade';
-        default: return false;
-      }
-    });
-    
-    if (balance && balance.balance !== null) {
-      exchange.status = 'connected';
-      exchange.balance = balance.balance;
-      exchange.lastCheck = now;
-    } else {
-      exchange.status = 'disconnected';
-      exchange.balance = null;
-      exchange.lastCheck = now;
-    }
-  });
-}
-
-// Test individual exchange connections
-async function testExchangeConnections() {
-  console.log('Dashboard: Starting exchange connection tests...');
-  const tests = [
-    { name: 'Aster DEX', test: () => $fetch('/api/balance/aster') },
-    { name: 'OANDA', test: () => $fetch('/api/balance/oanda') },
-    { name: 'Tradier', test: () => $fetch('/api/balance/tradier') },
-    { name: 'Tasty Trade', test: () => $fetch('/api/balance/tastytrade') }
-  ];
-  
-  for (const test of tests) {
-    try {
-      console.log(`Dashboard: Testing ${test.name} connection...`);
-      const response = await test.test();
-      const exchange = exchangeStatuses.value.find(e => e.name === test.name);
-      if (exchange) {
-        const isConnected = response && response.balance !== null;
-        exchange.status = isConnected ? 'connected' : 'disconnected';
-        exchange.balance = response?.balance || null;
-        exchange.lastCheck = new Date();
-        console.log(`Dashboard: ${test.name} - ${isConnected ? 'Connected' : 'Disconnected'} (Balance: ${response?.balance || 'null'})`);
-      }
-    } catch (error) {
-      console.log(`Dashboard: ${test.name} connection failed:`, error);
-      const exchange = exchangeStatuses.value.find(e => e.name === test.name);
-      if (exchange) {
-        exchange.status = 'disconnected';
-        exchange.balance = null;
-        exchange.lastCheck = new Date();
-      }
-    }
-  }
-  console.log('Dashboard: Exchange connection tests completed.');
 }
 
 // Load account balances
@@ -434,15 +619,10 @@ async function loadBalances() {
         .reduce((sum: number, b: any) => sum + b.balance, 0);
       
       totalBalance.value = total;
-      activeExchanges.value = filteredBalances.filter((b: any) => b.balance !== null).length;
-      
-      // Update individual exchange statuses
-      updateExchangeStatuses(result.balances);
     }
   } catch (error) {
     console.error('Error loading balances:', error);
     totalBalance.value = 0;
-    activeExchanges.value = 0;
   }
 }
 
@@ -496,7 +676,16 @@ async function loadData() {
         if (oandaResponse.success) {
           oandaPositions = oandaResponse.positions;
           console.log('Dashboard: Loaded OANDA positions:', oandaPositions.length);
-          console.log('Dashboard: OANDA positions data:', oandaPositions);
+          console.log('Dashboard: OANDA positions data (full):', JSON.stringify(oandaPositions, null, 2));
+          console.log('Dashboard: OANDA positions P&L data:', oandaPositions.map(p => ({
+            symbol: p.symbol,
+            exchange: p.exchange,
+            unrealized_pnl_usd: p.unrealized_pnl_usd,
+            unrealized_pnl_percent: p.unrealized_pnl_percent,
+            entry_price: p.entry_price,
+            current_price: p.current_price,
+            quantity: p.quantity
+          })));
         } else {
           console.log('Dashboard: OANDA API failed for', assetFilter === undefined ? 'All' : 'Forex', 'filter:', oandaResponse.error);
         }
@@ -506,21 +695,25 @@ async function loadData() {
     }
 
     // Combine positions based on filter
+    // Priority: API positions (more accurate, real-time) > Supabase positions (might be stale)
     let finalPositions = [];
     if (assetFilter === undefined) {
       // For "All" filter, combine Supabase + live API positions
-      finalPositions = [...supabasePositions, ...asterPositions, ...oandaPositions];
+      // Prioritize API positions over Supabase (API positions are more accurate)
+      finalPositions = [...asterPositions, ...oandaPositions, ...supabasePositions];
       console.log('Dashboard: Loaded Supabase positions:', supabasePositions.length);
       console.log('Dashboard: Loaded Aster DEX positions:', asterPositions.length);
       console.log('Dashboard: Loaded OANDA positions:', oandaPositions.length);
     } else if (assetFilter === 'crypto') {
       // For "Crypto" filter, combine Supabase + Aster DEX live positions
-      finalPositions = [...supabasePositions, ...asterPositions];
+      // Prioritize API positions
+      finalPositions = [...asterPositions, ...supabasePositions];
       console.log('Dashboard: Loaded Supabase crypto positions:', supabasePositions.length);
       console.log('Dashboard: Loaded Aster DEX live positions:', asterPositions.length);
     } else if (assetFilter === 'forex') {
       // For "Forex" filter, combine Supabase + OANDA live positions
-      finalPositions = [...supabasePositions, ...oandaPositions];
+      // Prioritize API positions (OANDA has correct asset_class and real-time data)
+      finalPositions = [...oandaPositions, ...supabasePositions];
       console.log('Dashboard: Loaded Supabase forex positions:', supabasePositions.length);
       console.log('Dashboard: Loaded OANDA live positions:', oandaPositions.length);
     } else {
@@ -529,34 +722,187 @@ async function loadData() {
       console.log('Dashboard: Using Supabase data for', assetFilter, 'filter:', supabasePositions.length, 'positions');
     }
     
-    console.log('Dashboard: Total positions:', finalPositions.length);
+    // Deduplicate positions: prioritize API positions (more accurate, real-time) over Supabase
+    // Strategy: For same symbol, prefer the most relevant exchange based on asset class
+    // Priority order: OANDA (forex) > TastyTrade (futures) > Tradier (stocks/options) > Aster (crypto) > Supabase
+    const positionMap = new Map();
+    const isApiPosition = (pos: any) => {
+      return pos.exchange && ['aster', 'oanda', 'tradier', 'tastytrade'].includes(pos.exchange.toLowerCase());
+    };
+    
+    // Exchange priority (higher number = higher priority)
+    const exchangePriority: Record<string, number> = {
+      'oanda': 4,      // Highest priority for forex
+      'tastytrade': 3, // Futures
+      'tradier': 2,    // Stocks/Options
+      'aster': 1,      // Crypto
+      'unknown': 0,    // Unknown/Supabase
+    };
+    
+    const getExchangePriority = (pos: any): number => {
+      const exchange = (pos.exchange || 'unknown').toLowerCase();
+      return exchangePriority[exchange] || 0;
+    };
+    
+    console.log('Dashboard: Starting deduplication with', finalPositions.length, 'positions');
+    console.log('Dashboard: Positions before deduplication:', finalPositions.map(p => ({
+      symbol: p.symbol,
+      exchange: p.exchange,
+      isApi: isApiPosition(p),
+      priority: getExchangePriority(p),
+      unrealized_pnl_usd: p.unrealized_pnl_usd,
+      unrealized_pnl_percent: p.unrealized_pnl_percent
+    })));
+    
+    // Process all positions and keep the one with highest priority for each symbol
+    finalPositions.forEach(pos => {
+      const key = (pos.symbol || '').toUpperCase();
+      const currentPos = positionMap.get(key);
+      const currentPriority = currentPos ? getExchangePriority(currentPos) : -1;
+      const newPriority = getExchangePriority(pos);
+      
+      // Only replace if this position has higher priority
+      if (!currentPos || newPriority > currentPriority) {
+        if (currentPos) {
+          console.log(`Dashboard: Replacing position ${key}: ${currentPos.exchange} (priority ${currentPriority}) -> ${pos.exchange} (priority ${newPriority})`);
+        } else {
+          console.log(`Dashboard: Adding position ${key} from ${pos.exchange} (priority ${newPriority}) with P&L:`, {
+            unrealized_pnl_usd: pos.unrealized_pnl_usd,
+            unrealized_pnl_percent: pos.unrealized_pnl_percent,
+            exchange: pos.exchange
+          });
+        }
+        positionMap.set(key, pos);
+      } else {
+        console.log(`Dashboard: Keeping existing position ${key} from ${currentPos.exchange} (priority ${currentPriority}) over ${pos.exchange} (priority ${newPriority})`);
+      }
+    });
+    
+    finalPositions = Array.from(positionMap.values());
+    
+    console.log('Dashboard: After deduplication, total positions:', finalPositions.length);
+    console.log('Dashboard: Positions by source:', {
+      api: finalPositions.filter(p => isApiPosition(p)).length,
+      supabase: finalPositions.filter(p => !isApiPosition(p)).length
+    });
+    console.log('Dashboard: Final positions after deduplication:', finalPositions.map(p => ({
+      symbol: p.symbol,
+      exchange: p.exchange,
+      isApi: isApiPosition(p),
+      priority: getExchangePriority(p),
+      unrealized_pnl_usd: p.unrealized_pnl_usd,
+      unrealized_pnl_percent: p.unrealized_pnl_percent
+    })));
     console.log('Dashboard: Loaded trades:', trades.length);
-    console.log('Dashboard: Final positions data:', finalPositions);
 
     console.log('Dashboard: Setting openPositions.value to:', finalPositions);
     console.log('Dashboard: Setting recentTrades.value to:', trades);
     console.log('Dashboard: Setting todaysStats.value to:', stats);
     
-    // Validate position data structure
-    const validatedPositions = finalPositions.map(pos => ({
-      id: pos.id || `${pos.symbol}_${Date.now()}`,
-      symbol: pos.symbol || 'Unknown',
-      side: pos.side || 'UNKNOWN',
-      entry_price: pos.entry_price || 0,
-      current_price: pos.current_price || pos.entry_price || 0,
-      position_size_usd: pos.position_size_usd || 0,
-      unrealized_pnl_usd: pos.unrealized_pnl_usd || 0,
-      unrealized_pnl_percent: pos.unrealized_pnl_percent || 0,
-      entry_time: pos.entry_time || new Date().toISOString(),
-      exchange: pos.exchange || 'unknown',
-      asset_class: pos.asset_class || 'unknown'
-    }));
+    // Validate position data structure and fix asset_class if missing or incorrect
+    const validatedPositions = finalPositions.map(pos => {
+      const exchange = pos.exchange?.toLowerCase();
+      const symbol = (pos.symbol || '').toUpperCase();
+      let assetClass = pos.asset_class;
+      
+      // DEBUG: Log position data before validation
+      console.log(`Dashboard: Validating position ${symbol}:`, {
+        exchange,
+        unrealized_pnl_usd: pos.unrealized_pnl_usd,
+        unrealized_pnl_percent: pos.unrealized_pnl_percent,
+        current_price: pos.current_price,
+        entry_price: pos.entry_price,
+        quantity: pos.quantity,
+        rawPosition: pos
+      });
+      
+      // CRITICAL: Always correct asset_class based on exchange (overrides incorrect Supabase data)
+      // This ensures OANDA positions always show as 'forex', Aster as 'crypto', etc.
+      if (exchange === 'oanda') {
+        assetClass = 'forex';
+      } else if (exchange === 'aster') {
+        assetClass = 'crypto';
+      } else if (exchange === 'tastytrade') {
+        assetClass = 'futures';
+      } else if (exchange === 'tradier') {
+        // Tradier can be stocks or options - try to infer from symbol
+        if (symbol.match(/^\d+$/) || symbol.includes('C') || symbol.includes('P')) {
+          assetClass = 'options';
+        } else {
+          assetClass = 'stocks';
+        }
+      }
+      // If exchange is unknown, try to infer from symbol format
+      else if (!assetClass || assetClass === 'unknown') {
+        // Forex pairs: EUR_USD, GBP_USD, etc. (typically 3-letter pairs with underscore)
+        if (symbol.includes('_') && symbol.match(/^[A-Z]{3}_[A-Z]{3}$/)) {
+          assetClass = 'forex';
+        } else if (symbol.includes('/') && symbol.match(/^[A-Z]{3}\/[A-Z]{3}$/)) {
+          assetClass = 'forex';
+        }
+        // Crypto symbols: BTCUSDT, ETHUSD, etc. (typically contain USDT, BTC, ETH)
+        else if ((symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH') || symbol.endsWith('USDT')) && !symbol.includes('_') && !symbol.includes('/')) {
+          assetClass = 'crypto';
+        }
+      }
+      
+      // CRITICAL: Preserve P&L data correctly - handle null/undefined but preserve negative values
+      // Use nullish coalescing (??) instead of logical OR (||) to preserve 0 and negative values
+      const unrealizedPnlUsd = pos.unrealized_pnl_usd != null ? pos.unrealized_pnl_usd : 0;
+      const unrealizedPnlPercent = pos.unrealized_pnl_percent != null ? pos.unrealized_pnl_percent : 0;
+      
+      const validatedPos = {
+        id: pos.id || `${pos.symbol}_${Date.now()}`,
+        symbol: pos.symbol || 'Unknown',
+        side: pos.side || 'UNKNOWN',
+        entry_price: pos.entry_price || 0,
+        current_price: pos.current_price != null ? pos.current_price : (pos.entry_price || 0),
+        quantity: pos.quantity || 0,
+        position_size_usd: pos.position_size_usd || 0,
+        unrealized_pnl_usd: unrealizedPnlUsd,
+        unrealized_pnl_percent: unrealizedPnlPercent,
+        entry_time: pos.entry_time || new Date().toISOString(),
+        exchange: pos.exchange || 'unknown',
+        asset_class: assetClass || 'unknown',
+        stop_loss_price: pos.stop_loss_price != null ? pos.stop_loss_price : null,
+        take_profit_price: pos.take_profit_price != null ? pos.take_profit_price : null,
+        stop_loss_percent: pos.stop_loss_percent != null ? pos.stop_loss_percent : null,
+        take_profit_percent: pos.take_profit_percent != null ? pos.take_profit_percent : null
+      };
+      
+      // DEBUG: Log validated position
+      console.log(`Dashboard: Validated position ${symbol}:`, {
+        unrealized_pnl_usd: validatedPos.unrealized_pnl_usd,
+        unrealized_pnl_percent: validatedPos.unrealized_pnl_percent,
+        validatedPosition: validatedPos
+      });
+      
+      return validatedPos;
+    });
+    
+    // DEBUG: Log final validated positions before assignment
+    console.log('Dashboard: Final validated positions before assignment:', validatedPositions.map(p => ({
+      symbol: p.symbol,
+      exchange: p.exchange,
+      unrealized_pnl_usd: p.unrealized_pnl_usd,
+      unrealized_pnl_percent: p.unrealized_pnl_percent,
+      entry_price: p.entry_price,
+      current_price: p.current_price,
+      quantity: p.quantity
+    })));
     
     openPositions.value = validatedPositions as any;
     recentTrades.value = trades;
     todaysStats.value = stats;
     
+    // DEBUG: Verify the values were set correctly
     console.log('Dashboard: After setting values - openPositions.value.length:', openPositions.value.length);
+    console.log('Dashboard: After setting values - openPositions.value:', openPositions.value.map(p => ({
+      symbol: p.symbol,
+      exchange: p.exchange,
+      unrealized_pnl_usd: p.unrealized_pnl_usd,
+      unrealized_pnl_percent: p.unrealized_pnl_percent
+    })));
     console.log('Dashboard: After setting values - recentTrades.value.length:', recentTrades.value.length);
   } catch (error) {
     console.error('Error loading data:', error);
@@ -568,7 +914,13 @@ async function loadData() {
 async function loadChartData() {
   try {
     const assetFilter = selectedAssetClass.value === 'all' ? undefined : selectedAssetClass.value;
+    console.log('Dashboard: Loading chart data for', chartDays.value, 'days with filter:', assetFilter);
     const data = await getCumulativePnL(chartDays.value, assetFilter);
+    console.log('Dashboard: Chart data loaded:', data);
+    console.log('Dashboard: Chart data length:', data.length);
+    if (data.length === 0) {
+      console.log('Dashboard: No chart data available - no closed trades in the last', chartDays.value, 'days');
+    }
     renderChart(data);
   } catch (error) {
     console.error('Error loading chart data:', error);
@@ -577,15 +929,95 @@ async function loadChartData() {
 
 // Render chart
 function renderChart(data: Array<{ date: string; cumulative_pnl: number }>) {
-  if (!pnlChart.value) return;
+  if (!pnlChart.value) {
+    console.log('Dashboard: Chart canvas not available');
+    return;
+  }
 
   // Destroy existing chart
   if (chartInstance) {
     chartInstance.destroy();
+    chartInstance = null;
   }
 
   const ctx = pnlChart.value.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) {
+    console.log('Dashboard: Chart context not available');
+    return;
+  }
+
+  // Handle empty data
+  if (!data || data.length === 0) {
+    console.log('Dashboard: No data to render in chart - showing empty state');
+    // Create a chart with empty data that shows a message
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Cumulative P&L',
+          data: [],
+          borderColor: '#6b7280',
+          backgroundColor: 'rgba(107, 114, 128, 0.1)',
+          borderWidth: 0,
+          fill: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            enabled: false
+          }
+        },
+        scales: {
+          x: {
+            display: false
+          },
+          y: {
+            display: false
+          }
+        }
+      },
+      plugins: [{
+        id: 'empty-state',
+        afterDraw: (chart) => {
+          const { ctx, chartArea } = chart;
+          if (!chartArea) return;
+          
+          ctx.save();
+          ctx.fillStyle = '#9ca3af';
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(
+            'No closed trades in the selected period',
+            (chartArea.left + chartArea.right) / 2,
+            (chartArea.top + chartArea.bottom) / 2
+          );
+          ctx.restore();
+        }
+      }]
+    });
+    return;
+  }
+
+  // Handle single data point (need at least 2 points for a line to be visible)
+  if (data.length === 1) {
+    console.log('Dashboard: Only one data point - duplicating for chart visibility');
+    // Duplicate the single point to create a visible line
+    data = [
+      { date: data[0].date, cumulative_pnl: 0 }, // Start at zero
+      data[0] // Then show the actual P&L
+    ];
+  }
+
+  console.log('Dashboard: Rendering chart with', data.length, 'data points');
+  console.log('Dashboard: Chart data:', data);
 
   chartInstance = new Chart(ctx, {
     type: 'line',
@@ -599,6 +1031,8 @@ function renderChart(data: Array<{ date: string; cumulative_pnl: number }>) {
         borderWidth: 2,
         fill: true,
         tension: 0.4,
+        pointRadius: data.length <= 10 ? 4 : 0, // Show points if few data points
+        pointHoverRadius: 6,
       }]
     },
     options: {
@@ -607,18 +1041,60 @@ function renderChart(data: Array<{ date: string; cumulative_pnl: number }>) {
       plugins: {
         legend: {
           display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `P&L: $${context.parsed.y.toFixed(2)}`;
+            }
+          }
         }
       },
       scales: {
-        y: {
-          beginAtZero: true,
+        x: {
+          display: data.length > 0,
           ticks: {
-            callback: (value) => `$${value}`
+            maxRotation: 45,
+            minRotation: 45
+          }
+        },
+        y: {
+          beginAtZero: false, // Don't force zero - show actual range
+          ticks: {
+            callback: (value) => `$${value.toFixed(2)}`
           }
         }
       }
     }
   });
+}
+
+// Get asset class label from asset_class or exchange
+function getAssetClassLabel(assetClass: string | null | undefined, exchange: string | null | undefined): string {
+  // First, try to use asset_class if available
+  if (assetClass) {
+    switch (assetClass.toLowerCase()) {
+      case 'crypto': return 'Crypto';
+      case 'forex': return 'Forex';
+      case 'stocks': return 'Stocks';
+      case 'options': return 'Options';
+      case 'futures': return 'Futures';
+      default: return assetClass.charAt(0).toUpperCase() + assetClass.slice(1);
+    }
+  }
+  
+  // Fall back to exchange mapping if asset_class is not available
+  if (exchange) {
+    switch (exchange.toLowerCase()) {
+      case 'aster': return 'Crypto';
+      case 'oanda': return 'Forex';
+      case 'tradier': return 'Stocks';
+      case 'tastytrade': return 'Futures';
+      default: return exchange;
+    }
+  }
+  
+  return 'Unknown';
 }
 
 // Format duration
@@ -647,21 +1123,80 @@ function formatTime(isoString: string): string {
   return date.toLocaleDateString();
 }
 
+// Sync trades - detect closed positions and save them as trades
+async function syncTrades() {
+  try {
+    isSyncingTrades.value = true;
+    console.log('Dashboard: Syncing trades...');
+    
+    const response = await $fetch('/api/trades/sync', {
+      method: 'GET'
+    });
+    
+    if (response.success) {
+      console.log('Dashboard: Trade sync successful:', response);
+      // Reload chart data to show new trades
+      await loadChartData();
+      // Reload data to refresh recent trades
+      await loadData();
+      
+      // Show success message (you could use a toast notification here)
+      alert(`Successfully synced ${response.count || 0} closed trades!`);
+    } else {
+      console.error('Dashboard: Trade sync failed:', response.error);
+      alert(`Trade sync failed: ${response.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Dashboard: Error syncing trades:', error);
+    alert('Error syncing trades. Check console for details.');
+  } finally {
+    isSyncingTrades.value = false;
+  }
+}
+
+// Fix P&L for existing trades with incorrect values
+async function fixPnl() {
+  try {
+    isFixingPnl.value = true;
+    console.log('Dashboard: Fixing P&L for existing trades...');
+    
+    const response = await $fetch('/api/trades/fix-pnl', {
+      method: 'GET'
+    });
+    
+    if (response.success) {
+      console.log('Dashboard: P&L fix successful:', response);
+      // Reload chart data to show corrected trades
+      await loadChartData();
+      // Reload data to refresh recent trades with corrected P&L
+      await loadData();
+      
+      // Show success message
+      alert(`Successfully fixed ${response.fixed || 0} trades!`);
+    } else {
+      console.error('Dashboard: P&L fix failed:', response.error);
+      alert(`P&L fix failed: ${response.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Dashboard: Error fixing P&L:', error);
+    alert('Error fixing P&L. Check console for details.');
+  } finally {
+    isFixingPnl.value = false;
+  }
+}
+
 // Auto-refresh data every 30 seconds
 let refreshInterval: NodeJS.Timeout | null = null;
 
 onMounted(async () => {
   console.log('Dashboard: Component mounted, starting data load...');
   
+  // Wait for next tick to ensure canvas is available
+  await nextTick();
+  
   await loadData();
   await loadChartData();
   await loadBalances();
-  
-  // Test individual exchange connections for detailed status (with small delay to ensure page is ready)
-  console.log('Dashboard: Testing individual exchange connections...');
-  setTimeout(async () => {
-    await testExchangeConnections();
-  }, 1000); // 1 second delay to ensure page is fully loaded
   
   console.log('Dashboard: Initial load complete, setting up auto-refresh...');
   
@@ -669,6 +1204,7 @@ onMounted(async () => {
   refreshInterval = setInterval(() => {
     console.log('Dashboard: Auto-refresh triggered...');
     loadData();
+    loadChartData(); // Also refresh chart data
     loadBalances();
     // Note: Exchange connections are only tested on initial load and manual refresh
     // to avoid interference between multiple simultaneous API calls

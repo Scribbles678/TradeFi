@@ -38,10 +38,29 @@ export default defineEventHandler(async (event): Promise<any> => {
       parseFloat(pos.positionAmt) !== 0
     )
 
-    console.log('Aster DEX Active Positions:', activePositions.length)
+    console.log('Aster DEX Active Positions (before filtering):', activePositions.length)
+    
+    // Filter out forex pairs (Aster DEX should only have crypto positions)
+    // Forex pairs typically have underscores (EUR_USD) or match forex patterns
+    const cryptoOnlyPositions = activePositions.filter((pos: any) => {
+      const symbol = (pos.symbol || '').toUpperCase()
+      // Exclude forex pairs (contain underscore and match forex pattern like EUR_USD, GBP_USD)
+      const isForexPair = symbol.includes('_') && symbol.match(/^[A-Z]{3}_[A-Z]{3}$/)
+      // Exclude forex pairs with slash (EUR/USD, GBP/USD)
+      const isForexPairSlash = symbol.includes('/') && symbol.match(/^[A-Z]{3}\/[A-Z]{3}$/)
+      // Keep everything else (crypto pairs)
+      return !isForexPair && !isForexPairSlash
+    })
+
+    console.log('Aster DEX Crypto Positions (after filtering):', cryptoOnlyPositions.length)
+    
+    if (activePositions.length !== cryptoOnlyPositions.length) {
+      const filteredOut = activePositions.filter((p: any) => !cryptoOnlyPositions.includes(p))
+      console.log('Aster DEX Filtered out non-crypto positions:', filteredOut.map((p: any) => p.symbol))
+    }
 
     // Transform positions to match dashboard format
-    const formattedPositions = activePositions.map((pos: any) => ({
+    const formattedPositions = cryptoOnlyPositions.map((pos: any) => ({
       id: `${pos.symbol}_${pos.positionSide}`,
       symbol: pos.symbol,
       side: parseFloat(pos.positionAmt) > 0 ? 'BUY' : 'SELL',

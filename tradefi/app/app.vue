@@ -1,7 +1,14 @@
 <template>
   <UApp class="min-h-screen bg-[#181a1f]">
     <header class="w-full sticky top-0 z-50 bg-[#181a1f] border-b-2 border-gold-500 shadow-lg flex items-center justify-between px-8 py-4">
-      <h1 class="text-2xl font-extrabold text-gold tracking-wide">TRADEFI</h1>
+      <div class="flex items-center gap-3">
+        <img 
+          src="/Sparky.png" 
+          alt="TradeFI Logo" 
+          class="h-15 w-15 object-contain"
+        />
+        <h1 class="text-2xl font-extrabold text-gold tracking-wide">SPARKY</h1>
+      </div>
       <!-- Desktop Nav -->
       <nav class="hidden md:flex gap-4">
         <router-link

@@ -87,12 +87,12 @@ TASTYTRADE_ACCOUNT_ID=your_tastytrade_account_id
 ### 2. **Database Migration**
 Run the migration script in Supabase SQL Editor:
 ```bash
-# Execute: tradfi/database-add-futures-support.sql
+# Execute: tradefi/database-add-futures-support.sql
 ```
 
 ### 3. **Restart Development Server**
 ```bash
-cd tradfi
+cd tradefi
 npm run dev
 ```
 

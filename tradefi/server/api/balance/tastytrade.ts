@@ -40,20 +40,31 @@ export default defineEventHandler(async (event): Promise<any> => {
   const password = config.tastytradePassword
   const accountId = config.tastytradeAccountId
 
-  try {
-    if (!clientId || !clientSecret || !username || !password || !accountId) {
-      console.log('Tasty Trade missing OAuth2 config')
-      return {
-        success: false,
-        exchange: 'Tasty Trade',
-        error: 'Missing Tasty Trade OAuth2 configuration'
-      }
+  // Early return if Tasty Trade is not configured - fail silently
+  if (!clientId || !clientSecret || !username || !password || !accountId) {
+    return {
+      success: false,
+      exchange: 'Tasty Trade',
+      error: 'Tasty Trade is not configured (disabled)',
+      disabled: true
     }
+  }
 
+  try {
     // First, get OAuth2 token using client credentials
     const tokenResponse = await $fetch('/api/auth/tastytrade-token')
     
+    // If token request failed or Tasty Trade is disabled, return early
     if (!tokenResponse.success) {
+      // Don't log errors if Tasty Trade is explicitly disabled
+      if (tokenResponse.disabled) {
+        return {
+          success: false,
+          exchange: 'Tasty Trade',
+          error: 'Tasty Trade is disabled',
+          disabled: true
+        }
+      }
       return {
         success: false,
         exchange: 'Tasty Trade',
@@ -105,12 +116,21 @@ export default defineEventHandler(async (event): Promise<any> => {
       maintenanceRequirement: account.maintenance_requirement || 0
     }
   } catch (error: unknown) {
-    console.error('Tasty Trade balance error:', error)
+    // Silently fail if it's a 401 (unauthorized) - means credentials are invalid/disabled
+    // Don't log 401 errors to avoid console spam
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const is401 = errorMessage.includes('401') || errorMessage.includes('Unauthorized')
+    
+    // Only log if it's not a 401 error
+    if (!is401) {
+      console.error('Tasty Trade balance error:', error)
+    }
+    
     return {
       success: false,
       exchange: 'Tasty Trade',
-      error: errorMessage
+      error: is401 ? 'Tasty Trade is disabled (invalid credentials)' : errorMessage,
+      disabled: true // Always mark as disabled on error
     }
   }
 })

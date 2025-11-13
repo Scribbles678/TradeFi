@@ -118,7 +118,7 @@ I've corrected the implementation to match the [Tasty Trade API documentation](h
 1. **Add your credentials** to the `.env` file using the template above
 2. **Restart the development server**:
    ```bash
-   cd tradfi
+   cd tradefi
    npm run dev
    ```
 3. **Test the integration**:

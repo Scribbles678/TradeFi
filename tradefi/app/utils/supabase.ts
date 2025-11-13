@@ -249,34 +249,55 @@ export async function getCumulativePnL(days = 30, assetClass?: AssetClass): Prom
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
+  console.log('Supabase: Fetching cumulative P&L for', days, 'days', assetClass ? `(filter: ${assetClass})` : '(all asset classes)');
+  console.log('Supabase: Start date:', startDate.toISOString());
+
   let query = supabase
     .from('trades')
-    .select('exit_time, pnl_usd')
+    .select('exit_time, pnl_usd, symbol, asset_class, exchange')
     .gte('exit_time', startDate.toISOString());
 
   if (assetClass) {
     // For now, use asset_class filtering since exchange column might not be set for existing data
     query = query.eq('asset_class', assetClass);
+    console.log('Supabase: Filtering by asset_class:', assetClass);
   }
 
   const { data, error } = await query.order('exit_time', { ascending: true });
 
   if (error) {
-    console.error('Error fetching cumulative P&L:', error);
+    console.error('Supabase: Error fetching cumulative P&L:', error);
     return [];
   }
 
-  if (!data || data.length === 0) return [];
+  console.log('Supabase: Found', data?.length || 0, 'trades in the last', days, 'days');
+  if (data && data.length > 0) {
+    console.log('Supabase: Trades data:', data.map(t => ({
+      symbol: t.symbol,
+      exit_time: t.exit_time,
+      pnl_usd: t.pnl_usd,
+      asset_class: t.asset_class,
+      exchange: t.exchange
+    })));
+  }
+
+  if (!data || data.length === 0) {
+    console.log('Supabase: No trades found - chart will show empty state');
+    return [];
+  }
 
   // Calculate cumulative P&L
   let cumulative = 0;
   const result = data.map(trade => {
-    cumulative += trade.pnl_usd;
+    cumulative += trade.pnl_usd || 0;
     return {
       date: new Date(trade.exit_time).toLocaleDateString(),
       cumulative_pnl: parseFloat(cumulative.toFixed(2))
     };
   });
+
+  console.log('Supabase: Cumulative P&L result:', result);
+  console.log('Supabase: Final cumulative P&L:', result[result.length - 1]?.cumulative_pnl);
 
   return result;
 }
@@ -295,9 +316,57 @@ export async function getTodaysStats(assetClass?: AssetClass) {
     };
   }
 
-  const todayPnL = todaysTrades.reduce((sum, trade) => sum + trade.pnl_usd, 0);
+  // Log today's trades for debugging
+  console.log('Supabase: Today\'s trades for stats:', todaysTrades.map(t => ({
+    id: t.id,
+    symbol: t.symbol,
+    pnl_usd: t.pnl_usd,
+    entry_price: t.entry_price,
+    exit_price: t.exit_price,
+    quantity: t.quantity,
+    side: t.side,
+    exchange: t.exchange,
+    asset_class: t.asset_class,
+    position_size_usd: t.position_size_usd,
+    exit_time: t.exit_time,
+    notes: t.notes
+  })));
+  
+  // Log trades with suspiciously large P&L values
+  const suspiciousTrades = todaysTrades.filter(t => Math.abs(t.pnl_usd || 0) > 1000);
+  if (suspiciousTrades.length > 0) {
+    console.warn('Supabase: Found trades with suspiciously large P&L values:', suspiciousTrades.map(t => ({
+      id: t.id,
+      symbol: t.symbol,
+      pnl_usd: t.pnl_usd,
+      entry_price: t.entry_price,
+      exit_price: t.exit_price,
+      quantity: t.quantity,
+      position_size_usd: t.position_size_usd,
+      exchange: t.exchange,
+      notes: t.notes,
+      // Calculate what the P&L should be based on entry/exit
+      calculated_pnl: t.entry_price && t.exit_price && t.quantity ? 
+        (t.side === 'BUY' ? (t.exit_price - t.entry_price) * t.quantity : (t.entry_price - t.exit_price) * t.quantity) : 
+        'N/A'
+    })));
+  }
+
+  const todayPnL = todaysTrades.reduce((sum, trade) => {
+    const pnl = trade.pnl_usd || 0;
+    console.log(`Supabase: Adding trade ${trade.symbol} P&L: $${pnl} (total so far: ${sum + pnl})`);
+    return sum + pnl;
+  }, 0);
+  
   const winners = todaysTrades.filter(t => t.is_winner).length;
   const winRate = (winners / todaysTrades.length) * 100;
+
+  console.log('Supabase: Today\'s stats calculated:', {
+    todayPnL,
+    winRate,
+    totalTrades: todaysTrades.length,
+    winners
+  });
 
   return {
     todayPnL: parseFloat(todayPnL.toFixed(2)),
@@ -488,16 +557,26 @@ export async function updateStrategyPineScript(id: string, pineScript: string, v
  * Delete a strategy
  */
 export async function deleteStrategy(id: string): Promise<boolean> {
-  const { error } = await supabase
+  console.log('Deleting strategy with ID:', id);
+  
+  const { data, error } = await supabase
     .from('strategies')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .select();
 
   if (error) {
     console.error('Error deleting strategy:', error);
+    console.error('Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     return false;
   }
 
+  console.log('Strategy deleted successfully:', data);
   return true;
 }
 
