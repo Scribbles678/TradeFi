@@ -1,22 +1,55 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
         <h1 class="text-3xl font-bold">Trading Strategies</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Manage your trading strategies and Pine Scripts</p>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">
+          Manage your own strategies or explore the marketplace
+        </p>
       </div>
-      <UButton
-        icon="i-heroicons-plus"
-        label="Add Strategy"
-        size="md"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-        @click="openAddStrategyModal"
-      />
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="bg-gray-900/40 border border-gray-700 rounded-2xl p-1 flex items-center">
+          <button
+            v-for="view in strategyViews"
+            :key="view.key"
+            @click="strategyView = view.key"
+            :class="[
+              'px-4 py-2 text-sm font-semibold rounded-2xl transition-all',
+              strategyView === view.key
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white'
+            ]"
+          >
+            {{ view.label }}
+          </button>
+        </div>
+        <UButton
+          v-if="strategyView === 'your'"
+          icon="i-heroicons-plus"
+          label="Add Strategy"
+          size="md"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+          @click="openAddStrategyModal"
+        />
+      </div>
     </div>
 
+    <!-- Marketplace Banner -->
+    <UAlert
+      v-if="strategyView === 'marketplace'"
+      icon="i-heroicons-megaphone"
+      title="Marketplace Strategies (Alpha)"
+      description="Discover entrepreneurs offering their automated alerts for a revenue share. Due diligence recommended before subscribing."
+      color="info"
+      variant="soft"
+    />
+
     <!-- Strategy List Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div
+      v-if="strategyView === 'your'"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+    >
       <UCard
         v-for="strategy in strategies"
         :key="strategy.id"
@@ -153,6 +186,104 @@
             class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
             @click="openAddStrategyModal"
           />
+        </div>
+      </UCard>
+    </div>
+
+    <!-- Marketplace Strategies -->
+    <div
+      v-else
+      class="grid grid-cols-1 md:grid-cols-2 gap-6"
+    >
+      <UCard
+        v-for="strategy in marketplaceStrategies"
+        :key="strategy.id"
+        class="border border-yellow-500/20 bg-gradient-to-br from-slate-900/60 to-slate-800/40"
+      >
+        <template #header>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <UIcon :name="strategy.traderIcon" class="w-5 h-5 text-yellow-400" />
+                <span class="text-xs text-yellow-400 font-semibold uppercase tracking-wide">
+                  Featured Trader
+                </span>
+              </div>
+              <h3 class="text-xl font-semibold text-white mt-1">{{ strategy.name }}</h3>
+              <p class="text-sm text-gray-400">{{ strategy.tradingStyle }}</p>
+            </div>
+            <div class="text-right space-y-1">
+              <UBadge color="success" size="sm">{{ strategy.royalty }}% Royalty</UBadge>
+              <p class="text-xs text-gray-500">Tracked {{ strategy.trackedDuration }}</p>
+            </div>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-sm text-gray-300">
+            {{ strategy.description }}
+          </p>
+
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="bg-black/20 rounded-lg p-3 border border-gray-700/50">
+              <p class="text-xs text-gray-400">Live Trades</p>
+              <p class="text-xl font-bold text-white">{{ strategy.liveTrades }}</p>
+            </div>
+            <div class="bg-black/20 rounded-lg p-3 border border-gray-700/50">
+              <p class="text-xs text-gray-400">Win Rate</p>
+              <p class="text-xl font-bold text-green-400">{{ strategy.winRate }}%</p>
+            </div>
+            <div class="bg-black/20 rounded-lg p-3 border border-gray-700/50">
+              <p class="text-xs text-gray-400">Total Profit</p>
+              <p
+                class="text-xl font-bold"
+                :class="strategy.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'"
+              >
+                {{ strategy.totalProfit >= 0 ? '+' : '' }}${{ strategy.totalProfit.toLocaleString() }}
+              </p>
+            </div>
+            <div class="bg-black/20 rounded-lg p-3 border border-gray-700/50">
+              <p class="text-xs text-gray-400">Tracked Length</p>
+              <p class="text-xl font-bold text-white">{{ strategy.trackedDuration }}</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-700/50">
+            <UBadge
+              v-for="asset in strategy.assetClasses"
+              :key="asset"
+              color="neutral"
+              variant="outline"
+              size="xs"
+            >
+              {{ asset.toUpperCase() }}
+            </UBadge>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-3">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-user-circle" class="w-5 h-5 text-gray-400" />
+              <div>
+                <p class="text-sm font-semibold text-white">{{ strategy.trader }}</p>
+                <p class="text-xs text-gray-500">{{ strategy.traderExperience }}</p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <UButton
+                label="View Trader Bio"
+                variant="outline"
+                size="sm"
+                @click="viewTraderBio(strategy)"
+              />
+              <UButton
+                label="Request Access"
+                icon="i-heroicons-bolt"
+                size="sm"
+                class="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+                @click="requestAccess(strategy)"
+              />
+            </div>
+          </div>
         </div>
       </UCard>
     </div>
@@ -321,6 +452,14 @@ import {
   type Strategy
 } from '~/utils/supabase';
 
+// View toggle
+const strategyViews = [
+  { key: 'your' as const, label: 'Your Strategies' },
+  { key: 'marketplace' as const, label: 'Marketplace Strategies' }
+];
+
+const strategyView = ref<'your' | 'marketplace'>('your');
+
 // State
 const strategies = ref<Strategy[]>([]);
 const showPineScriptModal = ref(false);
@@ -331,6 +470,74 @@ const pineScriptCode = ref('');
 const pineScriptVersion = ref('v5');
 const saving = ref(false);
 const pineScriptModalPosition = ref<{ x: number; y: number; width: number } | null>(null);
+
+interface MarketplaceStrategy {
+  id: string;
+  name: string;
+  tradingStyle: string;
+  description: string;
+  liveTrades: number;
+  winRate: number;
+  totalProfit: number;
+  assetClasses: string[];
+  royalty: number;
+  trackedDuration: string;
+  trader: string;
+  traderExperience: string;
+  traderIcon: string;
+  bio: string;
+}
+
+const marketplaceStrategies = ref<MarketplaceStrategy[]>([
+  {
+    id: 'mp-1',
+    name: 'Aurora Momentum Grid',
+    tradingStyle: 'High-frequency crypto momentum scalper',
+    description: 'Targets micro-trends on Aster DEX with adaptive position sizing and trailing exits.',
+    liveTrades: 187,
+    winRate: 72.4,
+    totalProfit: 42850,
+    assetClasses: ['crypto', 'futures'],
+    royalty: 12,
+    trackedDuration: '9 months',
+    trader: 'NovaQuant Labs',
+    traderExperience: 'Quant fund, est. 2018',
+    traderIcon: 'i-heroicons-sparkles',
+    bio: 'NovaQuant specializes in cross-exchange arbitrage and high-frequency execution, running validator infrastructure since 2019.'
+  },
+  {
+    id: 'mp-2',
+    name: 'Atlas Macro Swing',
+    tradingStyle: 'Macro swing trader focusing on FX & commodities',
+    description: 'Combines OANDA FX positions with hedged futures exposure to ride macro cycles.',
+    liveTrades: 64,
+    winRate: 61.2,
+    totalProfit: 18320,
+    assetClasses: ['forex', 'futures'],
+    royalty: 8,
+    trackedDuration: '14 months',
+    trader: 'Atlas Collective',
+    traderExperience: 'Former buy-side macro desk',
+    traderIcon: 'i-heroicons-globe-alt',
+    bio: 'Team of ex-hedge fund macro traders, publishing weekly global macro notes and risk briefings.'
+  },
+  {
+    id: 'mp-3',
+    name: 'Theta Harvest Options',
+    tradingStyle: 'Delta-neutral options income with Tradier',
+    description: 'Focuses on weekly iron condors with dynamic hedging to capture time decay.',
+    liveTrades: 42,
+    winRate: 58.9,
+    totalProfit: 9650,
+    assetClasses: ['options', 'stocks'],
+    royalty: 15,
+    trackedDuration: '6 months',
+    trader: 'Sierra Volatility Desk',
+    traderExperience: 'Options educator & prop trader',
+    traderIcon: 'i-heroicons-scale',
+    bio: 'Sierra runs a private options lab teaching risk-defined structures and provides detailed playbooks for each campaign.'
+  }
+]);
 
 
 // Form state
@@ -553,6 +760,14 @@ async function deleteStrategyConfirm(strategy: Strategy) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     alert(`Error deleting strategy: ${errorMessage}. Please check the console for details and ensure database permissions are set correctly.`);
   }
+}
+
+function viewTraderBio(strategy: MarketplaceStrategy) {
+  alert(`${strategy.trader} Bio:\n\n${strategy.bio}`);
+}
+
+function requestAccess(strategy: MarketplaceStrategy) {
+  alert(`Request submitted for ${strategy.name}. We'll notify ${strategy.trader}. (Mock action)`);
 }
 
 // Helper function for status colors

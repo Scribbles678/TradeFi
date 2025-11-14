@@ -27,13 +27,38 @@ Real-time analytics and monitoring dashboard for automated trading bots, startin
                             └──────────────────┘
 ```
 
+## Supabase Table Inventory
+
+Run this in Supabase (SQL editor or psql) to confirm the dashboard schema:
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+```
+
+Expected tables:
+- `positions`, `positions_summary`
+- `strategies`
+- `todays_trades`
+- `trade_settings_global`, `trade_settings_exchange`
+- `trade_stats`
+- `trades`
+- `tradier_option_trades`
+
+Schema snapshots for each table live in `tradefi/schema/`. Regenerate those files whenever you change the Supabase schema so the repo stays authoritative.
+
 ## Phase 1 MVP Features ✅
 
 **Currently Implemented:**
 - 📊 **Real-Time Stats Overview** - Today's P&L, Win Rate, Open Positions count, Total Trades
 - 📈 **Open Positions Table** - Live positions with unrealized P&L (updates every 30s)
-- 📜 **Recent Trades History** - Last 20 trades with P&L
+- 🔁 **Trades Card Toggle** - Switch between Recent Trades and Open Trades
 - 📉 **Simple P&L Chart** - Cumulative P&L over time (7 or 30 days)
+- 🧮 **Account Hub Tabs** - Overview, Exchange Accounts, API Keys, Webhook, Subscription
+- ⚙️ **Trade Settings Page** - Global + per-exchange controls mapped to Sparky's Supabase schema (currently mock wiring)
+- 🧠 **Strategies Marketplace Preview** - Entrepreneur cards with royalty + bio metadata
 - ⚡ **Auto-Refresh** - Dashboard refreshes every 30 seconds
 - 🎨 **Modern UI** - Built with Nuxt UI and Tailwind CSS
 
@@ -69,8 +94,28 @@ Create `.env` file in the project root:
 SUPABASE_URL=https://yfzfdvghkhctzqjtwajy.supabase.co
 SUPABASE_ANON_KEY=your_anon_key_here
 
-# Optional: Bot URL for direct API queries
-SPARKY_BOT_URL=http://your-vps-ip:3000
+# Sparky bot (optional)
+SPARKY_BOT_URL=http://localhost:3000
+
+# Aster DEX (Crypto)
+ASTER_API_KEY=your_aster_key
+ASTER_API_SECRET=your_aster_secret
+
+# OANDA (Forex)
+OANDA_API_KEY=your_oanda_token
+OANDA_ACCOUNT_ID=101-001-28692540-001
+OANDA_BASE_URL=https://api-fxpractice.oanda.com
+
+# Tradier (Stocks/Options)
+TRADIER_TOKEN=your_tradier_token
+TRADIER_ACCOUNT_ID=VA55402267
+
+# Tasty Trade (Futures)
+TASTYTRADE_CLIENT_ID=your_client_id
+TASTYTRADE_CLIENT_SECRET=your_client_secret
+TASTYTRADE_USERNAME=your_username
+TASTYTRADE_PASSWORD=your_password
+TASTYTRADE_ACCOUNT_ID=your_account_id
 ```
 
 **Important:** Use the **anon key** (NOT service role key) for the dashboard. The bot uses service role key for write access.
@@ -89,6 +134,18 @@ Dashboard will be available at **http://localhost:3001**
 npm run build
 npm run preview
 ```
+
+## Navigation & Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Dashboard overview (stats, positions, trades, P&L chart) |
+| `/account` | Five-tab account hub (Overview, Exchange Accounts, API Keys, Webhook, Subscription) |
+| `/trade-settings` | Global + per-exchange controls mapped to Sparky’s `trade_settings_*` tables |
+| `/strategies` | Strategy manager + marketplace toggle |
+| `/performance` | Analytics, win rate, P&L breakdown |
+| `/positions-summary` | Detailed positions view |
+| `/sparky-dashboard` | Legacy Sparky bot view |
 
 ## How It Works with Sparky Bot
 
@@ -127,6 +184,9 @@ npm run preview
 
 **Dashboard Pages:**
 - `app/pages/index.vue` - Main dashboard (Phase 1 MVP)
+- `app/pages/account.vue` - Tabbed account center (Overview, Exchange Accounts, API Keys, Webhook, Subscription)
+- `app/pages/trade-settings.vue` - Trade policy editor aligned with Sparky's trade settings tables
+- `app/pages/strategies.vue` - Strategy manager + marketplace toggle
 - `app/pages/sparky-dashboard.vue` - Alternative dashboard view
 - `app/pages/positions-summary.vue` - Positions detail view
 
@@ -182,7 +242,34 @@ setInterval(async () => {
 
 This syncs with Sparky Bot's position updater (also 30s).
 
+### Account Hub (/account)
+- **Overview** – profile, subscription, usage limits snapshot.
+- **Exchange Accounts** – real-time balances and connection diagnostics.
+- **API Keys** – placeholder management UI for exchange credentials (wires into Supabase soon).
+- **Webhook** – copy/regenerate TradingView webhook URL/secret + JSON template.
+- **Subscription** – mock billing table with plan comparison ahead of SaaS rollout.
+
+### Trade Settings (/trade-settings)
+- Global defaults + per-exchange controls exposed via sliders/inputs.
+- Mirrors the schema in `/Sparky/supabase-trade-settings.sql` (`trade_settings_global` + `trade_settings_exchange` tables).
+- Save/Reset currently log/alert; when Sparky ingests the tables these controls become authoritative.
+
+### Strategies (/strategies)
+- **Your Strategies** – existing CRUD, Pine Script editor, status toggles.
+- **Marketplace Strategies** – entrepreneur cards describing trading style, live trades, win rate, total profit, royalty %, asset class pills, tracking length, and trader bios. Data is mocked while we design onboarding + revenue share flow.
+
 ## API Endpoints
+
+### Dashboard APIs
+- `GET /api/balance/aster` – Aster DEX account balance
+- `GET /api/balance/aster-positions` – Aster positions
+- `GET /api/balance/oanda` – OANDA balance
+- `GET /api/balance/oanda-positions` – OANDA positions
+- `GET /api/balance/tradier` – Tradier balance (stocks/options)
+- `GET /api/balance/tastytrade` – Tasty Trade balance (futures)
+- `GET /api/balances` – Aggregated balances (filters disabled exchanges)
+- `POST /api/trades/save` – Bot trade logging endpoint
+- `POST /api/positions/save` – Bot position logging endpoint
 
 ### Dashboard Server Routes
 
@@ -405,6 +492,18 @@ npm install
 - [ ] Portfolio management
 - [ ] Social trading features
 
+## Operations Handbook
+
+- See `OPERATIONS_HANDBOOK.md` for trade logging steps, troubleshooting checklists, Supabase permission scripts, and table-inventory queries.
+- Update that handbook (and this README) any time you change API endpoints, logging flows, or Supabase schemas. If it’s not documented, it didn’t happen.
+
+## Documentation Maintenance
+
+- Every time we add/modify a feature (example: account tabs, Trade Settings UI, strategy marketplace) we update **all** markdown context files (`README`, `Quick Start`, `Project Deep Dive`, `Troubleshooting`, etc.) in the same PR.  
+- Trade settings now map to Sparky's `trade_settings_global` + `trade_settings_exchange` tables (`/Sparky/supabase-trade-settings.sql`); document schema or UI changes immediately.  
+- Sparky recently added `supabase-option-trades.sql` for Tradier options logging—be sure documentation references any new tables/API endpoints so the two repos stay in lockstep.
+- SQL snapshots for each table live in the `/schema` directory of this repo. Regenerate them from Supabase after making schema changes so the repository stays authoritative.
+
 ## Contributing
 
 This is a personal project, but contributions welcome!
@@ -426,6 +525,6 @@ MIT
 
 ---
 
-**Last Updated:** October 20, 2025  
+**Last Updated:** November 14, 2025  
 **Version:** 1.0.0 (Phase 1 MVP Complete)  
 **Status:** Production Ready ✅
