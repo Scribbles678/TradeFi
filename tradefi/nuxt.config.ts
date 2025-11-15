@@ -43,9 +43,11 @@ export default defineNuxtConfig({
     tastytradeAccountId: process.env.TASTYTRADE_ACCOUNT_ID,
     // Sparky Bot (for health checks)
     sparkyBotUrl: process.env.SPARKY_BOT_URL || 'http://localhost:3000',
+    // Supabase service role key stays server-side only
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     public: {
-      supabaseUrl: process.env.SUPABASE_URL || 'https://yfzfdvghkhctzqjtwajy.supabase.co',
-      supabaseKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmemZkdmdoa2hjdHpxanR3YWp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4OTI0NjUsImV4cCI6MjA3NjQ2ODQ2NX0.CpOU5V-kkzHQA4Z-hQ51rXQlyPlQHaRQHynAU6E6UiU'
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseKey: process.env.SUPABASE_ANON_KEY
     }
   },
 

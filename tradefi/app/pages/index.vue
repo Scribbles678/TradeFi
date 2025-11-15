@@ -102,7 +102,7 @@
             
             <div>
               <div class="flex items-center justify-center gap-2 mb-2">
-                <UIcon name="i-heroicons-target" class="w-4 h-4 text-green-400" />
+                <UIcon name="i-heroicons-star" class="w-4 h-4 text-green-400" />
                 <p class="text-sm text-green-300 font-medium">Win Rate</p>
               </div>
               <div 
@@ -251,36 +251,20 @@
               >
                 30D
               </UButton>
-              <div class="flex gap-2">
-                <UButton
-                  size="sm"
-                  @click="syncTrades"
-                  :disabled="isSyncingTrades || isFixingPnl"
-                  :class="[
-                    'font-medium',
-                    (isSyncingTrades || isFixingPnl)
-                      ? 'bg-gray-500 cursor-not-allowed text-white' 
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                  ]"
-                >
-                  <span v-if="isSyncingTrades">Syncing...</span>
-                  <span v-else>Sync Trades</span>
-                </UButton>
-                <UButton
-                  size="sm"
-                  @click="fixPnl"
-                  :disabled="isSyncingTrades || isFixingPnl"
-                  :class="[
-                    'font-medium',
-                    (isSyncingTrades || isFixingPnl)
-                      ? 'bg-gray-500 cursor-not-allowed text-white' 
-                      : 'bg-orange-600 hover:bg-orange-700 text-white'
-                  ]"
-                >
-                  <span v-if="isFixingPnl">Fixing...</span>
-                  <span v-else>Fix P&L</span>
-                </UButton>
-              </div>
+              <UButton
+                size="sm"
+                @click="syncTrades"
+                :disabled="isSyncingTrades"
+                :class="[
+                  'font-medium',
+                  isSyncingTrades
+                    ? 'bg-gray-500 cursor-not-allowed text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                ]"
+              >
+                <span v-if="isSyncingTrades">Syncing...</span>
+                <span v-else>Sync Trades</span>
+              </UButton>
             </div>
           </div>
         </template>
@@ -496,7 +480,6 @@ const totalBalance = ref(0);
 const tradeView = ref<'recent' | 'open'>('recent');
 const pnlView = ref<'realized' | 'unrealized'>('realized');
 const isSyncingTrades = ref(false);
-const isFixingPnl = ref(false);
 
 // Computed property for portfolio description
 const portfolioDescription = computed(() => {
@@ -1151,37 +1134,6 @@ async function syncTrades() {
     alert('Error syncing trades. Check console for details.');
   } finally {
     isSyncingTrades.value = false;
-  }
-}
-
-// Fix P&L for existing trades with incorrect values
-async function fixPnl() {
-  try {
-    isFixingPnl.value = true;
-    console.log('Dashboard: Fixing P&L for existing trades...');
-    
-    const response = await $fetch('/api/trades/fix-pnl', {
-      method: 'GET'
-    });
-    
-    if (response.success) {
-      console.log('Dashboard: P&L fix successful:', response);
-      // Reload chart data to show corrected trades
-      await loadChartData();
-      // Reload data to refresh recent trades with corrected P&L
-      await loadData();
-      
-      // Show success message
-      alert(`Successfully fixed ${response.fixed || 0} trades!`);
-    } else {
-      console.error('Dashboard: P&L fix failed:', response.error);
-      alert(`P&L fix failed: ${response.error || 'Unknown error'}`);
-    }
-  } catch (error) {
-    console.error('Dashboard: Error fixing P&L:', error);
-    alert('Error fixing P&L. Check console for details.');
-  } finally {
-    isFixingPnl.value = false;
   }
 }
 

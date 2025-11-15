@@ -57,7 +57,7 @@ Schema snapshots for each table live in `tradefi/schema/`. Regenerate those file
 - 🔁 **Trades Card Toggle** - Switch between Recent Trades and Open Trades
 - 📉 **Simple P&L Chart** - Cumulative P&L over time (7 or 30 days)
 - 🧮 **Account Hub Tabs** - Overview, Exchange Accounts, API Keys, Webhook, Subscription
-- ⚙️ **Trade Settings Page** - Global + per-exchange controls mapped to Sparky's Supabase schema (currently mock wiring)
+- ⚙️ **Trade Settings Page** - Global + per-exchange controls persisted to Sparky's `trade_settings_*` tables (live source of truth)
 - 🧠 **Strategies Marketplace Preview** - Entrepreneur cards with royalty + bio metadata
 - ⚡ **Auto-Refresh** - Dashboard refreshes every 30 seconds
 - 🎨 **Modern UI** - Built with Nuxt UI and Tailwind CSS
@@ -93,6 +93,7 @@ Create `.env` file in the project root:
 # Supabase (Read-Only Access)
 SUPABASE_URL=https://yfzfdvghkhctzqjtwajy.supabase.co
 SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here # server-only, never expose to browsers
 
 # Sparky bot (optional)
 SPARKY_BOT_URL=http://localhost:3000
@@ -118,7 +119,7 @@ TASTYTRADE_PASSWORD=your_password
 TASTYTRADE_ACCOUNT_ID=your_account_id
 ```
 
-**Important:** Use the **anon key** (NOT service role key) for the dashboard. The bot uses service role key for write access.
+**Important:** The browser uses the **anon key** for read-only access. All writes (trade logging, Trade Settings, etc.) flow through Nuxt server routes that inject the **SUPABASE_SERVICE_ROLE_KEY**, so never expose that key outside the server runtime.
 
 ### 3. Run Development Server
 
@@ -144,7 +145,6 @@ npm run preview
 | `/trade-settings` | Global + per-exchange controls mapped to Sparky’s `trade_settings_*` tables |
 | `/strategies` | Strategy manager + marketplace toggle |
 | `/performance` | Analytics, win rate, P&L breakdown |
-| `/positions-summary` | Detailed positions view |
 | `/sparky-dashboard` | Legacy Sparky bot view |
 
 ## How It Works with Sparky Bot
@@ -188,7 +188,6 @@ npm run preview
 - `app/pages/trade-settings.vue` - Trade policy editor aligned with Sparky's trade settings tables
 - `app/pages/strategies.vue` - Strategy manager + marketplace toggle
 - `app/pages/sparky-dashboard.vue` - Alternative dashboard view
-- `app/pages/positions-summary.vue` - Positions detail view
 
 **Utilities:**
 - `app/utils/supabase.ts` - Database client & query functions
@@ -250,9 +249,9 @@ This syncs with Sparky Bot's position updater (also 30s).
 - **Subscription** – mock billing table with plan comparison ahead of SaaS rollout.
 
 ### Trade Settings (/trade-settings)
-- Global defaults + per-exchange controls exposed via sliders/inputs.
-- Mirrors the schema in `/Sparky/supabase-trade-settings.sql` (`trade_settings_global` + `trade_settings_exchange` tables).
-- Save/Reset currently log/alert; when Sparky ingests the tables these controls become authoritative.
+- Exchange-specific controls for Aster, OANDA, Tradier (equities/options), and Tradier Options.
+- Mirrors the schema in `/Sparky/supabase-trade-settings.sql` (`trade_settings_exchange` table) and writes directly to that table using the server-side Supabase service key.
+- Save/Reset updates Sparky's live trading config immediately; changes propagate the next time the bot polls Supabase.
 
 ### Strategies (/strategies)
 - **Your Strategies** – existing CRUD, Pine Script editor, status toggles.
@@ -313,6 +312,7 @@ Response:
 runtimeConfig: {
   // Server-side only
   sparkyBotUrl: process.env.SPARKY_BOT_URL || 'http://localhost:3000',
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   
   // Public (exposed to client)
   public: {
@@ -322,11 +322,14 @@ runtimeConfig: {
 }
 ```
 
+Nuxt only exposes the `public` block to the browser. Anything that writes to Supabase (trade logging, Trade Settings saves, etc.) runs through server routes that read `runtimeConfig.supabaseServiceRoleKey`, so the service credential never leaves the server.
+
 ### Environment Variables
 
 **Required:**
 - `SUPABASE_URL` - Your Supabase project URL
 - `SUPABASE_ANON_KEY` - Supabase anonymous key (read-only)
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (server-only writes)
 
 **Optional:**
 - `SPARKY_BOT_URL` - Sparky bot API endpoint (defaults to localhost:3000)
@@ -341,7 +344,7 @@ tradefi/
 │   ├── pages/
 │   │   ├── index.vue              # Main dashboard (Phase 1)
 │   │   ├── sparky-dashboard.vue   # Alternative view
-│   │   └── positions-summary.vue  # Positions detail
+│   │   └── account.vue            # Account hub
 │   ├── utils/
 │   │   └── supabase.ts           # Database client & queries
 │   └── assets/

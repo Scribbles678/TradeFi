@@ -1,14 +1,57 @@
 /**
- * Supabase Client for TradeFI Dashboard
- * Read-only access to Sparky trading data
+ * Supabase Client helpers for TradeFI Dashboard
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { useRuntimeConfig } from '#imports';
 
-const supabaseUrl = 'https://yfzfdvghkhctzqjtwajy.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmemZkdmdoa2hjdHpxanR3YWp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4OTI0NjUsImV4cCI6MjA3NjQ2ODQ2NX0.CpOU5V-kkzHQA4Z-hQ51rXQlyPlQHaRQHynAU6E6UiU';
+let supabaseClient: SupabaseClient | null = null;
+let serviceSupabaseClient: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+function assertSupabaseEnv(url?: string, key?: string) {
+  if (!url || !key) {
+    throw new Error(
+      'Supabase environment variables are missing. Ensure SUPABASE_URL and SUPABASE_ANON_KEY are set.'
+    );
+  }
+}
+
+export function useSupabaseClient(): SupabaseClient {
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  const config = useRuntimeConfig();
+  const url = config.public.supabaseUrl;
+  const key = config.public.supabaseKey;
+  assertSupabaseEnv(url, key);
+
+  supabaseClient = createClient(url as string, key as string);
+  return supabaseClient;
+}
+
+export function useServiceSupabaseClient(): SupabaseClient {
+  if (import.meta.client) {
+    throw new Error('The Supabase service role client can only be used server-side.');
+  }
+
+  if (serviceSupabaseClient) {
+    return serviceSupabaseClient;
+  }
+
+  const config = useRuntimeConfig();
+  const url = config.public.supabaseUrl;
+  const key = config.supabaseServiceRoleKey;
+
+  if (!url || !key) {
+    throw new Error(
+      'Supabase service role configuration is missing. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment.'
+    );
+  }
+
+  serviceSupabaseClient = createClient(url as string, key as string);
+  return serviceSupabaseClient;
+}
 
 // Asset Class Type
 export type AssetClass = 'forex' | 'crypto' | 'options' | 'stocks' | 'futures';
@@ -125,6 +168,7 @@ export interface Strategy {
  * Filters by exchange (aster, oanda, tradier) or asset_class (crypto, forex, options)
  */
 export async function getOpenPositions(assetClass?: AssetClass): Promise<Position[]> {
+  const supabase = useSupabaseClient();
   let query = supabase
     .from('positions')
     .select('*');
@@ -156,6 +200,7 @@ export async function getOpenPositions(assetClass?: AssetClass): Promise<Positio
  * Filters by exchange (aster, oanda, tradier) or asset_class (crypto, forex, options)
  */
 export async function getRecentTrades(limit = 20, assetClass?: AssetClass): Promise<Trade[]> {
+  const supabase = useSupabaseClient();
   let query = supabase
     .from('trades')
     .select('*');
@@ -181,6 +226,7 @@ export async function getRecentTrades(limit = 20, assetClass?: AssetClass): Prom
  * Fetch trades for a specific date range
  */
 export async function getTradesByDateRange(startDate: string, endDate: string): Promise<Trade[]> {
+  const supabase = useSupabaseClient();
   const { data, error } = await supabase
     .from('trades')
     .select('*')
@@ -204,6 +250,7 @@ export async function getTodaysTrades(assetClass?: AssetClass): Promise<Trade[]>
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
+  const supabase = useSupabaseClient();
   let query = supabase
     .from('trades')
     .select('*')
@@ -228,6 +275,7 @@ export async function getTodaysTrades(assetClass?: AssetClass): Promise<Trade[]>
  * Fetch overall trading statistics
  */
 export async function getTradeStats(): Promise<TradeStats | null> {
+  const supabase = useSupabaseClient();
   const { data, error } = await supabase
     .from('trade_stats')
     .select('*')
@@ -252,6 +300,7 @@ export async function getCumulativePnL(days = 30, assetClass?: AssetClass): Prom
   console.log('Supabase: Fetching cumulative P&L for', days, 'days', assetClass ? `(filter: ${assetClass})` : '(all asset classes)');
   console.log('Supabase: Start date:', startDate.toISOString());
 
+  const supabase = useSupabaseClient();
   let query = supabase
     .from('trades')
     .select('exit_time, pnl_usd, symbol, asset_class, exchange')
@@ -385,6 +434,7 @@ export async function getTodaysStats(assetClass?: AssetClass) {
  * Fetch all strategies
  */
 export async function getStrategies(assetClass?: AssetClass): Promise<Strategy[]> {
+  const supabase = useSupabaseClient();
   let query = supabase
     .from('strategies')
     .select('*');
@@ -407,6 +457,7 @@ export async function getStrategies(assetClass?: AssetClass): Promise<Strategy[]
  * Fetch a single strategy by ID
  */
 export async function getStrategy(id: string): Promise<Strategy | null> {
+  const supabase = useSupabaseClient();
   const { data, error } = await supabase
     .from('strategies')
     .select('*')
@@ -425,6 +476,7 @@ export async function getStrategy(id: string): Promise<Strategy | null> {
  * Create a new strategy
  */
 export async function createStrategy(strategy: Partial<Strategy>): Promise<Strategy | null> {
+  const supabase = useSupabaseClient();
   const { data, error } = await supabase
     .from('strategies')
     .insert([strategy])
@@ -443,6 +495,7 @@ export async function createStrategy(strategy: Partial<Strategy>): Promise<Strat
  * Update a strategy
  */
 export async function updateStrategy(id: string, updates: Partial<Strategy>): Promise<Strategy | null> {
+  const supabase = useSupabaseClient();
   const { data, error } = await supabase
     .from('strategies')
     .update(updates)
@@ -462,6 +515,7 @@ export async function updateStrategy(id: string, updates: Partial<Strategy>): Pr
  * Save a trade to the database
  */
 export async function saveTrade(trade: Partial<Trade>): Promise<Trade | null> {
+  const supabase = useServiceSupabaseClient();
   const { data, error } = await supabase
     .from('trades')
     .insert([trade])
@@ -481,6 +535,7 @@ export async function saveTrade(trade: Partial<Trade>): Promise<Trade | null> {
  * Save multiple trades to the database
  */
 export async function saveTrades(trades: Partial<Trade>[]): Promise<Trade[] | null> {
+  const supabase = useServiceSupabaseClient();
   const { data, error } = await supabase
     .from('trades')
     .insert(trades)
@@ -499,6 +554,7 @@ export async function saveTrades(trades: Partial<Trade>[]): Promise<Trade[] | nu
  * Save a position to the database
  */
 export async function savePosition(position: Partial<Position>): Promise<Position | null> {
+  const supabase = useServiceSupabaseClient();
   const { data, error } = await supabase
     .from('positions')
     .insert([position])
@@ -518,6 +574,7 @@ export async function savePosition(position: Partial<Position>): Promise<Positio
  * Update an existing position
  */
 export async function updatePosition(id: string, updates: Partial<Position>): Promise<Position | null> {
+  const supabase = useServiceSupabaseClient();
   const { data, error } = await supabase
     .from('positions')
     .update(updates)
@@ -537,6 +594,7 @@ export async function updatePosition(id: string, updates: Partial<Position>): Pr
  * Update Pine Script for a strategy
  */
 export async function updateStrategyPineScript(id: string, pineScript: string, version: string = 'v5'): Promise<boolean> {
+  const supabase = useSupabaseClient();
   const { error } = await supabase
     .from('strategies')
     .update({ 
@@ -559,6 +617,7 @@ export async function updateStrategyPineScript(id: string, pineScript: string, v
 export async function deleteStrategy(id: string): Promise<boolean> {
   console.log('Deleting strategy with ID:', id);
   
+  const supabase = useSupabaseClient();
   const { data, error } = await supabase
     .from('strategies')
     .delete()

@@ -6,55 +6,7 @@
       <p class="text-gray-500 dark:text-gray-400">
         Configure how Sparky trades on each exchange. These controls are synced with Supabase and applied by the bot automatically.
       </p>
-      <UAlert
-        v-if="!globalSettingsSynced"
-        icon="i-heroicons-light-bulb"
-        title="Defaults in effect"
-        description="Global settings have not been saved yet; Sparky is using built-in defaults."
-        color="warning"
-        variant="soft"
-      />
     </div>
-
-    <!-- Global Settings Summary -->
-    <UCard>
-      <template #header>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5" />
-            <h3 class="text-lg font-semibold">Global Trading Controls</h3>
-          </div>
-          <UBadge :color="globalSettingsSynced ? 'primary' : 'warning'">
-            {{ globalSettingsSynced ? 'Live' : 'Default' }}
-          </UBadge>
-        </div>
-      </template>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-        <div class="space-y-1">
-          <p class="text-gray-500 dark:text-gray-400">Default Max Trades / Day</p>
-          <p class="text-xl font-semibold">{{ globalSettings.maxTradesDisplay }}</p>
-        </div>
-        <div class="space-y-1">
-          <p class="text-gray-500 dark:text-gray-400">Default Max Position Size</p>
-          <p class="text-xl font-semibold">{{ globalSettings.maxPositionSizeDisplay }}</p>
-        </div>
-        <div class="space-y-1">
-          <p class="text-gray-500 dark:text-gray-400">Default TP / SL</p>
-          <p class="text-xl font-semibold">{{ globalSettings.tpSlDisplay }}</p>
-        </div>
-      </div>
-      <template #footer>
-        <div class="flex items-center justify-between">
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            These defaults apply when an exchange doesn't have overrides saved.
-          </p>
-          <div class="flex gap-2">
-            <UButton icon="i-heroicons-arrow-path" label="Reload" variant="ghost" size="sm" :loading="loading" @click="loadSettings" />
-            <UButton icon="i-heroicons-pencil" label="Edit Global Defaults" variant="outline" size="sm" @click="openGlobalSettings" />
-          </div>
-        </div>
-      </template>
-    </UCard>
 
     <!-- Exchange Configuration -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -67,55 +19,83 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <UIcon :name="exchange.icon" class="w-6 h-6" />
-              <div>
-                <h3 class="text-lg font-semibold">{{ exchange.name }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ exchange.assetClass }}</p>
-              </div>
+              <h3 class="text-lg font-semibold">{{ exchange.name }}</h3>
+              <UBadge color="neutral" variant="outline" size="xs" class="ml-auto">
+                {{ formatAssetClass(exchange.assetClass) }}
+              </UBadge>
             </div>
             <UBadge color="primary" variant="soft">{{ exchange.status }}</UBadge>
           </div>
         </template>
 
-        <div class="space-y-4">
-          <UFormGroup label="Allowed Trading Hours" help="Use presets or switch to manual custom window.">
-            <div class="space-y-2">
-              <USelect
-                v-model="exchange.settings.tradingHours"
-                :options="tradingHourOptions"
-                placeholder="Select trading window"
-              />
-              <div v-if="exchange.settings.tradingHours === 'custom'" class="grid grid-cols-2 gap-2">
-                <UInput v-model="exchange.settings.customWindow[0]" placeholder="Start HH:MM" />
-                <UInput v-model="exchange.settings.customWindow[1]" placeholder="End HH:MM" />
+        <div class="space-y-6">
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-clock" class="w-5 h-5 text-blue-400" />
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Trading Window</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Tell Sparky when it can enter new positions on this exchange.</p>
               </div>
             </div>
-          </UFormGroup>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UFormGroup label="Max Trades per Day" help="0 = unlimited">
-              <UInput v-model.number="exchange.settings.maxTrades" type="number" min="0" placeholder="e.g. 5" />
-            </UFormGroup>
-            <UFormGroup label="Max Position Size (USD)" help="0 = auto sized">
-              <UInput v-model.number="exchange.settings.maxPositionSize" type="number" min="0" step="50" placeholder="e.g. 1000" />
-            </UFormGroup>
+            <div class="rounded-xl border border-blue-500/30 bg-blue-600/5 px-4 py-3 text-sm text-blue-100 flex items-center justify-between">
+              <div>
+                <p class="font-semibold text-blue-200">
+                  Default Window
+                </p>
+                <p class="font-mono text-xs">
+                  <template v-if="isCryptoExchange(exchange)">
+                    24/7
+                  </template>
+                  <template v-else>
+                    {{ getActiveWindow(exchange).start }} → {{ getActiveWindow(exchange).end }} (local time)
+                  </template>
+                </p>
+              </div>
+              <div v-if="isCryptoExchange(exchange)" class="flex items-center gap-2 text-xs">
+                <span>Pause Weekends</span>
+                <USwitch
+                  :model-value="!exchange.settings.allowWeekends"
+                  color="primary"
+                  on-color="primary"
+                  @update:model-value="toggleCryptoWeekends(exchange, $event)"
+                />
+              </div>
+              <div v-else class="flex items-center gap-2 text-xs">
+                <span>Extended Hours</span>
+                <USwitch
+                  :model-value="isExtendedTrading(exchange)"
+                  color="primary"
+                  on-color="primary"
+                  @update:model-value="toggleExtendedTrading(exchange, $event)"
+                />
+              </div>
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UFormGroup label="Take Profit Target (%)" help="Percentage gain to exit winners.">
-              <UInput v-model.number="exchange.settings.takeProfit" type="number" min="0" step="0.1" placeholder="e.g. 2" />
-            </UFormGroup>
-            <UFormGroup label="Stop Loss Target (%)" help="Percentage loss to cut losers.">
-              <UInput v-model.number="exchange.settings.stopLoss" type="number" min="0" step="0.1" placeholder="e.g. 1" />
-            </UFormGroup>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UFormGroup label="Allow Weekends">
-              <UToggle v-model="exchange.settings.allowWeekends" />
-            </UFormGroup>
-            <UFormGroup label="Enable News Filter">
-              <UToggle v-model="exchange.settings.newsFilter" />
-            </UFormGroup>
+          <div class="space-y-3 border-t border-gray-200 dark:border-gray-800 pt-4">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-emerald-400" />
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Risk Controls</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Cap daily exposure and define exit rules.</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UFormField label="Max Trades per Day" help="0 = unlimited. Sparky stops opening new positions after this count.">
+                <UInput v-model.number="exchange.settings.maxTrades" type="number" min="0" placeholder="e.g. 5" />
+              </UFormField>
+              <UFormField label="Max Position Size (USD)" help="Largest single position size. 0 lets Sparky auto-size.">
+                <UInput v-model.number="exchange.settings.maxPositionSize" type="number" min="0" step="50" placeholder="e.g. 1000" />
+              </UFormField>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UFormField label="Take Profit Target (%)" help="Percent gain that triggers profit-taking.">
+                <UInput v-model.number="exchange.settings.takeProfit" type="number" min="0" step="0.1" placeholder="e.g. 2" />
+              </UFormField>
+              <UFormField label="Stop Loss Limit (%)" help="Percent drawdown where Sparky exits the trade.">
+                <UInput v-model.number="exchange.settings.stopLoss" type="number" min="0" step="0.1" placeholder="e.g. 1" />
+              </UFormField>
+            </div>
           </div>
 
           <div v-if="exchange.optionsSpecific" class="space-y-4 border-t border-gray-200 dark:border-gray-800 pt-4">
@@ -124,38 +104,31 @@
               Options Controls
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UFormGroup label="Position Size (% buying power)">
+              <UFormField label="Position Size (% buying power)">
                 <UInput v-model.number="exchange.settings.positionSizePercent" type="number" min="1" />
-              </UFormGroup>
-              <UFormGroup label="Strike Tolerance (%)">
+              </UFormField>
+              <UFormField label="Strike Tolerance (%)">
                 <UInput v-model.number="exchange.settings.strikeTolerancePercent" type="number" min="0.1" step="0.1" />
-              </UFormGroup>
+              </UFormField>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UFormGroup label="Entry Limit Offset (%)" help="How far above the ask to place entry orders.">
+              <UFormField label="Entry Limit Offset (%)" help="How far above the ask to place entry orders.">
                 <UInput v-model.number="exchange.settings.entryLimitOffsetPercent" type="number" min="0.1" step="0.1" />
-              </UFormGroup>
-              <UFormGroup label="Max Signal Age (sec)">
+              </UFormField>
+              <UFormField label="Max Signal Age (sec)">
                 <UInput v-model.number="exchange.settings.maxSignalAgeSec" type="number" min="1" />
-              </UFormGroup>
+              </UFormField>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UFormGroup label="Max Open Positions per Symbol">
+              <UFormField label="Max Open Positions per Symbol">
                 <UInput v-model.number="exchange.settings.maxOpenPositions" type="number" min="1" />
-              </UFormGroup>
-              <UFormGroup label="Auto Close Outside Window">
-                <UToggle v-model="exchange.settings.autoCloseOutsideWindow" />
-              </UFormGroup>
+              </UFormField>
+              <UFormField label="Auto Close Outside Window">
+                <USwitch v-model="exchange.settings.autoCloseOutsideWindow" color="primary" on-color="primary" />
+              </UFormField>
             </div>
           </div>
 
-          <UFormGroup label="Notes">
-            <UTextarea
-              v-model="exchange.settings.notes"
-              placeholder="Add reminders or special instructions..."
-              :rows="3"
-            />
-          </UFormGroup>
         </div>
 
         <template #footer>
@@ -189,7 +162,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { supabase } from '~/utils/supabase'
+import { useSupabaseClient } from '~/utils/supabase'
 
 type ExchangeKey = 'aster' | 'oanda' | 'tradier' | 'tradier_options'
 
@@ -222,32 +195,59 @@ interface ExchangeConfig {
   settings: ExchangeSettings
 }
 
-interface GlobalSettingsSummary {
-  maxTradesDisplay: string
-  maxPositionSizeDisplay: string
-  tpSlDisplay: string
-}
-
 const DEFAULT_WINDOW: [string, string] = ['00:00', '23:59']
 
-const tradingHourOptions = [
-  { label: '24/5 (Default)', value: '24/5' },
-  { label: 'Custom Session (NYSE)', value: 'ny-session' },
-  { label: 'Custom Session (London)', value: 'london-session' },
-  { label: 'Weekends Only (Crypto)', value: 'weekend' },
-  { label: 'Manual Custom Window', value: 'custom' },
-]
+const tradingWindowPresets: Record<string, { label: string; start: string; end: string; description: string }> = {
+  '24/5': {
+    label: '24/5 (Weekdays Only)',
+    start: '00:00',
+    end: '23:59',
+    description: 'Continuous Monday–Friday trading. Typical forex broker schedule.',
+  },
+  '24/7': {
+    label: '24/7 (Always On)',
+    start: '00:00',
+    end: '23:59',
+    description: 'Never stop trading. Ideal for crypto bots that operate around the clock.',
+  },
+  'forex-extended': {
+    label: 'Extended Forex Hours',
+    start: '00:00',
+    end: '23:59',
+    description: 'Enable weekend entries for forex strategies (broker permitting).',
+  },
+  'ny-session': {
+    label: 'NYSE Regular Session',
+    start: '09:30',
+    end: '16:00',
+    description: 'Align entries with U.S. equity market hours (Eastern Time).',
+  },
+  'stocks-extended': {
+    label: 'Extended Equity Hours',
+    start: '07:00',
+    end: '20:00',
+    description: 'Allow pre-market and after-hours participation.',
+  },
+  weekend: {
+    label: 'Weekends Only',
+    start: '00:00',
+    end: '23:59',
+    description: 'Restrict entries to Saturdays and Sundays for niche strategies.',
+  },
+  'london-session': {
+    label: 'London Session',
+    start: '08:00',
+    end: '17:00',
+    description: 'European market hours (UTC).',
+  },
+}
 
 const toast = useToast()
 
 const loading = ref(false)
 const savingKey = ref('')
-const globalSettingsSynced = ref(false)
-const globalSettings = ref<GlobalSettingsSummary>({
-  maxTradesDisplay: 'Unlimited',
-  maxPositionSizeDisplay: '$0',
-  tpSlDisplay: '0% / 0%',
-})
+
+const supabase = useSupabaseClient()
 
 const defaultExchanges: Record<ExchangeKey, ExchangeConfig> = {
   aster: {
@@ -257,7 +257,11 @@ const defaultExchanges: Record<ExchangeKey, ExchangeConfig> = {
     assetClass: 'Crypto Futures',
     status: 'Live',
     lastUpdated: 'Not saved',
-    settings: buildDefaultSettings({ allowWeekends: true }),
+    settings: buildDefaultSettings({
+      tradingHours: '24/7',
+      customWindow: ['00:00', '23:59'],
+      allowWeekends: true,
+    }),
   },
   oanda: {
     key: 'oanda',
@@ -266,7 +270,11 @@ const defaultExchanges: Record<ExchangeKey, ExchangeConfig> = {
     assetClass: 'Forex',
     status: 'Live',
     lastUpdated: 'Not saved',
-    settings: buildDefaultSettings({ tradingHours: 'ny-session' }),
+    settings: buildDefaultSettings({
+      tradingHours: '24/5',
+      customWindow: ['00:00', '23:59'],
+      allowWeekends: false,
+    }),
   },
   tradier: {
     key: 'tradier',
@@ -275,7 +283,11 @@ const defaultExchanges: Record<ExchangeKey, ExchangeConfig> = {
     assetClass: 'Stocks',
     status: 'Paper Trading',
     lastUpdated: 'Not saved',
-    settings: buildDefaultSettings({ tradingHours: 'ny-session' }),
+    settings: buildDefaultSettings({
+      tradingHours: 'ny-session',
+      customWindow: ['09:30', '16:00'],
+      allowWeekends: false,
+    }),
   },
   tradier_options: {
     key: 'tradier_options',
@@ -287,6 +299,7 @@ const defaultExchanges: Record<ExchangeKey, ExchangeConfig> = {
     lastUpdated: 'Not saved',
     settings: buildDefaultSettings({
       tradingHours: 'ny-session',
+      customWindow: ['09:30', '16:00'],
       positionSizePercent: 20,
       strikeTolerancePercent: 1,
       entryLimitOffsetPercent: 1,
@@ -340,45 +353,73 @@ function parseTradingWindow(value: any): [string, string] {
   return [...DEFAULT_WINDOW]
 }
 
-async function loadSettings() {
-  loading.value = true
-  try {
-    await Promise.all([loadGlobalSettings(), loadExchangeSettings()])
-    toast.add({ title: 'Settings refreshed', icon: 'i-heroicons-check-circle', color: 'green' })
-  } catch (error) {
-    console.error(error)
-    toast.add({ title: 'Failed to load settings', description: String(error), color: 'red' })
-  } finally {
-    loading.value = false
+function getPresetInfo(value: string) {
+  return tradingWindowPresets[value]
+}
+
+function applyTradingPreset(exchange: ExchangeConfig, presetKey: string) {
+  const preset = getPresetInfo(presetKey)
+  exchange.settings.tradingHours = presetKey
+  if (preset) {
+    exchange.settings.customWindow = [preset.start, preset.end]
   }
 }
 
-async function loadGlobalSettings() {
-  const { data, error } = await supabase
-    .from('trade_settings_global')
-    .select('*')
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+function isCryptoExchange(exchange: ExchangeConfig) {
+  return exchange.assetClass.toLowerCase().includes('crypto')
+}
 
-  if (error) throw error
+function isForexExchange(exchange: ExchangeConfig) {
+  return exchange.assetClass.toLowerCase().includes('forex')
+}
 
-  if (data) {
-    globalSettingsSynced.value = true
-    globalSettings.value = {
-      maxTradesDisplay: data.max_trades_per_day ? String(data.max_trades_per_day) : 'Unlimited',
-      maxPositionSizeDisplay: data.max_position_size_usd
-        ? formatCurrency(data.max_position_size_usd)
-        : '$0',
-      tpSlDisplay: `${data.take_profit_percent ?? 0}% / ${data.stop_loss_percent ?? 0}%`,
-    }
-  } else {
-    globalSettingsSynced.value = false
-    globalSettings.value = {
-      maxTradesDisplay: 'Unlimited',
-      maxPositionSizeDisplay: '$0',
-      tpSlDisplay: '0% / 0%',
-    }
+function isEquitiesExchange(exchange: ExchangeConfig) {
+  const lower = exchange.assetClass.toLowerCase()
+  return lower.includes('stocks') || lower.includes('options')
+}
+
+function formatAssetClass(label: string) {
+  return label?.toUpperCase() || 'UNKNOWN'
+}
+
+function getActiveWindow(exchange: ExchangeConfig) {
+  const preset = getPresetInfo(exchange.settings.tradingHours)
+  return {
+    title: preset?.label || 'Custom Window',
+    description: preset?.description || 'Custom trading hours configured in Supabase.',
+    start: preset?.start || exchange.settings.customWindow[0],
+    end: preset?.end || exchange.settings.customWindow[1],
+  }
+}
+
+function toggleCryptoWeekends(exchange: ExchangeConfig, pauseWeekends: boolean) {
+  exchange.settings.allowWeekends = !pauseWeekends
+  applyTradingPreset(exchange, pauseWeekends ? '24/5' : '24/7')
+}
+
+function isExtendedTrading(exchange: ExchangeConfig) {
+  return exchange.settings.tradingHours === 'forex-extended' || exchange.settings.tradingHours === 'stocks-extended'
+}
+
+function toggleExtendedTrading(exchange: ExchangeConfig, enabled: boolean) {
+  if (isForexExchange(exchange)) {
+    applyTradingPreset(exchange, enabled ? 'forex-extended' : '24/5')
+    exchange.settings.allowWeekends = enabled
+  } else if (isEquitiesExchange(exchange)) {
+    applyTradingPreset(exchange, enabled ? 'stocks-extended' : 'ny-session')
+  }
+}
+
+async function loadSettings() {
+  loading.value = true
+  try {
+    await loadExchangeSettings()
+    toast.add({ title: 'Settings refreshed', icon: 'i-heroicons-check-circle', color: 'success' })
+  } catch (error) {
+    console.error(error)
+    toast.add({ title: 'Failed to load settings', description: String(error), color: 'error' })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -469,13 +510,13 @@ async function saveSettings(exchangeKey: ExchangeKey) {
     if (error) throw error
 
     exchange.lastUpdated = new Date().toLocaleString()
-    toast.add({ title: `Settings saved for ${exchange.name}`, color: 'green' })
+    toast.add({ title: `Settings saved for ${exchange.name}`, color: 'success' })
   } catch (error) {
     console.error(error)
     toast.add({
       title: `Failed to save settings for ${exchangeKey}`,
       description: String(error),
-      color: 'red',
+      color: 'error',
     })
   } finally {
     savingKey.value = ''
@@ -496,10 +537,6 @@ async function resetSettings(exchangeKey: ExchangeKey) {
   }
 
   await saveSettings(exchangeKey)
-}
-
-function openGlobalSettings() {
-  alert('Global settings modal coming soon!')
 }
 
 onMounted(loadSettings)
