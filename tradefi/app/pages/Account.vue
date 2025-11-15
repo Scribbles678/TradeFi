@@ -399,391 +399,115 @@
                 <h3 class="text-xl font-semibold">Connect Your Exchange Accounts</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your API keys securely</p>
               </div>
+              <UButton
+                icon="i-heroicons-arrow-path"
+                label="Refresh"
+                size="md"
+                :loading="credentialsLoading"
+                @click="loadCredentials"
+              />
             </div>
 
-            <!-- Aster DEX -->
-            <UCard>
-              <template #header>
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <UIcon name="i-simple-icons-bitcoin" class="w-6 h-6 text-orange-500" />
-                    <div>
-                      <h3 class="text-lg font-semibold">Aster DEX</h3>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Crypto Futures</p>
-                    </div>
-                  </div>
-                  <UBadge :color="apiKeys.aster?.connected ? 'success' : 'neutral'" size="sm">
-                    {{ apiKeys.aster?.connected ? 'Connected' : 'Not Connected' }}
-                  </UBadge>
-                </div>
-              </template>
-              <div class="space-y-4">
-                <div v-if="apiKeys.aster?.connected" class="space-y-3">
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-500 dark:text-gray-400">Last validated:</span>
-                    <span class="font-semibold">{{ apiKeys.aster?.lastValidated || '2 hours ago' }}</span>
-                  </div>
-                  <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-gray-500 dark:text-gray-400">API Key:</span>
-                      <div class="flex items-center gap-2">
-                        <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                          {{ showAsterKey ? apiKeys.aster?.apiKey : '••••••••••••••••' }}
-                        </code>
-                        <UButton
-                          :icon="showAsterKey ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
-                          size="xs"
-                          variant="ghost"
-                          @click="showAsterKey = !showAsterKey"
-                        />
-                        <UButton
-                          icon="i-heroicons-pencil"
-                          size="xs"
-                          variant="ghost"
-                          @click="editApiKey('aster')"
-                          label="Edit"
-                        />
-                        <UButton
-                          icon="i-heroicons-trash"
-                          size="xs"
-                          variant="ghost"
-                          color="error"
-                          @click="deleteApiKey('aster')"
-                          label="Delete"
-                        />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <UCard
+                v-for="card in credentialCards"
+                :key="card.key"
+                class="space-y-4"
+              >
+                <template #header>
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <UIcon :name="card.icon" class="w-6 h-6" />
+                      <div>
+                        <h3 class="text-lg font-semibold">{{ card.name }}</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ card.description }}</p>
                       </div>
                     </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-gray-500 dark:text-gray-400">API Secret:</span>
-                      <div class="flex items-center gap-2">
-                        <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                          {{ showAsterSecret ? apiKeys.aster?.apiSecret : '••••••••••••••••' }}
-                        </code>
-                        <UButton
-                          :icon="showAsterSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
-                          size="xs"
-                          variant="ghost"
-                          @click="showAsterSecret = !showAsterSecret"
-                        />
-                        <UButton
-                          icon="i-heroicons-pencil"
-                          size="xs"
-                          variant="ghost"
-                          @click="editApiKey('aster')"
-                          label="Edit"
-                        />
-                      </div>
-                    </div>
+                    <UBadge :color="isCredentialConnected(card.key) ? 'success' : 'neutral'" size="sm">
+                      {{ isCredentialConnected(card.key) ? 'Connected' : 'Not Connected' }}
+                    </UBadge>
                   </div>
-                  <div class="flex gap-2 pt-2">
-                    <UButton
-                      icon="i-heroicons-arrow-path"
-                      label="Test Connection"
-                      size="sm"
-                      variant="outline"
-                      @click="testConnection('aster')"
-                      :loading="testingConnection === 'aster'"
-                    />
-                    <UButton
-                      icon="i-heroicons-document-text"
-                      label="View Documentation"
-                      size="sm"
-                      variant="ghost"
-                      @click="viewDocs('aster')"
-                    />
-                  </div>
-                </div>
-                <div v-else class="text-center py-4">
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Connect your Aster DEX account to start trading</p>
-                  <UButton
-                    icon="i-heroicons-plus"
-                    label="Add API Key"
-                    size="md"
-                    class="bg-orange-600 hover:bg-orange-700 text-white font-semibold"
-                    @click="addApiKey('aster')"
-                  />
-                  <UButton
-                    icon="i-heroicons-document-text"
-                    label="View Documentation"
-                    size="md"
-                    variant="ghost"
-                    class="ml-2"
-                    @click="viewDocs('aster')"
-                  />
-                </div>
-              </div>
-            </UCard>
+                </template>
 
-            <!-- OANDA -->
-            <UCard>
-              <template #header>
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <UIcon name="i-heroicons-currency-dollar" class="w-6 h-6 text-green-500" />
-                    <div>
-                      <h3 class="text-lg font-semibold">OANDA</h3>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Forex</p>
-                    </div>
+                <div class="space-y-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <UFormField label="Label">
+                      <UInput
+                        v-model="credentialForms[card.key].label"
+                        placeholder="Account label"
+                      />
+                    </UFormField>
+                    <UFormField label="Environment">
+                      <USelect
+                        v-model="credentialForms[card.key].environment"
+                        :options="environmentOptions"
+                      />
+                    </UFormField>
                   </div>
-                  <UBadge :color="apiKeys.oanda?.connected ? 'success' : 'neutral'" size="sm">
-                    {{ apiKeys.oanda?.connected ? 'Connected' : 'Not Connected' }}
-                  </UBadge>
-                </div>
-              </template>
-              <div class="space-y-4">
-                <div v-if="apiKeys.oanda?.connected" class="space-y-3">
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-500 dark:text-gray-400">Last validated:</span>
-                    <span class="font-semibold">{{ apiKeys.oanda?.lastValidated || '5 days ago' }}</span>
-                  </div>
-                  <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-gray-500 dark:text-gray-400">API Token:</span>
-                      <div class="flex items-center gap-2">
-                        <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                          {{ showOandaKey ? apiKeys.oanda?.apiKey : '••••••••••••••••' }}
-                        </code>
-                        <UButton
-                          :icon="showOandaKey ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
-                          size="xs"
-                          variant="ghost"
-                          @click="showOandaKey = !showOandaKey"
-                        />
-                        <UButton
-                          icon="i-heroicons-pencil"
-                          size="xs"
-                          variant="ghost"
-                          @click="editApiKey('oanda')"
-                          label="Edit"
-                        />
-                        <UButton
-                          icon="i-heroicons-trash"
-                          size="xs"
-                          variant="ghost"
-                          color="error"
-                          @click="deleteApiKey('oanda')"
-                          label="Delete"
-                        />
-                      </div>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-gray-500 dark:text-gray-400">Account ID:</span>
-                      <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                        {{ apiKeys.oanda?.accountId || '101-001-28692540-001' }}
-                      </code>
-                    </div>
-                  </div>
-                  <div class="flex gap-2 pt-2">
-                    <UButton
-                      icon="i-heroicons-arrow-path"
-                      label="Test Connection"
-                      size="sm"
-                      variant="outline"
-                      @click="testConnection('oanda')"
-                      :loading="testingConnection === 'oanda'"
-                    />
-                    <UButton
-                      icon="i-heroicons-document-text"
-                      label="View Documentation"
-                      size="sm"
-                      variant="ghost"
-                      @click="viewDocs('oanda')"
-                    />
-                  </div>
-                </div>
-                <div v-else class="text-center py-4">
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Connect your OANDA account to start trading</p>
-                  <UButton
-                    icon="i-heroicons-plus"
-                    label="Add API Key"
-                    size="md"
-                    class="bg-green-600 hover:bg-green-700 text-white font-semibold"
-                    @click="addApiKey('oanda')"
-                  />
-                  <UButton
-                    icon="i-heroicons-document-text"
-                    label="View Documentation"
-                    size="md"
-                    variant="ghost"
-                    class="ml-2"
-                    @click="viewDocs('oanda')"
-                  />
-                </div>
-              </div>
-            </UCard>
 
-            <!-- Tradier -->
-            <UCard>
-              <template #header>
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <UIcon name="i-heroicons-chart-bar" class="w-6 h-6 text-blue-500" />
-                    <div>
-                      <h3 class="text-lg font-semibold">Tradier</h3>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Stocks/Options</p>
-                    </div>
-                  </div>
-                  <UBadge :color="apiKeys.tradier?.connected ? 'success' : 'neutral'" size="sm">
-                    {{ apiKeys.tradier?.connected ? 'Connected' : 'Not Connected' }}
-                  </UBadge>
-                </div>
-              </template>
-              <div class="space-y-4">
-                <div v-if="apiKeys.tradier?.connected" class="space-y-3">
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-500 dark:text-gray-400">Last validated:</span>
-                    <span class="font-semibold">{{ apiKeys.tradier?.lastValidated || '1 day ago' }}</span>
-                  </div>
-                  <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-gray-500 dark:text-gray-400">API Token:</span>
-                      <div class="flex items-center gap-2">
-                        <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                          {{ showTradierKey ? apiKeys.tradier?.apiKey : '••••••••••••••••' }}
-                        </code>
-                        <UButton
-                          :icon="showTradierKey ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
-                          size="xs"
-                          variant="ghost"
-                          @click="showTradierKey = !showTradierKey"
-                        />
-                        <UButton
-                          icon="i-heroicons-pencil"
-                          size="xs"
-                          variant="ghost"
-                          @click="editApiKey('tradier')"
-                          label="Edit"
-                        />
-                        <UButton
-                          icon="i-heroicons-trash"
-                          size="xs"
-                          variant="ghost"
-                          color="error"
-                          @click="deleteApiKey('tradier')"
-                          label="Delete"
-                        />
-                      </div>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-sm text-gray-500 dark:text-gray-400">Account ID:</span>
-                      <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                        {{ apiKeys.tradier?.accountId || 'VA55402267' }}
-                      </code>
-                    </div>
-                  </div>
-                  <div class="flex gap-2 pt-2">
-                    <UButton
-                      icon="i-heroicons-arrow-path"
-                      label="Test Connection"
-                      size="sm"
-                      variant="outline"
-                      @click="testConnection('tradier')"
-                      :loading="testingConnection === 'tradier'"
+                  <UFormField label="Account ID" v-if="card.key !== 'tastytrade'">
+                    <UInput
+                      v-model="credentialForms[card.key].accountId"
+                      placeholder="Account ID / Number"
                     />
-                    <UButton
-                      icon="i-heroicons-document-text"
-                      label="View Documentation"
-                      size="sm"
-                      variant="ghost"
-                      @click="viewDocs('tradier')"
-                    />
-                  </div>
-                </div>
-                <div v-else class="text-center py-4">
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Connect your Tradier account to start trading</p>
-                  <UButton
-                    icon="i-heroicons-plus"
-                    label="Add API Key"
-                    size="md"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                    @click="addApiKey('tradier')"
-                  />
-                  <UButton
-                    icon="i-heroicons-document-text"
-                    label="View Documentation"
-                    size="md"
-                    variant="ghost"
-                    class="ml-2"
-                    @click="viewDocs('tradier')"
-                  />
-                </div>
-              </div>
-            </UCard>
+                  </UFormField>
 
-            <!-- Tasty Trade -->
-            <UCard>
-              <template #header>
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <UIcon name="i-heroicons-chart-line" class="w-6 h-6 text-indigo-500" />
-                    <div>
-                      <h3 class="text-lg font-semibold">Tasty Trade</h3>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">Futures</p>
+                  <UFormField :label="card.key === 'oanda' ? 'API Token' : 'API Key'">
+                    <UInput
+                      v-model="credentialForms[card.key].apiKey"
+                      type="password"
+                      placeholder="API key or token"
+                    />
+                  </UFormField>
+
+                  <UFormField label="API Secret" v-if="card.showApiSecret !== false">
+                    <UInput
+                      v-model="credentialForms[card.key].apiSecret"
+                      type="password"
+                      placeholder="API secret (if required)"
+                    />
+                  </UFormField>
+
+                  <UFormField label="Passphrase" v-if="card.showPassphrase">
+                    <UInput
+                      v-model="credentialForms[card.key].passphrase"
+                      type="password"
+                      placeholder="Optional passphrase"
+                    />
+                  </UFormField>
+
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Last updated: {{ formatUpdatedAt(credentialForms[card.key].updatedAt) }}
+                  </p>
+                </div>
+
+                <template #footer>
+                  <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      Stored securely in Supabase
+                    </div>
+                    <div class="flex gap-2">
+                      <UButton
+                        label="Delete"
+                        variant="ghost"
+                        color="error"
+                        size="sm"
+                        :loading="deletingCredential === card.key"
+                        @click="deleteCredential(card.key)"
+                      />
+                      <UButton
+                        label="Save"
+                        icon="i-heroicons-check"
+                        size="sm"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                        :loading="savingCredential === card.key"
+                        @click="saveCredential(card.key)"
+                      />
                     </div>
                   </div>
-                  <UBadge :color="apiKeys.tastytrade?.connected ? 'success' : 'neutral'" size="sm">
-                    {{ apiKeys.tastytrade?.connected ? 'Connected' : 'Not Connected' }}
-                  </UBadge>
-                </div>
-              </template>
-              <div class="space-y-4">
-                <div v-if="apiKeys.tastytrade?.connected" class="space-y-3">
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-500 dark:text-gray-400">Last validated:</span>
-                    <span class="font-semibold">{{ apiKeys.tastytrade?.lastValidated || 'Never' }}</span>
-                  </div>
-                  <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
-                      <UIcon name="i-heroicons-information-circle" class="w-4 h-4 inline mr-1" />
-                      Note: Requires OAuth2 authentication
-                    </p>
-                  </div>
-                  <div class="flex gap-2 pt-2">
-                    <UButton
-                      icon="i-heroicons-arrow-path"
-                      label="Test Connection"
-                      size="sm"
-                      variant="outline"
-                      @click="testConnection('tastytrade')"
-                      :loading="testingConnection === 'tastytrade'"
-                    />
-                    <UButton
-                      icon="i-heroicons-document-text"
-                      label="View Documentation"
-                      size="sm"
-                      variant="ghost"
-                      @click="viewDocs('tastytrade')"
-                    />
-                    <UButton
-                      icon="i-heroicons-trash"
-                      label="Disconnect"
-                      size="sm"
-                      variant="ghost"
-                      color="error"
-                      @click="deleteApiKey('tastytrade')"
-                    />
-                  </div>
-                </div>
-                <div v-else class="text-center py-4">
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Connect your Tasty Trade account using OAuth2</p>
-                  <UButton
-                    icon="i-heroicons-lock-closed"
-                    label="Connect with OAuth"
-                    size="md"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
-                    @click="addApiKey('tastytrade')"
-                  />
-                  <UButton
-                    icon="i-heroicons-document-text"
-                    label="View Documentation"
-                    size="md"
-                    variant="ghost"
-                    class="ml-2"
-                    @click="viewDocs('tastytrade')"
-                  />
-                </div>
-              </div>
-            </UCard>
+                </template>
+              </UCard>
+            </div>
 
             <!-- Security Notice -->
             <UCard class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
@@ -792,7 +516,7 @@
                 <div class="text-sm text-blue-900 dark:text-blue-100">
                   <p class="font-semibold mb-1">Security Notice</p>
                   <p class="text-blue-800 dark:text-blue-200">
-                    Your API keys are encrypted and stored securely. They are never logged or exposed in client-side code.
+                    API credentials are stored in Supabase, encrypted at rest, and never exposed to the browser. Updates from this page flow directly to Sparky.
                   </p>
                 </div>
               </div>
@@ -817,48 +541,96 @@
               <div class="space-y-4">
                 <div>
                   <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Webhook URL</label>
-                  <div class="flex items-center gap-2">
-                    <code class="flex-1 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded text-sm break-all">
-                      {{ webhookConfig.url || 'https://api.sparky.com/webhook/abc123xyz' }}
-                    </code>
-                    <UButton
-                      icon="i-heroicons-clipboard-document"
-                      label="Copy URL"
-                      size="sm"
-                      @click="copyWebhookUrl"
-                    />
+                  <div class="flex flex-col gap-3">
+                    <div class="flex flex-col md:flex-row gap-2 items-stretch">
+                      <UInput
+                        v-model="credentialForms.webhook.extraMetadata.webhookUrl"
+                        placeholder="https://your-sparky-bot/webhook"
+                        class="flex-1"
+                      />
+                      <UButton
+                        icon="i-heroicons-clipboard-document"
+                        label="Copy URL"
+                        size="sm"
+                        variant="outline"
+                        @click="copyWebhookUrl"
+                      />
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <UButton
+                        icon="i-heroicons-check"
+                        label="Save Webhook URL"
+                        size="sm"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                        :loading="savingCredential === 'webhook'"
+                        @click="saveCredential('webhook')"
+                      />
+                      <UButton
+                        icon="i-heroicons-arrow-path"
+                        label="Reset to Default"
+                        size="sm"
+                        variant="ghost"
+                        @click="credentialForms.webhook.extraMetadata.webhookUrl = runtimeConfig.public?.sparkyWebhookUrl || 'http://localhost:3000/webhook'"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div>
                   <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Webhook Secret</label>
-                  <div class="flex items-center gap-2">
-                    <code class="flex-1 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded text-sm">
-                      {{ showWebhookSecret ? webhookConfig.secret : '••••••••••••••••' }}
-                    </code>
-                    <UButton
-                      :icon="showWebhookSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
-                      size="sm"
-                      variant="ghost"
-                      @click="showWebhookSecret = !showWebhookSecret"
-                    />
-                    <UButton
-                      icon="i-heroicons-clipboard-document"
-                      label="Copy Secret"
-                      size="sm"
-                      @click="copyWebhookSecret"
-                    />
-                    <UButton
-                      icon="i-heroicons-arrow-path"
-                      label="Regenerate"
-                      size="sm"
-                      variant="outline"
-                      color="warning"
-                      @click="regenerateWebhookSecret"
-                    />
+                  <div class="flex flex-col gap-3">
+                    <div class="flex flex-col md:flex-row gap-2 items-stretch">
+                      <UInput
+                        v-model="credentialForms.webhook.webhookSecret"
+                        :type="showWebhookSecret ? 'text' : 'password'"
+                        placeholder="Enter webhook secret"
+                        class="flex-1"
+                      />
+                      <UButton
+                        :icon="showWebhookSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                        :label="showWebhookSecret ? 'Hide' : 'Show'"
+                        size="sm"
+                        variant="ghost"
+                        @click="showWebhookSecret = !showWebhookSecret"
+                      />
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <UButton
+                        icon="i-heroicons-clipboard-document"
+                        label="Copy Secret"
+                        size="sm"
+                        variant="outline"
+                        @click="copyWebhookSecret"
+                      />
+                      <UButton
+                        icon="i-heroicons-check"
+                        label="Save Secret"
+                        size="sm"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                        :loading="savingCredential === 'webhook'"
+                        @click="saveCredential('webhook')"
+                      />
+                      <UButton
+                        icon="i-heroicons-arrow-path"
+                        label="Regenerate"
+                        size="sm"
+                        variant="outline"
+                        color="warning"
+                        @click="regenerateWebhookSecret"
+                      />
+                      <UButton
+                        icon="i-heroicons-trash"
+                        label="Clear"
+                        size="sm"
+                        variant="ghost"
+                        color="error"
+                        :loading="deletingCredential === 'webhook'"
+                        @click="deleteCredential('webhook')"
+                      />
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      ⚠️ Keep your secret secure. Never share it publicly.
+                    </p>
                   </div>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    ⚠️ Keep your secret secure. Never share it publicly.
-                  </p>
                 </div>
               </div>
             </UCard>
@@ -892,6 +664,7 @@
                       icon="i-heroicons-clipboard-document"
                       label="Copy Template"
                       size="sm"
+                      class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                       @click="copyWebhookTemplate"
                     />
                     <UButton
@@ -1243,7 +1016,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 
 interface ExchangeBalance {
   success: boolean
@@ -1278,9 +1051,33 @@ interface Usage {
   webhooksLimit: number | typeof Infinity
 }
 
-interface WebhookConfig {
-  url: string
-  secret: string
+type CredentialKey = 'aster' | 'oanda' | 'tradier' | 'tastytrade' | 'webhook'
+
+interface BotCredentialRecord {
+  id: string
+  label: string | null
+  exchange: string
+  environment: string | null
+  account_id: string | null
+  api_key: string | null
+  api_secret: string | null
+  passphrase: string | null
+  webhook_secret: string | null
+  extra_metadata: Record<string, any> | null
+  updated_at: string | null
+}
+
+interface CredentialForm {
+  id: string | null
+  label: string
+  environment: string
+  accountId: string
+  apiKey: string
+  apiSecret: string
+  passphrase: string
+  webhookSecret: string
+  extraMetadata: Record<string, any>
+  updatedAt?: string | null
 }
 
 interface WebhookActivity {
@@ -1341,45 +1138,68 @@ const usage = ref<Usage>({
   webhooksLimit: Infinity
 })
 
-// API Keys (Mock Data)
-const apiKeys = ref<Record<string, ApiKey>>({
-  aster: {
-    connected: true,
-    apiKey: 'aster_key_abc123xyz',
-    apiSecret: 'aster_secret_xyz789abc',
-    lastValidated: '2 hours ago'
+const credentialCards = [
+  {
+    key: 'aster' as const,
+    name: 'Aster DEX',
+    icon: 'i-simple-icons-bitcoin',
+    description: 'Crypto Futures',
+    showApiSecret: true,
+    showPassphrase: false
   },
-  oanda: {
-    connected: false,
-    lastValidated: 'Never'
+  {
+    key: 'oanda' as const,
+    name: 'OANDA',
+    icon: 'i-heroicons-currency-dollar',
+    description: 'Forex',
+    showApiSecret: false
   },
-  tradier: {
-    connected: true,
-    apiKey: 'tradier_token_12345',
-    accountId: 'VA55402267',
-    lastValidated: '1 day ago'
+  {
+    key: 'tradier' as const,
+    name: 'Tradier',
+    icon: 'i-heroicons-chart-bar',
+    description: 'Stocks / Options',
+    showApiSecret: false
   },
-  tastytrade: {
-    connected: false,
-    lastValidated: 'Never'
+  {
+    key: 'tastytrade' as const,
+    name: 'Tasty Trade',
+    icon: 'i-heroicons-chart-line',
+    description: 'Futures',
+    showApiSecret: true,
+    showPassphrase: true
   }
+]
+
+const credentialForms = reactive<Record<CredentialKey, CredentialForm>>({
+  aster: createCredentialForm('Aster DEX'),
+  oanda: createCredentialForm('OANDA'),
+  tradier: createCredentialForm('Tradier'),
+  tastytrade: createCredentialForm('Tasty Trade'),
+  webhook: createCredentialForm('TradingView Webhook')
 })
+
+const environmentOptions = [
+  { label: 'Production', value: 'production' },
+  { label: 'Paper / Practice', value: 'practice' },
+  { label: 'Sandbox', value: 'sandbox' }
+]
+
+const credentialsLoading = ref(false)
+const savingCredential = ref<string | null>(null)
+const deletingCredential = ref<string | null>(null)
 
 // Show/Hide API Keys
-const showAsterKey = ref(false)
-const showAsterSecret = ref(false)
-const showOandaKey = ref(false)
-const showTradierKey = ref(false)
 const showWebhookSecret = ref(false)
 
-// Webhook Config (Mock Data)
-const webhookConfig = ref<WebhookConfig>({
-  url: 'https://api.sparky.com/webhook/abc123xyz',
-  secret: 'webhook_secret_xyz789abc'
-})
+const runtimeConfig = useRuntimeConfig()
+const toast = useToast()
 
-const webhookTemplate = ref(`{
-  "secret": "${webhookConfig.value.secret}",
+const webhookUrl = computed(() => credentialForms.webhook.extraMetadata?.webhookUrl || runtimeConfig.public?.sparkyWebhookUrl || 'http://localhost:3000/webhook')
+const webhookSecret = computed(() => credentialForms.webhook.webhookSecret || 'set-in-tradefi')
+
+const webhookTemplate = computed(() => `{
+  "secret": "${webhookSecret.value}",
   "exchange": "aster",
   "action": "buy",
   "symbol": "{{ticker}}"
@@ -1389,6 +1209,165 @@ const webhookActivity = ref<WebhookActivity>({
   received24h: 45,
   lastReceived: '2 minutes ago'
 })
+
+function createCredentialForm(defaultLabel: string): CredentialForm {
+  return {
+    id: null,
+    label: defaultLabel,
+    environment: 'production',
+    accountId: '',
+    apiKey: '',
+    apiSecret: '',
+    passphrase: '',
+    webhookSecret: '',
+    extraMetadata: { webhookUrl: '' },
+    updatedAt: null
+  }
+}
+
+const credentialCardMap = credentialCards.reduce<Record<string, (typeof credentialCards)[number]>>((acc, card) => {
+  acc[card.key] = card
+  return acc
+}, {})
+
+function credentialTitle(key: CredentialKey) {
+  return credentialCardMap[key]?.name || 'TradingView Webhook'
+}
+
+function formatUpdatedAt(timestamp?: string | null) {
+  if (!timestamp) return 'Never'
+  return new Date(timestamp).toLocaleString()
+}
+
+function isCredentialConnected(key: CredentialKey) {
+  const form = credentialForms[key]
+  if (!form) return false
+  if (key === 'webhook') {
+    return Boolean(form.webhookSecret)
+  }
+  if (key === 'oanda' || key === 'tradier') {
+    return Boolean(form.apiKey)
+  }
+  if (key === 'tastytrade') {
+    return Boolean(form.apiKey || form.apiSecret)
+  }
+  return Boolean(form.apiKey && form.apiSecret)
+}
+
+async function loadCredentials() {
+  credentialsLoading.value = true
+  try {
+    const response = await $fetch<{ data: BotCredentialRecord[] }>('/api/bot/credentials')
+    response.data?.forEach(applyCredential)
+  } catch (error) {
+    console.error('Failed to load bot credentials', error)
+    toast.add({
+      title: 'Unable to load credentials',
+      color: 'red',
+      description: 'Check Supabase configuration and try again.'
+    })
+  } finally {
+    credentialsLoading.value = false
+  }
+}
+
+function applyCredential(record: BotCredentialRecord) {
+  const key = record.exchange as CredentialKey
+  if (!credentialForms[key]) {
+    return
+  }
+
+  const target = credentialForms[key]
+  target.id = record.id
+  target.label = record.label || credentialTitle(key)
+  target.environment = record.environment || 'production'
+  target.accountId = record.account_id || ''
+  target.apiKey = record.api_key || ''
+  target.apiSecret = record.api_secret || ''
+  target.passphrase = record.passphrase || ''
+  target.webhookSecret = record.webhook_secret || target.webhookSecret
+  target.extraMetadata = {
+    webhookUrl: record.extra_metadata?.webhookUrl || '',
+    ...record.extra_metadata
+  }
+  target.updatedAt = record.updated_at
+}
+
+function resetCredentialForm(key: CredentialKey) {
+  const defaults = createCredentialForm(credentialTitle(key))
+  Object.assign(credentialForms[key], defaults)
+}
+
+async function saveCredential(key: CredentialKey) {
+  const form = credentialForms[key]
+  savingCredential.value = key
+  try {
+    const payload = {
+      id: form.id,
+      exchange: key,
+      label: form.label,
+      environment: form.environment,
+      accountId: form.accountId || null,
+      apiKey: form.apiKey || null,
+      apiSecret: form.apiSecret || null,
+      passphrase: form.passphrase || null,
+      webhookSecret: key === 'webhook' ? (form.webhookSecret || null) : null,
+      extraMetadata: form.extraMetadata || {}
+    }
+
+    const response = await $fetch<{ success: boolean; credential: BotCredentialRecord }>('/api/bot/credentials', {
+      method: 'POST',
+      body: payload
+    })
+
+    applyCredential(response.credential)
+    toast.add({
+      title: `${credentialTitle(key)} saved`,
+      description: 'Credentials updated successfully.'
+    })
+  } catch (error) {
+    console.error('Failed to save credential', error)
+    toast.add({
+      title: `Failed to save ${credentialTitle(key)}`,
+      color: 'red',
+      description: 'Please verify the values and try again.'
+    })
+  } finally {
+    savingCredential.value = null
+  }
+}
+
+async function deleteCredential(key: CredentialKey) {
+  if (key === 'webhook') {
+    if (!confirm('Clear the stored webhook secret? Existing alerts will stop working.')) {
+      return
+    }
+  } else if (!confirm(`Remove credentials for ${credentialTitle(key)}?`)) {
+    return
+  }
+
+  deletingCredential.value = key
+  try {
+    await $fetch('/api/bot/credentials', {
+      method: 'DELETE',
+      query: { exchange: key }
+    })
+    resetCredentialForm(key)
+    toast.add({
+      title: `${credentialTitle(key)} removed`,
+      description: 'Credentials deleted.'
+    })
+  } catch (error) {
+    console.error('Failed to delete credential', error)
+    toast.add({
+      title: `Failed to delete ${credentialTitle(key)}`,
+      color: 'red',
+      description: 'Try again in a moment.'
+    })
+  } finally {
+    deletingCredential.value = null
+  }
+}
 
 // Billing History (Mock Data)
 const billingHistory = ref<BillingInvoice[]>([
@@ -1461,24 +1440,6 @@ function viewUsageDetails() {
   alert('Usage Details - Coming Soon!')
 }
 
-function addApiKey(exchange: string) {
-  console.log(`Add API Key for ${exchange}`)
-  alert(`Add API Key for ${exchange} - Coming Soon!`)
-}
-
-function editApiKey(exchange: string) {
-  console.log(`Edit API Key for ${exchange}`)
-  alert(`Edit API Key for ${exchange} - Coming Soon!`)
-}
-
-function deleteApiKey(exchange: string) {
-  if (!confirm(`Are you sure you want to delete the API key for ${exchange}?`)) {
-    return
-  }
-  console.log(`Delete API Key for ${exchange}`)
-  alert(`Delete API Key for ${exchange} - Coming Soon!`)
-}
-
 async function testConnection(exchange: string) {
   testingConnection.value = exchange
   console.log(`Test Connection for ${exchange}`)
@@ -1494,7 +1455,7 @@ function viewDocs(exchange: string) {
 }
 
 function copyWebhookUrl() {
-  navigator.clipboard.writeText(webhookConfig.value.url).then(() => {
+  navigator.clipboard.writeText(webhookUrl.value).then(() => {
     alert('Webhook URL copied to clipboard!')
   }).catch(() => {
     alert('Failed to copy webhook URL')
@@ -1502,19 +1463,19 @@ function copyWebhookUrl() {
 }
 
 function copyWebhookSecret() {
-  navigator.clipboard.writeText(webhookConfig.value.secret).then(() => {
+  navigator.clipboard.writeText(credentialForms.webhook.webhookSecret || '').then(() => {
     alert('Webhook secret copied to clipboard!')
   }).catch(() => {
     alert('Failed to copy webhook secret')
   })
 }
 
-function regenerateWebhookSecret() {
+async function regenerateWebhookSecret() {
   if (!confirm('Are you sure you want to regenerate your webhook secret? This will invalidate your current TradingView alerts.')) {
     return
   }
-  console.log('Regenerate Webhook Secret')
-  alert('Regenerate Webhook Secret - Coming Soon!')
+  credentialForms.webhook.webhookSecret = crypto.randomUUID?.() || Math.random().toString(36).slice(2, 18)
+  await saveCredential('webhook')
 }
 
 function copyWebhookTemplate() {
@@ -1599,6 +1560,7 @@ function viewAllInvoices() {
 // Load on mount and refresh every 30 seconds
 onMounted(() => {
   loadBalances()
+  loadCredentials()
   setInterval(loadBalances, 30000)
 })
 

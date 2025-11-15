@@ -47,7 +47,8 @@ export default defineNuxtConfig({
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     public: {
       supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_ANON_KEY
+      supabaseKey: process.env.SUPABASE_ANON_KEY,
+      sparkyWebhookUrl: process.env.SPARKY_WEBHOOK_URL || 'http://localhost:3000/webhook'
     }
   },
 
