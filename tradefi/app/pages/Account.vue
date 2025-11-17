@@ -437,44 +437,53 @@
                         placeholder="Account label"
                       />
                     </UFormField>
-                    <UFormField label="Environment">
+
+                    <UFormField :label="card.key === 'oanda' ? 'API Token' : 'API Key'">
+                      <UInput
+                        v-model="credentialForms[card.key].apiKey"
+                        type="password"
+                        placeholder="API key or token"
+                      />
+                    </UFormField>
+
+                    <UFormField label="Account ID" v-if="card.key !== 'tastytrade'">
+                      <UInput
+                        v-model="credentialForms[card.key].accountId"
+                        placeholder="Account ID / Number"
+                      />
+                    </UFormField>
+
+                    <UFormField label="API Secret" v-if="card.showApiSecret !== false">
+                      <UInput
+                        v-model="credentialForms[card.key].apiSecret"
+                        type="password"
+                        placeholder="API secret (if required)"
+                      />
+                    </UFormField>
+
+                    <UFormField
+                      v-if="card.key !== 'aster'"
+                      label="Environment"
+                      class="md:col-span-2 md:max-w-xs"
+                    >
                       <USelect
                         v-model="credentialForms[card.key].environment"
                         :options="environmentOptions"
                       />
                     </UFormField>
+
+                    <UFormField
+                      label="Passphrase"
+                      v-if="card.showPassphrase"
+                      class="md:col-span-2 md:max-w-xs"
+                    >
+                      <UInput
+                        v-model="credentialForms[card.key].passphrase"
+                        type="password"
+                        placeholder="Optional passphrase"
+                      />
+                    </UFormField>
                   </div>
-
-                  <UFormField label="Account ID" v-if="card.key !== 'tastytrade'">
-                    <UInput
-                      v-model="credentialForms[card.key].accountId"
-                      placeholder="Account ID / Number"
-                    />
-                  </UFormField>
-
-                  <UFormField :label="card.key === 'oanda' ? 'API Token' : 'API Key'">
-                    <UInput
-                      v-model="credentialForms[card.key].apiKey"
-                      type="password"
-                      placeholder="API key or token"
-                    />
-                  </UFormField>
-
-                  <UFormField label="API Secret" v-if="card.showApiSecret !== false">
-                    <UInput
-                      v-model="credentialForms[card.key].apiSecret"
-                      type="password"
-                      placeholder="API secret (if required)"
-                    />
-                  </UFormField>
-
-                  <UFormField label="Passphrase" v-if="card.showPassphrase">
-                    <UInput
-                      v-model="credentialForms[card.key].passphrase"
-                      type="password"
-                      placeholder="Optional passphrase"
-                    />
-                  </UFormField>
 
                   <p class="text-xs text-gray-500 dark:text-gray-400">
                     Last updated: {{ formatUpdatedAt(credentialForms[card.key].updatedAt) }}
@@ -482,28 +491,23 @@
                 </div>
 
                 <template #footer>
-                  <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
-                      Stored securely in Supabase
-                    </div>
-                    <div class="flex gap-2">
-                      <UButton
-                        label="Delete"
-                        variant="ghost"
-                        color="error"
-                        size="sm"
-                        :loading="deletingCredential === card.key"
-                        @click="deleteCredential(card.key)"
-                      />
-                      <UButton
-                        label="Save"
-                        icon="i-heroicons-check"
-                        size="sm"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                        :loading="savingCredential === card.key"
-                        @click="saveCredential(card.key)"
-                      />
-                    </div>
+                  <div class="flex items-center justify-end gap-2">
+                    <UButton
+                      label="Delete"
+                      variant="ghost"
+                      color="error"
+                      size="sm"
+                      :loading="deletingCredential === card.key"
+                      @click="deleteCredential(card.key)"
+                    />
+                    <UButton
+                      label="Save"
+                      icon="i-heroicons-check"
+                      size="sm"
+                      class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                      :loading="savingCredential === card.key"
+                      @click="saveCredential(card.key)"
+                    />
                   </div>
                 </template>
               </UCard>

@@ -37,37 +37,69 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400">Tell Sparky when it can enter new positions on this exchange.</p>
               </div>
             </div>
-            <div class="rounded-xl border border-blue-500/30 bg-blue-600/5 px-4 py-3 text-sm text-blue-100 flex items-center justify-between">
-              <div>
+            <div class="rounded-xl border border-blue-500/30 bg-blue-600/5 px-4 py-3 text-sm text-blue-100">
+              <div class="flex items-center justify-between mb-2">
                 <p class="font-semibold text-blue-200">
-                  Default Window
-                </p>
-                <p class="font-mono text-xs">
-                  <template v-if="isCryptoExchange(exchange)">
-                    24/7
-                  </template>
-                  <template v-else>
-                    {{ getActiveWindow(exchange).start }} → {{ getActiveWindow(exchange).end }} (local time)
-                  </template>
+                  Trading Window
                 </p>
               </div>
-              <div v-if="isCryptoExchange(exchange)" class="flex items-center gap-2 text-xs">
-                <span>Pause Weekends</span>
-                <USwitch
-                  :model-value="!exchange.settings.allowWeekends"
-                  color="primary"
-                  on-color="primary"
-                  @update:model-value="toggleCryptoWeekends(exchange, $event)"
-                />
+              <p class="font-mono text-xs mb-2">
+                <template v-if="isCryptoExchange(exchange)">
+                </template>
+                <template v-else-if="isForexExchange(exchange)">
+                 
+                </template>
+                <template v-else>
+                </template>
+              </p>
+              <div class="flex items-center gap-2">
+                <UBadge color="primary" variant="soft" size="sm">
+                  {{ getActiveWindow(exchange).title || 'Default' }}
+                </UBadge>
               </div>
-              <div v-else class="flex items-center gap-2 text-xs">
-                <span>Extended Hours</span>
-                <USwitch
-                  :model-value="isExtendedTrading(exchange)"
-                  color="primary"
-                  on-color="primary"
-                  @update:model-value="toggleExtendedTrading(exchange, $event)"
-                />
+              <!-- Advanced Toggles -->
+              <div class="mt-3 pt-3 border-t border-blue-500/20">
+                <!-- Crypto: Pause Weekends Toggle -->
+                <div v-if="isCryptoExchange(exchange)" class="flex items-center justify-between toggle-container">
+                  <div>
+                    <p class="text-xs font-medium text-blue-200">Pause on Weekends</p>
+                    <p class="text-xs text-blue-300/70">Disable trading on Saturdays and Sundays</p>
+                  </div>
+                  <div 
+                    class="toggle-wrapper"
+                    :class="{ 'toggle-on': !exchange.settings.allowWeekends }"
+                  >
+                    <USwitch
+                      :model-value="!exchange.settings.allowWeekends"
+                      @update:model-value="(paused: boolean) => toggleCryptoWeekends(exchange, !paused)"
+                      color="primary"
+                    />
+                  </div>
+                </div>
+                <!-- Forex/Stocks: Extended Hours Toggle -->
+                <div v-else-if="isForexExchange(exchange) || isEquitiesExchange(exchange)" class="flex items-center justify-between toggle-container">
+                  <div>
+                    <p class="text-xs font-medium text-blue-200">Extended Hours Trading</p>
+                    <p class="text-xs text-blue-300/70">
+                      <template v-if="isForexExchange(exchange)">
+                        Allow trading on weekends (broker permitting)
+                      </template>
+                      <template v-else>
+                        Allow pre-market and after-hours trading
+                      </template>
+                    </p>
+                  </div>
+                  <div 
+                    class="toggle-wrapper"
+                    :class="{ 'toggle-on': isExtendedTradingEnabled(exchange) }"
+                  >
+                    <USwitch
+                      :model-value="isExtendedTradingEnabled(exchange)"
+                      @update:model-value="(value: boolean) => toggleExtendedTrading(exchange, value)"
+                      color="primary"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -124,7 +156,7 @@
                 <UInput v-model.number="exchange.settings.maxOpenPositions" type="number" min="1" />
               </UFormField>
               <UFormField label="Auto Close Outside Window">
-                <USwitch v-model="exchange.settings.autoCloseOutsideWindow" color="primary" on-color="primary" />
+                <USwitch v-model="exchange.settings.autoCloseOutsideWindow" color="primary" />
               </UFormField>
             </div>
           </div>
@@ -174,8 +206,6 @@ interface ExchangeSettings {
   takeProfit: number
   stopLoss: number
   allowWeekends: boolean
-  newsFilter: boolean
-  notes: string
   positionSizePercent: number
   strikeTolerancePercent: number
   entryLimitOffsetPercent: number
@@ -197,48 +227,25 @@ interface ExchangeConfig {
 
 const DEFAULT_WINDOW: [string, string] = ['00:00', '23:59']
 
+// Simplified trading window presets
 const tradingWindowPresets: Record<string, { label: string; start: string; end: string; description: string }> = {
-  '24/5': {
-    label: '24/5 (Weekdays Only)',
-    start: '00:00',
-    end: '23:59',
-    description: 'Continuous Monday–Friday trading. Typical forex broker schedule.',
-  },
   '24/7': {
     label: '24/7 (Always On)',
     start: '00:00',
     end: '23:59',
-    description: 'Never stop trading. Ideal for crypto bots that operate around the clock.',
+    description: 'Trade around the clock, including weekends.',
   },
-  'forex-extended': {
-    label: 'Extended Forex Hours',
-    start: '00:00',
-    end: '23:59',
-    description: 'Enable weekend entries for forex strategies (broker permitting).',
-  },
-  'ny-session': {
-    label: 'NYSE Regular Session',
+  'market-hours': {
+    label: 'Regular Market Hours',
     start: '09:30',
     end: '16:00',
-    description: 'Align entries with U.S. equity market hours (Eastern Time).',
+    description: 'NYSE/NASDAQ regular trading hours (9:30 AM - 4:00 PM ET).',
   },
-  'stocks-extended': {
-    label: 'Extended Equity Hours',
-    start: '07:00',
-    end: '20:00',
-    description: 'Allow pre-market and after-hours participation.',
-  },
-  weekend: {
-    label: 'Weekends Only',
+  'forex-hours': {
+    label: 'Forex Market Hours',
     start: '00:00',
     end: '23:59',
-    description: 'Restrict entries to Saturdays and Sundays for niche strategies.',
-  },
-  'london-session': {
-    label: 'London Session',
-    start: '08:00',
-    end: '17:00',
-    description: 'European market hours (UTC).',
+    description: '24/5 - Weekdays only (Monday-Friday, closes Friday evening).',
   },
 }
 
@@ -271,7 +278,7 @@ const defaultExchanges: Record<ExchangeKey, ExchangeConfig> = {
     status: 'Live',
     lastUpdated: 'Not saved',
     settings: buildDefaultSettings({
-      tradingHours: '24/5',
+      tradingHours: 'forex-hours',
       customWindow: ['00:00', '23:59'],
       allowWeekends: false,
     }),
@@ -284,7 +291,7 @@ const defaultExchanges: Record<ExchangeKey, ExchangeConfig> = {
     status: 'Paper Trading',
     lastUpdated: 'Not saved',
     settings: buildDefaultSettings({
-      tradingHours: 'ny-session',
+      tradingHours: 'market-hours',
       customWindow: ['09:30', '16:00'],
       allowWeekends: false,
     }),
@@ -298,7 +305,7 @@ const defaultExchanges: Record<ExchangeKey, ExchangeConfig> = {
     optionsSpecific: true,
     lastUpdated: 'Not saved',
     settings: buildDefaultSettings({
-      tradingHours: 'ny-session',
+      tradingHours: 'market-hours',
       customWindow: ['09:30', '16:00'],
       positionSizePercent: 20,
       strikeTolerancePercent: 1,
@@ -319,7 +326,7 @@ const exchangeConfigs = ref<ExchangeConfig[]>(
 
 function buildDefaultSettings(overrides: Partial<ExchangeSettings> = {}): ExchangeSettings {
   return {
-    tradingHours: overrides.tradingHours || '24/5',
+    tradingHours: overrides.tradingHours || 'market-hours',
     customWindow: overrides.customWindow
       ? [...overrides.customWindow] as [string, string]
       : [...DEFAULT_WINDOW],
@@ -328,8 +335,6 @@ function buildDefaultSettings(overrides: Partial<ExchangeSettings> = {}): Exchan
     takeProfit: overrides.takeProfit ?? 0,
     stopLoss: overrides.stopLoss ?? 0,
     allowWeekends: overrides.allowWeekends ?? false,
-    newsFilter: overrides.newsFilter ?? false,
-    notes: overrides.notes || '',
     positionSizePercent: overrides.positionSizePercent ?? 0,
     strikeTolerancePercent: overrides.strikeTolerancePercent ?? 1,
     entryLimitOffsetPercent: overrides.entryLimitOffsetPercent ?? 1,
@@ -361,7 +366,7 @@ function applyTradingPreset(exchange: ExchangeConfig, presetKey: string) {
   const preset = getPresetInfo(presetKey)
   exchange.settings.tradingHours = presetKey
   if (preset) {
-    exchange.settings.customWindow = [preset.start, preset.end]
+    exchange.settings.customWindow = [preset.start, preset.end] as [string, string]
   }
 }
 
@@ -392,21 +397,57 @@ function getActiveWindow(exchange: ExchangeConfig) {
   }
 }
 
-function toggleCryptoWeekends(exchange: ExchangeConfig, pauseWeekends: boolean) {
-  exchange.settings.allowWeekends = !pauseWeekends
-  applyTradingPreset(exchange, pauseWeekends ? '24/5' : '24/7')
+function getAvailablePresets(exchange: ExchangeConfig) {
+  if (isCryptoExchange(exchange)) {
+    // Crypto: Only 24/7
+    return [{ label: '24/7 (Always On)', value: '24/7' }]
+  } else if (isForexExchange(exchange)) {
+    // Forex: Market hours only
+    return [{ label: 'Forex Market Hours (24/5)', value: 'forex-hours' }]
+  } else {
+    // Equities/Options: Regular market hours
+    return [{ label: 'Regular Market Hours', value: 'market-hours' }]
+  }
 }
 
-function isExtendedTrading(exchange: ExchangeConfig) {
-  return exchange.settings.tradingHours === 'forex-extended' || exchange.settings.tradingHours === 'stocks-extended'
+function toggleCryptoWeekends(exchange: ExchangeConfig, allowWeekends: boolean) {
+  exchange.settings.allowWeekends = allowWeekends
+  // Update trading hours preset based on weekend setting
+  if (allowWeekends) {
+    exchange.settings.tradingHours = '24/7'
+  } else {
+    exchange.settings.tradingHours = '24/7' // Still 24/7, but weekends disabled via allowWeekends flag
+  }
+}
+
+function isExtendedTradingEnabled(exchange: ExchangeConfig): boolean {
+  if (isForexExchange(exchange)) {
+    // For forex, extended hours = weekend trading
+    return exchange.settings.allowWeekends || false
+  } else if (isEquitiesExchange(exchange)) {
+    // For equities, extended hours = pre-market (7 AM) to after-hours (8 PM)
+    // Check if window is extended (7:00-20:00) vs regular (9:30-16:00)
+    const window = exchange.settings.customWindow
+    return (window[0] === '07:00' && window[1] === '20:00') || exchange.settings.allowWeekends || false
+  }
+  return false
 }
 
 function toggleExtendedTrading(exchange: ExchangeConfig, enabled: boolean) {
   if (isForexExchange(exchange)) {
-    applyTradingPreset(exchange, enabled ? 'forex-extended' : '24/5')
+    // Forex: Extended = weekend trading
     exchange.settings.allowWeekends = enabled
+    exchange.settings.tradingHours = 'forex-hours' // Keep base preset
   } else if (isEquitiesExchange(exchange)) {
-    applyTradingPreset(exchange, enabled ? 'stocks-extended' : 'ny-session')
+    // Equities: Extended = pre-market (7 AM) to after-hours (8 PM ET)
+    exchange.settings.allowWeekends = enabled // Use this flag to indicate extended hours
+    if (enabled) {
+      exchange.settings.customWindow = ['07:00', '20:00'] as [string, string]
+      exchange.settings.tradingHours = 'market-hours' // Base preset, extended controlled by customWindow
+    } else {
+      exchange.settings.customWindow = ['09:30', '16:00'] as [string, string]
+      exchange.settings.tradingHours = 'market-hours'
+    }
   }
 }
 
@@ -450,8 +491,6 @@ async function loadExchangeSettings() {
         takeProfit: Number(row.take_profit_percent) || 0,
         stopLoss: Number(row.stop_loss_percent) || 0,
         allowWeekends: row.allow_weekends ?? target.settings.allowWeekends,
-        newsFilter: row.news_filter ?? target.settings.newsFilter,
-        notes: row.notes || '',
         positionSizePercent: Number(row.position_size_percent) || target.settings.positionSizePercent,
         strikeTolerancePercent:
           Number(row.strike_tolerance_percent) || target.settings.strikeTolerancePercent,
@@ -491,13 +530,9 @@ async function saveSettings(exchangeKey: ExchangeKey) {
       take_profit_percent: exchange.settings.takeProfit,
       stop_loss_percent: exchange.settings.stopLoss,
       allow_weekends: exchange.settings.allowWeekends,
-      news_filter: exchange.settings.newsFilter,
-      notes: exchange.settings.notes || null,
       position_size_percent: exchange.settings.positionSizePercent,
       strike_tolerance_percent: exchange.settings.strikeTolerancePercent,
       entry_limit_offset_percent: exchange.settings.entryLimitOffsetPercent,
-      tp_percent: exchange.settings.takeProfit,
-      sl_percent: exchange.settings.stopLoss,
       max_signal_age_sec: exchange.settings.maxSignalAgeSec,
       auto_close_outside_window: exchange.settings.autoCloseOutsideWindow,
       max_open_positions: exchange.settings.maxOpenPositions,
@@ -546,4 +581,65 @@ definePageMeta({
   description: 'Configure Sparky trading parameters per exchange.',
 })
 </script>
+
+<style scoped>
+/* Toggle ON state - Green background with glow */
+.toggle-wrapper.toggle-on :deep(button),
+.toggle-wrapper.toggle-on :deep([role="switch"]) {
+  background-color: var(--color-green-500) !important;
+  border-color: var(--color-green-400) !important;
+  box-shadow: 0 0 12px 0 var(--color-green-500), 0 4px 24px 0 rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Alternative selectors for checked state */
+.toggle-wrapper :deep(button[aria-checked="true"]),
+.toggle-wrapper :deep([role="switch"][aria-checked="true"]),
+.toggle-wrapper :deep(button[data-state="checked"]),
+.toggle-wrapper :deep([data-state="checked"]) {
+  background-color: var(--color-green-500) !important;
+  border-color: var(--color-green-400) !important;
+  box-shadow: 0 0 12px 0 var(--color-green-500), 0 4px 24px 0 rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Toggle handle when ON - bright white with shadow */
+.toggle-wrapper.toggle-on :deep(button > *),
+.toggle-wrapper.toggle-on :deep([role="switch"] > *) {
+  background-color: white !important;
+}
+
+.toggle-wrapper :deep(button[aria-checked="true"] > *),
+.toggle-wrapper :deep([role="switch"][aria-checked="true"] > *) {
+  background-color: white !important;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Toggle OFF state - subtle gray */
+.toggle-wrapper:not(.toggle-on) :deep(button),
+.toggle-wrapper:not(.toggle-on) :deep([role="switch"]) {
+  background-color: rgba(75, 85, 99, 0.5) !important;
+  border-color: rgba(107, 114, 128, 0.5) !important;
+}
+
+/* Toggle hover glow effect */
+.toggle-wrapper:hover :deep(button),
+.toggle-wrapper:hover :deep([role="switch"]) {
+  box-shadow: 0 0 12px 0 var(--color-gold-400), 0 4px 32px 0 rgba(255, 215, 0, 0.3);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.toggle-wrapper.toggle-on:hover :deep(button),
+.toggle-wrapper.toggle-on:hover :deep([role="switch"]),
+.toggle-wrapper:hover :deep(button[aria-checked="true"]),
+.toggle-wrapper:hover :deep([role="switch"][aria-checked="true"]) {
+  background-color: var(--color-green-600) !important;
+  box-shadow: 0 0 16px 0 var(--color-green-500), 0 6px 32px 0 rgba(16, 185, 129, 0.6) !important;
+  border-color: var(--color-green-400) !important;
+}
+
+/* Toggle container hover effect */
+.toggle-container:hover {
+  transform: translateX(2px);
+  transition: transform 0.2s ease;
+}
+</style>
 

@@ -477,6 +477,8 @@ const chartDays = ref(7);
 const pnlChart = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart | null = null;
 const totalBalance = ref(0);
+const toast = useToast()
+
 const tradeView = ref<'recent' | 'open'>('recent');
 const pnlView = ref<'realized' | 'unrealized'>('realized');
 const isSyncingTrades = ref(false);
@@ -1123,15 +1125,28 @@ async function syncTrades() {
       // Reload data to refresh recent trades
       await loadData();
       
-      // Show success message (you could use a toast notification here)
-      alert(`Successfully synced ${response.count || 0} closed trades!`);
+      const count = response.count || 0;
+      toast.add({
+        title: 'Trades synced',
+        description: `Successfully synced ${count} closed ${count === 1 ? 'trade' : 'trades'}.`,
+        icon: 'i-heroicons-check-circle',
+        color: 'success',
+      });
     } else {
       console.error('Dashboard: Trade sync failed:', response.error);
-      alert(`Trade sync failed: ${response.error || 'Unknown error'}`);
+      toast.add({
+        title: 'Trade sync failed',
+        description: response.error || 'Unknown error occurred.',
+        color: 'error',
+      });
     }
   } catch (error) {
     console.error('Dashboard: Error syncing trades:', error);
-    alert('Error syncing trades. Check console for details.');
+    toast.add({
+      title: 'Error syncing trades',
+      description: 'Check console for details.',
+      color: 'error',
+    });
   } finally {
     isSyncingTrades.value = false;
   }
