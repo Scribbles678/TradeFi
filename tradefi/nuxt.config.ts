@@ -63,10 +63,7 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    preset: 'netlify',
-    output: {
-      publicDir: '.output/public'
-    },
+    // Let Netlify auto-detect the preset (like the working scheduling-app)
     experimental: {
       wasm: true
     }
