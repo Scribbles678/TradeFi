@@ -64,6 +64,9 @@ export default defineNuxtConfig({
 
   nitro: {
     preset: 'netlify',
+    output: {
+      publicDir: '.output/public'
+    },
     experimental: {
       wasm: true
     }
