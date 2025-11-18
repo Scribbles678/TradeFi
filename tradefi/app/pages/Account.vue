@@ -196,18 +196,16 @@
 
         <!-- Exchange Accounts Tab -->
         <div v-if="activeTab === 'exchange-accounts'" class="space-y-6">
-            <!-- Total Portfolio Value -->
-            <UCard>
-              <div class="text-center py-6">
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Portfolio Value</p>
-                <p class="text-4xl font-bold">
-                  ${{ totalBalance.toFixed(2) }}
-                </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Last updated: {{ lastUpdate }}
-                </p>
-              </div>
-            </UCard>
+            <!-- Add Exchange Button -->
+            <div class="flex justify-end">
+              <UButton
+                icon="i-heroicons-plus"
+                label="Add Exchange"
+                size="md"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                @click="addExchange"
+              />
+            </div>
 
     <!-- Exchange Balances -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -408,111 +406,6 @@
               />
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <UCard
-                v-for="card in credentialCards"
-                :key="card.key"
-                class="space-y-4"
-              >
-                <template #header>
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                      <UIcon :name="card.icon" class="w-6 h-6" />
-                      <div>
-                        <h3 class="text-lg font-semibold">{{ card.name }}</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ card.description }}</p>
-                      </div>
-                    </div>
-                    <UBadge :color="isCredentialConnected(card.key) ? 'success' : 'neutral'" size="sm">
-                      {{ isCredentialConnected(card.key) ? 'Connected' : 'Not Connected' }}
-                    </UBadge>
-                  </div>
-                </template>
-
-                <div class="space-y-4">
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <UFormField label="Label">
-                      <UInput
-                        v-model="credentialForms[card.key].label"
-                        placeholder="Account label"
-                      />
-                    </UFormField>
-
-                    <UFormField :label="card.key === 'oanda' ? 'API Token' : 'API Key'">
-                      <UInput
-                        v-model="credentialForms[card.key].apiKey"
-                        type="password"
-                        placeholder="API key or token"
-                      />
-                    </UFormField>
-
-                    <UFormField label="Account ID" v-if="card.key !== 'tastytrade'">
-                      <UInput
-                        v-model="credentialForms[card.key].accountId"
-                        placeholder="Account ID / Number"
-                      />
-                    </UFormField>
-
-                    <UFormField label="API Secret" v-if="card.showApiSecret !== false">
-                      <UInput
-                        v-model="credentialForms[card.key].apiSecret"
-                        type="password"
-                        placeholder="API secret (if required)"
-                      />
-                    </UFormField>
-
-                    <UFormField
-                      v-if="card.key !== 'aster'"
-                      label="Environment"
-                      class="md:col-span-2 md:max-w-xs"
-                    >
-                      <USelect
-                        v-model="credentialForms[card.key].environment"
-                        :options="environmentOptions"
-                      />
-                    </UFormField>
-
-                    <UFormField
-                      label="Passphrase"
-                      v-if="card.showPassphrase"
-                      class="md:col-span-2 md:max-w-xs"
-                    >
-                      <UInput
-                        v-model="credentialForms[card.key].passphrase"
-                        type="password"
-                        placeholder="Optional passphrase"
-                      />
-                    </UFormField>
-                  </div>
-
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Last updated: {{ formatUpdatedAt(credentialForms[card.key].updatedAt) }}
-                  </p>
-                </div>
-
-                <template #footer>
-                  <div class="flex items-center justify-end gap-2">
-                    <UButton
-                      label="Delete"
-                      variant="ghost"
-                      color="error"
-                      size="sm"
-                      :loading="deletingCredential === card.key"
-                      @click="deleteCredential(card.key)"
-                    />
-                    <UButton
-                      label="Save"
-                      icon="i-heroicons-check"
-                      size="sm"
-                      class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                      :loading="savingCredential === card.key"
-                      @click="saveCredential(card.key)"
-                    />
-                  </div>
-                </template>
-              </UCard>
-            </div>
-
             <!-- Security Notice -->
             <UCard class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
               <div class="flex gap-3">
@@ -525,6 +418,120 @@
                 </div>
               </div>
             </UCard>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UCard
+                v-for="card in credentialCards"
+                :key="card.key"
+                class="space-y-2 compact-card"
+              >
+                <template #header>
+                  <div class="flex items-center justify-between py-1">
+                    <div class="flex items-center gap-2">
+                      <UIcon :name="card.icon" class="w-5 h-5" />
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <h3 class="text-base font-semibold">{{ card.name }}</h3>
+                          <UBadge :color="isCredentialConnected(card.key) ? 'success' : 'neutral'" size="xs">
+                            {{ isCredentialConnected(card.key) ? 'Connected' : 'Not Connected' }}
+                          </UBadge>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ card.description }}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <!-- Environment Toggle (Live/Paper) - Only show for non-aster exchanges -->
+                      <div v-if="card.key !== 'aster'" class="flex items-center gap-2 toggle-container">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Paper</span>
+                        <div 
+                          class="toggle-wrapper"
+                          :class="{ 'toggle-on': credentialForms[card.key].isLive }"
+                        >
+                          <USwitch
+                            v-model="credentialForms[card.key].isLive"
+                            color="primary"
+                            size="sm"
+                            @update:model-value="updateEnvironment(card.key)"
+                          />
+                        </div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Live</span>
+                      </div>
+                      <UButton
+                        label="Delete"
+                        variant="ghost"
+                        color="error"
+                        size="xs"
+                        :loading="deletingCredential === card.key"
+                        @click="deleteCredential(card.key)"
+                      />
+                      <UButton
+                        label="Save"
+                        icon="i-heroicons-check"
+                        size="xs"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                        :loading="savingCredential === card.key"
+                        @click="saveCredential(card.key)"
+                      />
+                    </div>
+                  </div>
+                </template>
+
+                <div class="space-y-2">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <UFormField label="Label">
+                      <UInput
+                        v-model="credentialForms[card.key].label"
+                        placeholder="Account label"
+                        size="sm"
+                      />
+                    </UFormField>
+
+                    <UFormField :label="card.key === 'oanda' ? 'API Token' : 'API Key'">
+                      <UInput
+                        v-model="credentialForms[card.key].apiKey"
+                        type="password"
+                        placeholder="API key or token"
+                        size="sm"
+                      />
+                    </UFormField>
+
+                    <UFormField label="Account ID" v-if="card.key !== 'tastytrade'">
+                      <UInput
+                        v-model="credentialForms[card.key].accountId"
+                        placeholder="Account ID / Number"
+                        size="sm"
+                      />
+                    </UFormField>
+
+                    <UFormField label="API Secret" v-if="card.showApiSecret !== false">
+                      <UInput
+                        v-model="credentialForms[card.key].apiSecret"
+                        type="password"
+                        placeholder="API secret (if required)"
+                        size="sm"
+                      />
+                    </UFormField>
+
+                    <UFormField
+                      label="Passphrase"
+                      v-if="card.showPassphrase"
+                      class="md:col-span-2 md:max-w-xs"
+                    >
+                      <UInput
+                        v-model="credentialForms[card.key].passphrase"
+                        type="password"
+                        placeholder="Optional passphrase"
+                        size="sm"
+                      />
+                    </UFormField>
+                  </div>
+
+                  <p class="text-xs text-gray-500 dark:text-gray-400 pt-1 mb-0">
+                    Last updated: {{ formatUpdatedAt(credentialForms[card.key].updatedAt) }}
+                  </p>
+                </div>
+              </UCard>
+            </div>
           </div>
 
         <!-- Webhook Configuration Tab -->
@@ -1075,6 +1082,7 @@ interface CredentialForm {
   id: string | null
   label: string
   environment: string
+  isLive: boolean
   accountId: string
   apiKey: string
   apiSecret: string
@@ -1219,6 +1227,7 @@ function createCredentialForm(defaultLabel: string): CredentialForm {
     id: null,
     label: defaultLabel,
     environment: 'production',
+    isLive: true, // true = Live (production), false = Paper (practice)
     accountId: '',
     apiKey: '',
     apiSecret: '',
@@ -1285,6 +1294,8 @@ function applyCredential(record: BotCredentialRecord) {
   target.id = record.id
   target.label = record.label || credentialTitle(key)
   target.environment = record.environment || 'production'
+  // Set isLive based on environment: production = true (Live), practice/sandbox = false (Paper)
+  target.isLive = target.environment === 'production'
   target.accountId = record.account_id || ''
   target.apiKey = record.api_key || ''
   target.apiSecret = record.api_secret || ''
@@ -1295,6 +1306,13 @@ function applyCredential(record: BotCredentialRecord) {
     ...record.extra_metadata
   }
   target.updatedAt = record.updated_at
+}
+
+// Update environment when toggle is switched
+function updateEnvironment(key: CredentialKey) {
+  const form = credentialForms[key]
+  // isLive = true means "production" (Live), isLive = false means "practice" (Paper)
+  form.environment = form.isLive ? 'production' : 'practice'
 }
 
 function resetCredentialForm(key: CredentialKey) {
@@ -1434,6 +1452,17 @@ async function loadBalances() {
 }
 
 // Placeholder Functions
+function addExchange() {
+  console.log('Add Exchange clicked')
+  // Switch to API Keys tab to add credentials
+  activeTab.value = 'api-keys'
+  toast.add({
+    title: 'Add Exchange',
+    description: 'Please configure your API keys in the API Keys tab.',
+    color: 'info'
+  })
+}
+
 function editProfile() {
   console.log('Edit Profile clicked')
   alert('Edit Profile - Coming Soon!')
@@ -1572,4 +1601,82 @@ definePageMeta({
   title: 'Account',
   description: 'Manage your account, API keys, webhooks, and subscription'
 })
-</script> 
+</script>
+
+<style scoped>
+.compact-card :deep(.UCard-body),
+.compact-card :deep(> div:not(:first-child):not(:last-child)) {
+  padding-bottom: 0.5rem !important;
+}
+
+.compact-card :deep(> div:last-child) {
+  padding-bottom: 0.5rem !important;
+}
+
+/* Toggle ON state - Green background with glow */
+.toggle-wrapper.toggle-on :deep(button),
+.toggle-wrapper.toggle-on :deep([role="switch"]) {
+  background-color: var(--color-green-500) !important;
+  border-color: var(--color-green-400) !important;
+  box-shadow: 0 0 12px 0 var(--color-green-500), 0 4px 24px 0 rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Alternative selectors for checked state */
+.toggle-wrapper :deep(button[aria-checked="true"]),
+.toggle-wrapper :deep([role="switch"][aria-checked="true"]),
+.toggle-wrapper :deep(button[data-state="checked"]),
+.toggle-wrapper :deep([data-state="checked"]) {
+  background-color: var(--color-green-500) !important;
+  border-color: var(--color-green-400) !important;
+  box-shadow: 0 0 12px 0 var(--color-green-500), 0 4px 24px 0 rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Toggle handle when ON - bright white with shadow */
+.toggle-wrapper.toggle-on :deep(button > *),
+.toggle-wrapper.toggle-on :deep([role="switch"] > *) {
+  background-color: white !important;
+}
+
+.toggle-wrapper :deep(button[aria-checked="true"] > *),
+.toggle-wrapper :deep([role="switch"][aria-checked="true"] > *) {
+  background-color: white !important;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Toggle OFF state - white glow for Paper */
+.toggle-wrapper:not(.toggle-on) :deep(button),
+.toggle-wrapper:not(.toggle-on) :deep([role="switch"]) {
+  background-color: rgba(75, 85, 99, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 0 12px 0 rgba(255, 255, 255, 0.4), 0 4px 24px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Toggle hover glow effect */
+.toggle-wrapper:hover :deep(button),
+.toggle-wrapper:hover :deep([role="switch"]) {
+  box-shadow: 0 0 12px 0 var(--color-gold-400), 0 4px 32px 0 rgba(255, 215, 0, 0.3);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+/* Paper (OFF) state hover - enhanced white glow */
+.toggle-wrapper:not(.toggle-on):hover :deep(button),
+.toggle-wrapper:not(.toggle-on):hover :deep([role="switch"]) {
+  border-color: rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 0 16px 0 rgba(255, 255, 255, 0.6), 0 6px 32px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+.toggle-wrapper.toggle-on:hover :deep(button),
+.toggle-wrapper.toggle-on:hover :deep([role="switch"]),
+.toggle-wrapper:hover :deep(button[aria-checked="true"]),
+.toggle-wrapper:hover :deep([role="switch"][aria-checked="true"]) {
+  background-color: var(--color-green-600) !important;
+  box-shadow: 0 0 16px 0 var(--color-green-500), 0 6px 32px 0 rgba(16, 185, 129, 0.6) !important;
+  border-color: var(--color-green-400) !important;
+}
+
+/* Toggle container hover effect */
+.toggle-container:hover {
+  transform: translateX(2px);
+  transition: transform 0.2s ease;
+}
+</style> 

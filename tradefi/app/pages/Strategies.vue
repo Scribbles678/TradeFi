@@ -46,17 +46,123 @@
     />
 
     <!-- Strategy List Section -->
-    <div
-      v-if="strategyView === 'your'"
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-    >
-      <UCard
-        v-for="strategy in strategies"
-        :key="strategy.id"
-        class="hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
-      >
+    <div v-if="strategyView === 'your'" class="space-y-6">
+      <!-- Add New Strategy Card (At Top - Always First) -->
+      <Transition name="fade">
+        <UCard
+          v-if="showStrategyModal && !editingStrategyId"
+          key="add-strategy-card"
+          data-add-strategy-card
+          class="w-full shadow-2xl border-2 border-green-500 dark:border-green-400 z-10 hover:shadow-xl transition-all duration-300"
+        >
         <template #header>
-          <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Add New Strategy</h3>
+            <UButton
+              icon="i-heroicons-x-mark"
+              size="sm"
+              variant="ghost"
+              class="text-gray-400 hover:text-gray-600"
+              @click="cancelAddStrategy()"
+            />
+          </div>
+        </template>
+
+        <form @submit.prevent="saveStrategy" class="space-y-4">
+          <!-- Strategy Name -->
+          <UFormField label="Strategy Name" help="A descriptive name for your trading strategy">
+            <UInput 
+              v-model="strategyForm.name" 
+              placeholder="e.g., Momentum Breakout Strategy"
+              icon="i-heroicons-tag"
+              autofocus
+              required
+            />
+          </UFormField>
+
+          <!-- Description -->
+          <UFormField label="Description" help="Brief description of what this strategy does">
+            <UTextarea
+              v-model="strategyForm.description"
+              placeholder="Describe your strategy's approach, entry/exit conditions, etc."
+              :rows="3"
+            />
+          </UFormField>
+
+          <!-- Asset Class - Multi-select Pills -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Asset Classes
+            </label>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Select all asset classes this strategy trades</p>
+            <div class="flex flex-wrap gap-2">
+              <UButton
+                v-for="option in assetClassOptions"
+                :key="option.value"
+                :variant="selectedAssetClasses.includes(option.value) ? 'solid' : 'outline'"
+                :color="selectedAssetClasses.includes(option.value) ? 'primary' : undefined"
+                :class="selectedAssetClasses.includes(option.value) ? '' : 'text-gray-400'"
+                size="sm"
+                @click="toggleAssetClass(option.value)"
+              >
+                {{ option.label }}
+              </UButton>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+            <UButton
+              type="button"
+              label="Cancel"
+              size="md"
+              variant="ghost"
+              class="w-full sm:w-auto text-gray-400 hover:text-gray-600"
+              @click="cancelAddStrategy()"
+            />
+            <UButton
+              type="submit"
+              label="Create Strategy"
+              size="md"
+              icon="i-heroicons-check"
+              class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              :loading="saving"
+            />
+          </div>
+        </form>
+        </UCard>
+      </Transition>
+
+      <!-- Existing Strategy Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <UCard
+          v-for="strategy in strategies"
+          :key="strategy.id"
+          :data-strategy-id="strategy.id"
+          :class="[
+            'hover:shadow-xl transition-all duration-300',
+            editingStrategyId === strategy.id 
+              ? 'md:col-span-2 lg:col-span-3 shadow-2xl border-2 border-blue-500 dark:border-blue-400 z-10' 
+              : 'hover:scale-[1.02]'
+          ]"
+        >
+        <template #header>
+          <!-- Edit Mode Header -->
+          <div v-if="editingStrategyId === strategy.id">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Strategy</h3>
+              <UButton
+                icon="i-heroicons-x-mark"
+                size="sm"
+                variant="ghost"
+                class="text-gray-400 hover:text-gray-600"
+                @click="cancelEdit()"
+              />
+            </div>
+          </div>
+          
+          <!-- View Mode Header -->
+          <div v-else class="flex items-start justify-between gap-3">
             <div class="flex-1">
               <h4 class="font-bold text-lg text-gray-900 dark:text-white">{{ strategy.name }}</h4>
               <!-- Asset Class Badge -->
@@ -72,7 +178,71 @@
           </div>
         </template>
 
-        <div class="space-y-4">
+        <!-- Edit Form -->
+        <form v-if="editingStrategyId === strategy.id" @submit.prevent="saveStrategy()" class="space-y-4">
+          <!-- Strategy Name -->
+          <UFormField label="Strategy Name" help="A descriptive name for your trading strategy">
+            <UInput 
+              v-model="strategyForm.name" 
+              placeholder="e.g., Momentum Breakout Strategy"
+              icon="i-heroicons-tag"
+              autofocus
+              required
+            />
+          </UFormField>
+
+          <!-- Description -->
+          <UFormField label="Description" help="Brief description of what this strategy does">
+            <UTextarea
+              v-model="strategyForm.description"
+              placeholder="Describe your strategy's approach, entry/exit conditions, etc."
+              :rows="3"
+            />
+          </UFormField>
+
+          <!-- Asset Class - Multi-select Pills -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Asset Classes
+            </label>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Select all asset classes this strategy trades</p>
+            <div class="flex flex-wrap gap-2">
+              <UButton
+                v-for="option in assetClassOptions"
+                :key="option.value"
+                :variant="selectedAssetClasses.includes(option.value) ? 'solid' : 'outline'"
+                :color="selectedAssetClasses.includes(option.value) ? 'primary' : 'gray'"
+                size="sm"
+                @click="toggleAssetClass(option.value)"
+              >
+                {{ option.label }}
+              </UButton>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+            <UButton
+              type="button"
+              label="Cancel"
+              size="md"
+              variant="ghost"
+              class="w-full sm:w-auto text-gray-400 hover:text-gray-600"
+              @click="cancelEdit()"
+            />
+            <UButton
+              type="submit"
+              label="Save Changes"
+              size="md"
+              icon="i-heroicons-check"
+              class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              :loading="saving"
+            />
+          </div>
+        </form>
+
+        <!-- View Mode Content -->
+        <div v-else class="space-y-4">
           <!-- Description -->
           <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 min-h-[60px]">
             {{ strategy.description || 'No description provided for this strategy.' }}
@@ -159,7 +329,7 @@
                 label="Edit"
                 size="md"
                 class="flex-1 justify-center font-medium bg-gray-600 hover:bg-gray-700 text-white"
-                @click="openEditStrategyModal(strategy)"
+                @click="startEditStrategy(strategy)"
               />
               
               <!-- Delete Button -->
@@ -173,10 +343,11 @@
             </div>
           </div>
         </div>
-      </UCard>
+        </UCard>
+      </div>
 
       <!-- Empty State -->
-      <UCard v-if="strategies.length === 0" class="col-span-full">
+      <UCard v-if="strategies.length === 0 && !showStrategyModal" class="w-full">
         <div class="text-center py-12">
           <UIcon name="i-heroicons-chart-bar" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p class="text-gray-500 dark:text-gray-400">No strategies yet</p>
@@ -317,22 +488,39 @@
 
           <div class="space-y-4">
             <!-- Version Selector -->
-            <UFormGroup label="Pine Script Version">
-              <USelect
-                v-model="pineScriptVersion"
-                :options="['v4', 'v5']"
-              />
-            </UFormGroup>
+            <div class="space-y-2">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Pine Script Version
+              </label>
+              <div class="flex gap-2">
+                <UButton
+                  :variant="pineScriptVersion === 'v4' ? 'solid' : 'outline'"
+                  :color="pineScriptVersion === 'v4' ? 'primary' : 'gray'"
+                  size="sm"
+                  @click="pineScriptVersion = 'v4'"
+                >
+                  v4
+                </UButton>
+                <UButton
+                  :variant="pineScriptVersion === 'v5' ? 'solid' : 'outline'"
+                  :color="pineScriptVersion === 'v5' ? 'primary' : 'gray'"
+                  size="sm"
+                  @click="pineScriptVersion = 'v5'"
+                >
+                  v5
+                </UButton>
+              </div>
+            </div>
 
             <!-- Code Editor -->
-            <UFormGroup label="Pine Script Code">
+            <UFormField label="Pine Script Code">
               <UTextarea
                 v-model="pineScriptCode"
                 :rows="20"
                 placeholder="Paste your Pine Script code here..."
                 class="font-mono text-sm"
               />
-            </UFormGroup>
+            </UFormField>
 
             <!-- Helper Text -->
             <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -370,73 +558,6 @@
         </UCard>
       </UModal>
 
-    <!-- Add/Edit Strategy Modal -->
-    <UModal 
-      v-if="showStrategyModal"
-      v-model="showStrategyModal"
-    >
-      <UCard>
-          <template #header>
-            <h3 class="text-lg font-semibold">
-              {{ editingStrategy ? 'Edit Strategy' : 'Add New Strategy' }}
-            </h3>
-          </template>
-
-          <form @submit.prevent="saveStrategy" class="space-y-4">
-            <UFormGroup label="Strategy Name" required>
-              <UInput v-model="strategyForm.name" placeholder="Enter strategy name" />
-            </UFormGroup>
-
-            <UFormGroup label="Description">
-              <UTextarea
-                v-model="strategyForm.description"
-                placeholder="Enter strategy description"
-                :rows="3"
-              />
-            </UFormGroup>
-
-            <UFormGroup label="Asset Class">
-              <USelect
-                v-model="strategyForm.asset_class"
-                :options="assetClassOptions"
-                placeholder="Select asset class"
-              />
-            </UFormGroup>
-
-            <UFormGroup label="Risk Level">
-              <USelect
-                v-model="strategyForm.risk_level"
-                :options="riskLevelOptions"
-                placeholder="Select risk level"
-              />
-            </UFormGroup>
-
-            <UFormGroup label="Timeframe">
-              <USelect
-                v-model="strategyForm.timeframe"
-                :options="timeframeOptions"
-                placeholder="Select timeframe"
-              />
-            </UFormGroup>
-
-            <div class="flex justify-end gap-3 pt-4">
-              <UButton
-                label="Cancel"
-                size="md"
-                class="bg-gray-600 hover:bg-gray-700 text-white"
-                @click="showStrategyModal = false"
-              />
-              <UButton
-                type="submit"
-                :label="editingStrategy ? 'Update Strategy' : 'Create Strategy'"
-                size="md"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                :loading="saving"
-              />
-            </div>
-        </form>
-      </UCard>
-    </UModal>
   </div>
 </template>
 
@@ -466,6 +587,7 @@ const showPineScriptModal = ref(false);
 const showStrategyModal = ref(false);
 const selectedStrategy = ref<Strategy | null>(null);
 const editingStrategy = ref<Strategy | null>(null);
+const editingStrategyId = ref<string | null>(null);
 const pineScriptCode = ref('');
 const pineScriptVersion = ref('v5');
 const saving = ref(false);
@@ -544,10 +666,25 @@ const marketplaceStrategies = ref<MarketplaceStrategy[]>([
 const strategyForm = ref({
   name: '',
   description: '',
-  asset_class: null as 'forex' | 'crypto' | 'options' | 'stocks' | 'futures' | null,
-  risk_level: null as 'low' | 'medium' | 'high' | null,
-  timeframe: null as string | null,
+  asset_class: null as string | null,
 });
+
+// Multi-select asset classes
+const selectedAssetClasses = ref<string[]>([])
+
+// Toggle asset class selection
+function toggleAssetClass(value: string) {
+  const index = selectedAssetClasses.value.indexOf(value)
+  if (index > -1) {
+    selectedAssetClasses.value.splice(index, 1)
+  } else {
+    selectedAssetClasses.value.push(value)
+  }
+  // Store as comma-separated string for database
+  strategyForm.value.asset_class = selectedAssetClasses.value.length > 0 
+    ? selectedAssetClasses.value.join(',') 
+    : null
+}
 
 // Options
 const assetClassOptions = [
@@ -558,22 +695,9 @@ const assetClassOptions = [
   { label: 'Futures', value: 'futures' },
 ];
 
-const riskLevelOptions = [
-  { label: 'Low', value: 'low' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'High', value: 'high' },
-];
 
-const timeframeOptions = [
-  { label: '1 Minute', value: '1m' },
-  { label: '5 Minutes', value: '5m' },
-  { label: '15 Minutes', value: '15m' },
-  { label: '30 Minutes', value: '30m' },
-  { label: '1 Hour', value: '1h' },
-  { label: '4 Hours', value: '4h' },
-  { label: '1 Day', value: '1d' },
-  { label: '1 Week', value: '1w' },
-];
+
+const toast = useToast()
 
 // Load strategies
 async function loadStrategies() {
@@ -589,7 +713,12 @@ function openPineScriptModal(strategy: Strategy, event?: Event) {
   
   // Calculate position to center modal over the card
   if (event && event.currentTarget) {
-    const cardElement = (event.currentTarget as HTMLElement).closest('.hover\\:shadow-xl') as HTMLElement;
+    // Find the parent UCard element by traversing up the DOM
+    let cardElement = (event.currentTarget as HTMLElement).closest('[data-strategy-id]') as HTMLElement;
+    // Fallback: try to find any card-like container
+    if (!cardElement) {
+      cardElement = (event.currentTarget as HTMLElement).closest('.hover\\:shadow-xl, [class*="shadow"]') as HTMLElement;
+    }
     if (cardElement) {
       const rect = cardElement.getBoundingClientRect();
       pineScriptModalPosition.value = {
@@ -614,7 +743,11 @@ async function savePineScript() {
   if (!selectedStrategy.value) return;
 
   if (!pineScriptCode.value.trim()) {
-    alert('Please enter Pine Script code');
+    toast.add({
+      title: 'Pine Script required',
+      description: 'Please enter Pine Script code before saving.',
+      color: 'warning',
+    });
     return;
   }
 
@@ -630,58 +763,112 @@ async function savePineScript() {
       showPineScriptModal.value = false;
       pineScriptModalPosition.value = null;
       await loadStrategies();
-      alert('Pine Script saved successfully!');
+      toast.add({
+        title: 'Pine Script saved',
+        description: 'Your Pine Script code has been saved successfully.',
+        icon: 'i-heroicons-check-circle',
+        color: 'success',
+      });
     } else {
-      alert('Error saving Pine Script. Please check the console for details.');
+      toast.add({
+        title: 'Failed to save Pine Script',
+        description: 'Please check the console for details.',
+        color: 'error',
+      });
     }
   } catch (error) {
     console.error('Error saving Pine Script:', error);
-    alert('Error saving Pine Script. Please make sure the database is set up correctly.');
+    toast.add({
+      title: 'Error saving Pine Script',
+      description: 'Please make sure the database is set up correctly.',
+      color: 'error',
+    });
   } finally {
     saving.value = false;
   }
 }
 
-// Open Add Strategy Modal
+// Open Add Strategy (Inline Card)
 function openAddStrategyModal() {
   editingStrategy.value = null;
+  editingStrategyId.value = null;
   strategyForm.value = {
     name: '',
     description: '',
     asset_class: null,
-    risk_level: null,
-    timeframe: null,
   };
+  selectedAssetClasses.value = [];
   showStrategyModal.value = true;
-  // Scroll to top when modal opens
+  // Force scroll to top immediately, then again after DOM update
+  window.scrollTo({ top: 0, behavior: 'instant' });
   nextTick(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const addCard = document.querySelector('[data-add-strategy-card]');
+      if (addCard) {
+        addCard.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      }
+    });
   });
 }
 
-// Open Edit Strategy Modal
-function openEditStrategyModal(strategy: Strategy) {
+// Cancel Add Strategy
+function cancelAddStrategy() {
+  showStrategyModal.value = false;
+  strategyForm.value = {
+    name: '',
+    description: '',
+    asset_class: null,
+  };
+  selectedAssetClasses.value = [];
+}
+
+// Start inline editing in card
+function startEditStrategy(strategy: Strategy) {
   editingStrategy.value = strategy;
-  // Scroll to top when modal opens
-  nextTick(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    document.body.style.overflow = 'hidden';
-  });
+  editingStrategyId.value = strategy.id;
   strategyForm.value = {
     name: strategy.name,
     description: strategy.description || '',
     asset_class: strategy.asset_class,
-    risk_level: strategy.risk_level,
-    timeframe: strategy.timeframe,
   };
-  showStrategyModal.value = true;
+  // Parse asset classes from comma-separated string or single value
+  if (strategy.asset_class) {
+    selectedAssetClasses.value = strategy.asset_class.includes(',') 
+      ? strategy.asset_class.split(',')
+      : [strategy.asset_class];
+  } else {
+    selectedAssetClasses.value = [];
+  }
+  // Scroll to the card being edited
+  nextTick(() => {
+    const cardElement = document.querySelector(`[data-strategy-id="${strategy.id}"]`);
+    if (cardElement) {
+      cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+}
+
+// Cancel inline editing
+function cancelEdit() {
+  editingStrategy.value = null;
+  editingStrategyId.value = null;
+  strategyForm.value = {
+    name: '',
+    description: '',
+    asset_class: null,
+  };
+  selectedAssetClasses.value = [];
 }
 
 // Save Strategy (Create or Update)
 async function saveStrategy() {
   if (!strategyForm.value.name) {
-    alert('Please enter a strategy name');
+    toast.add({
+      title: 'Strategy name required',
+      description: 'Please enter a strategy name.',
+      color: 'warning',
+    });
     return;
   }
 
@@ -700,15 +887,33 @@ async function saveStrategy() {
     }
     
     if (result) {
+      const wasEditing = !!editingStrategyId.value;
+      const strategyName = strategyForm.value.name;
       showStrategyModal.value = false;
+      // Clear editing state
+      editingStrategy.value = null;
+      editingStrategyId.value = null;
       await loadStrategies();
-      alert(editingStrategy.value ? 'Strategy updated successfully!' : 'Strategy created successfully!');
+      toast.add({
+        title: wasEditing ? 'Strategy updated' : 'Strategy created',
+        description: `"${strategyName}" has been ${wasEditing ? 'updated' : 'created'} successfully.`,
+        icon: 'i-heroicons-check-circle',
+        color: 'success',
+      });
     } else {
-      alert('Error saving strategy. Please check the console for details.');
+      toast.add({
+        title: 'Failed to save strategy',
+        description: 'Please check the console for details.',
+        color: 'error',
+      });
     }
   } catch (error) {
     console.error('Error saving strategy:', error);
-    alert('Error saving strategy. Please make sure the database is set up correctly.');
+    toast.add({
+      title: 'Error saving strategy',
+      description: 'Please make sure the database is set up correctly.',
+      color: 'error',
+    });
   } finally {
     saving.value = false;
   }
@@ -717,9 +922,21 @@ async function saveStrategy() {
 // Toggle Strategy Status
 async function toggleStatus(id: string) {
   try {
+    const strategy = strategies.value.find(s => s.id === id);
     const result = await toggleStrategyStatusAPI(id);
     if (result) {
       await loadStrategies();
+      
+      // Find the updated strategy to get its new status
+      const updatedStrategy = strategies.value.find(s => s.id === id);
+      const newStatus = updatedStrategy?.status || 'unknown';
+      
+      toast.add({
+        title: 'Strategy status updated',
+        description: `"${strategy?.name || 'Strategy'}" is now ${newStatus === 'active' ? 'active' : 'inactive'}.`,
+        icon: 'i-heroicons-check-circle',
+        color: 'success',
+      });
       
       // Notify the bot to reload strategies
       try {
@@ -736,7 +953,11 @@ async function toggleStatus(id: string) {
     }
   } catch (error) {
     console.error('Error toggling strategy status:', error);
-    alert('Error toggling strategy status. Please check the console for details.');
+    toast.add({
+      title: 'Failed to update strategy status',
+      description: 'Please check the console for details.',
+      color: 'error',
+    });
   }
 }
 
@@ -750,15 +971,28 @@ async function deleteStrategyConfirm(strategy: Strategy) {
     const success = await deleteStrategyAPI(strategy.id);
     if (success) {
       await loadStrategies();
-      alert('Strategy deleted successfully!');
+      toast.add({
+        title: 'Strategy deleted',
+        description: `"${strategy.name}" has been deleted successfully.`,
+        icon: 'i-heroicons-check-circle',
+        color: 'success',
+      });
     } else {
       console.error('Delete strategy returned false. Check browser console for Supabase error details.');
-      alert('Error deleting strategy. Please check the browser console for details and ensure Row Level Security (RLS) is disabled or properly configured for the strategies table.');
+      toast.add({
+        title: 'Failed to delete strategy',
+        description: 'Please check the browser console for details and ensure Row Level Security (RLS) is disabled or properly configured.',
+        color: 'error',
+      });
     }
   } catch (error) {
     console.error('Error deleting strategy:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    alert(`Error deleting strategy: ${errorMessage}. Please check the console for details and ensure database permissions are set correctly.`);
+    toast.add({
+      title: 'Error deleting strategy',
+      description: errorMessage || 'Please check the console for details and ensure database permissions are set correctly.',
+      color: 'error',
+    });
   }
 }
 
@@ -795,6 +1029,14 @@ watch(showPineScriptModal, (isOpen) => {
   if (!isOpen) {
     document.body.style.overflow = '';
     pineScriptModalPosition.value = null;
+  }
+});
+
+// Watch editing state to restore scroll when cancelled
+watch(editingStrategyId, (id) => {
+  if (!id) {
+    // No longer editing - ensure body scroll is restored
+    document.body.style.overflow = '';
   }
 });
 
