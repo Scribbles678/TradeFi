@@ -1,10 +1,36 @@
-import { defineEventHandler, useRuntimeConfig } from '#imports'
+import { defineEventHandler, useRuntimeConfig, createError } from '#imports'
 import { createHmac } from 'node:crypto'
+import { serverSupabaseClient } from '#supabase/server'
 
 export default defineEventHandler(async (event): Promise<any> => {
-  const config = useRuntimeConfig()
-  const apiKey = config.asterApiKey
-  const apiSecret = config.asterApiSecret
+  // Get authenticated user
+  const user = event.context.user
+  if (!user) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized - Please log in'
+    })
+  }
+
+  // Get user's API credentials from database
+  const supabase = await serverSupabaseClient(event)
+  const { data: credentials, error: credError } = await supabase
+    .from('bot_credentials')
+    .select('api_key, api_secret')
+    .eq('exchange', 'aster')
+    .single()
+
+  if (credError || !credentials) {
+    return {
+      success: false,
+      exchange: 'Aster DEX',
+      balance: null,
+      error: 'Aster DEX credentials not configured'
+    }
+  }
+
+  const apiKey = credentials.api_key
+  const apiSecret = credentials.api_secret
 
   try {
     // Prepare request details for Aster DEX - use v4/account endpoint for comprehensive balance data

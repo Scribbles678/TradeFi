@@ -167,14 +167,18 @@ export interface Strategy {
  * Fetch all open positions
  * Filters by exchange (aster, oanda, tradier) or asset_class (crypto, forex, options)
  */
+/**
+ * Fetch open positions (user-specific via RLS)
+ */
 export async function getOpenPositions(assetClass?: AssetClass): Promise<Position[]> {
   const supabase = useSupabaseClient();
+  
+  // RLS policies will automatically filter by user_id
   let query = supabase
     .from('positions')
     .select('*');
 
   if (assetClass) {
-    // For now, use asset_class filtering since exchange column might not be set for existing data
     query = query.eq('asset_class', assetClass);
   }
 
@@ -223,10 +227,12 @@ export async function getRecentTrades(limit = 20, assetClass?: AssetClass): Prom
 }
 
 /**
- * Fetch trades for a specific date range
+ * Fetch trades for a specific date range (user-specific via RLS)
  */
 export async function getTradesByDateRange(startDate: string, endDate: string): Promise<Trade[]> {
   const supabase = useSupabaseClient();
+  
+  // RLS policies will automatically filter by user_id
   const { data, error } = await supabase
     .from('trades')
     .select('*')
@@ -243,7 +249,7 @@ export async function getTradesByDateRange(startDate: string, endDate: string): 
 }
 
 /**
- * Fetch today's trades
+ * Fetch today's trades (user-specific via RLS)
  * Filters by exchange (aster, oanda, tradier) or asset_class (crypto, forex, options)
  */
 export async function getTodaysTrades(assetClass?: AssetClass): Promise<Trade[]> {
@@ -251,13 +257,14 @@ export async function getTodaysTrades(assetClass?: AssetClass): Promise<Trade[]>
   today.setHours(0, 0, 0, 0);
   
   const supabase = useSupabaseClient();
+  
+  // RLS policies will automatically filter by user_id
   let query = supabase
     .from('trades')
     .select('*')
     .gte('exit_time', today.toISOString());
 
   if (assetClass) {
-    // For now, use asset_class filtering since exchange column might not be set for existing data
     query = query.eq('asset_class', assetClass);
   }
 
@@ -431,7 +438,7 @@ export async function getTodaysStats(assetClass?: AssetClass) {
  */
 
 /**
- * Fetch all strategies
+ * Fetch all strategies (user-specific via RLS)
  */
 export async function getStrategies(assetClass?: AssetClass): Promise<Strategy[]> {
   const supabase = useSupabaseClient();
@@ -454,7 +461,7 @@ export async function getStrategies(assetClass?: AssetClass): Promise<Strategy[]
 }
 
 /**
- * Fetch a single strategy by ID
+ * Fetch a single strategy by ID (user-specific via RLS)
  */
 export async function getStrategy(id: string): Promise<Strategy | null> {
   const supabase = useSupabaseClient();
@@ -473,7 +480,7 @@ export async function getStrategy(id: string): Promise<Strategy | null> {
 }
 
 /**
- * Create a new strategy
+ * Create a new strategy (user_id auto-assigned via RLS)
  */
 export async function createStrategy(strategy: Partial<Strategy>): Promise<Strategy | null> {
   const supabase = useSupabaseClient();
@@ -492,7 +499,7 @@ export async function createStrategy(strategy: Partial<Strategy>): Promise<Strat
 }
 
 /**
- * Update a strategy
+ * Update a strategy (user-specific via RLS)
  */
 export async function updateStrategy(id: string, updates: Partial<Strategy>): Promise<Strategy | null> {
   const supabase = useSupabaseClient();
@@ -612,7 +619,7 @@ export async function updateStrategyPineScript(id: string, pineScript: string, v
 }
 
 /**
- * Delete a strategy
+ * Delete a strategy (user-specific via RLS)
  */
 export async function deleteStrategy(id: string): Promise<boolean> {
   console.log('Deleting strategy with ID:', id);
@@ -640,7 +647,33 @@ export async function deleteStrategy(id: string): Promise<boolean> {
 }
 
 /**
- * Toggle strategy status (active/inactive)
+ * Get total P&L for a specific strategy from trades (user-specific via RLS)
+ */
+export async function getStrategyPnL(strategyId: string): Promise<number> {
+  const supabase = useSupabaseClient();
+  const { data, error } = await supabase
+    .from('trades')
+    .select('pnl_usd')
+    .eq('strategy_id', strategyId);
+
+  if (error) {
+    console.error('Error fetching strategy P&L:', error);
+    return 0;
+  }
+
+  if (!data || data.length === 0) {
+    return 0;
+  }
+
+  const totalPnL = data.reduce((sum, trade) => {
+    return sum + (trade.pnl_usd || 0);
+  }, 0);
+
+  return parseFloat(totalPnL.toFixed(2));
+}
+
+/**
+ * Toggle strategy status (active/inactive) (user-specific via RLS)
  */
 export async function toggleStrategyStatus(id: string): Promise<Strategy | null> {
   // First get the current strategy

@@ -1,4 +1,5 @@
-import { defineEventHandler, useRuntimeConfig } from '#imports'
+import { defineEventHandler, useRuntimeConfig, createError } from '#imports'
+import { serverSupabaseClient } from '#supabase/server'
 
 interface TradierBalances {
   total_equity: number
@@ -24,9 +25,34 @@ interface TradierResponse {
 }
 
 export default defineEventHandler(async (event): Promise<any> => {
-  const config = useRuntimeConfig()
-  const token = config.tradierToken
-  const accountId = config.tradierAccountId
+  // Get authenticated user
+  const user = event.context.user
+  if (!user) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized - Please log in'
+    })
+  }
+
+  // Get user's API credentials from database
+  const supabase = await serverSupabaseClient(event)
+  const { data: credentials, error: credError } = await supabase
+    .from('bot_credentials')
+    .select('api_key, account_id')
+    .eq('exchange', 'tradier')
+    .single()
+
+  if (credError || !credentials) {
+    return {
+      success: false,
+      exchange: 'Tradier',
+      balance: null,
+      error: 'Tradier credentials not configured'
+    }
+  }
+
+  const token = credentials.api_key
+  const accountId = credentials.account_id
 
   try {
     const response: TradierResponse = await $fetch<TradierResponse>(`https://sandbox.tradier.com/v1/accounts/${accountId}/balances`, {

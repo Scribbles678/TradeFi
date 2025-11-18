@@ -1,4 +1,5 @@
-import { defineEventHandler, useRuntimeConfig } from '#imports'
+import { defineEventHandler, useRuntimeConfig, createError } from '#imports'
+import { serverSupabaseClient } from '#supabase/server'
 
 interface TastyTradeAccount {
   account_number: string
@@ -33,22 +34,37 @@ interface TastyTradeResponse {
 }
 
 export default defineEventHandler(async (event): Promise<any> => {
-  const config = useRuntimeConfig()
-  const clientId = config.tastytradeClientId
-  const clientSecret = config.tastytradeClientSecret
-  const username = config.tastytradeUsername
-  const password = config.tastytradePassword
-  const accountId = config.tastytradeAccountId
+  // Get authenticated user
+  const user = event.context.user
+  if (!user) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized - Please log in'
+    })
+  }
 
-  // Early return if Tasty Trade is not configured - fail silently
-  if (!clientId || !clientSecret || !username || !password || !accountId) {
+  // Get user's API credentials from database
+  const supabase = await serverSupabaseClient(event)
+  const { data: credentials, error: credError } = await supabase
+    .from('bot_credentials')
+    .select('api_key, api_secret, account_id, username, password')
+    .eq('exchange', 'tastytrade')
+    .single()
+
+  if (credError || !credentials) {
     return {
       success: false,
       exchange: 'Tasty Trade',
-      error: 'Tasty Trade is not configured (disabled)',
+      error: 'Tasty Trade credentials not configured',
       disabled: true
     }
   }
+
+  const clientId = credentials.api_key
+  const clientSecret = credentials.api_secret
+  const username = credentials.username
+  const password = credentials.password
+  const accountId = credentials.account_id
 
   try {
     // First, get OAuth2 token using client credentials

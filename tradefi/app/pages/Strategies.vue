@@ -114,6 +114,30 @@
             </div>
           </div>
 
+          <!-- Risk Controls -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t dark:border-gray-700">
+            <UFormField label="Take Profit Target (%)" help="Percent gain that triggers profit-taking.">
+              <UInput 
+                v-model.number="strategyForm.take_profit_percent" 
+                type="number" 
+                min="0" 
+                step="0.1" 
+                placeholder="e.g. 2" 
+                size="sm"
+              />
+            </UFormField>
+            <UFormField label="Stop Loss Limit (%)" help="Percent drawdown where Sparky exits the trade.">
+              <UInput 
+                v-model.number="strategyForm.stop_loss_percent" 
+                type="number" 
+                min="0" 
+                step="0.1" 
+                placeholder="e.g. 1" 
+                size="sm"
+              />
+            </UFormField>
+          </div>
+
           <!-- Action Buttons -->
           <div class="flex flex-col sm:flex-row justify-end gap-2 pt-1">
             <UButton
@@ -266,59 +290,62 @@
           <!-- Performance Metrics -->
           <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2.5">
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400 font-medium">Success Rate</span>
-              <span class="font-bold text-gray-900 dark:text-white">{{ strategy.success_rate?.toFixed(1) || '0.0' }}%</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400 font-medium">Avg Profit</span>
-              <span :class="['font-bold', (strategy.avg_profit || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']">
-                {{ (strategy.avg_profit || 0) >= 0 ? '+' : '' }}{{ strategy.avg_profit?.toFixed(2) || '0.00' }}%
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Win Rate</span>
+              <span 
+                class="font-bold"
+                :class="{
+                  'text-green-400': calculateWinRate(strategy) >= 70,
+                  'text-yellow-400': calculateWinRate(strategy) >= 50 && calculateWinRate(strategy) < 70,
+                  'text-red-400': calculateWinRate(strategy) < 50,
+                  'text-gray-400': strategy.total_trades === 0
+                }"
+              >
+                {{ calculateWinRate(strategy).toFixed(1) }}%
               </span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400 font-medium">Total Trades</span>
-              <span class="font-bold text-gray-900 dark:text-white">{{ strategy.total_trades || 0 }}</span>
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Wins/Total</span>
+              <span class="font-bold text-gray-900 dark:text-white">
+                {{ strategy.winning_trades || 0 }}/{{ strategy.total_trades || 0 }} trades
+              </span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400 font-medium">Risk Level</span>
-              <UBadge 
-                :color="strategy.risk_level === 'low' ? 'success' : strategy.risk_level === 'high' ? 'error' : 'warning'"
-                size="xs"
-                variant="soft"
+              <span class="text-gray-600 dark:text-gray-400 font-medium">Total P&L</span>
+              <span 
+                class="font-bold"
+                :class="(strategyPnL[strategy.id] || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
               >
-                {{ (strategy.risk_level || 'N/A').toUpperCase() }}
-              </UBadge>
+                {{ (strategyPnL[strategy.id] || 0) >= 0 ? '+' : '' }}${{ (strategyPnL[strategy.id] || 0).toFixed(2) }}
+              </span>
             </div>
-          </div>
-
-          <!-- Pine Script Status -->
-          <div class="flex items-center gap-2">
-            <button
-              :class="[
-                'flex-1 flex items-center justify-between gap-2 p-3 rounded-lg text-sm font-medium cursor-pointer hover:opacity-80 transition-all',
-                strategy.pine_script 
-                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
-                  : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
-              ]"
-              @click="openPineScriptModal(strategy, $event)"
-            >
-              <div class="flex items-center gap-2">
-                <UIcon
-                  :name="strategy.pine_script ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-circle'"
-                  class="text-lg"
+            <div class="pt-2 border-t dark:border-gray-700 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">Take Profit (%)</label>
+                <UInput 
+                  v-model.number="strategy.take_profit_percent" 
+                  type="number" 
+                  min="0" 
+                  step="0.1" 
+                  placeholder="e.g. 2"
+                  size="xs"
+                  class="w-24"
+                  @blur="updateStrategyField(strategy, 'take_profit_percent')"
                 />
-                <span>{{ strategy.pine_script ? 'Pine Script Added' : 'No Pine Script' }}</span>
               </div>
-              <UIcon name="i-heroicons-chevron-right" class="text-xs" />
-            </button>
-            <UButton
-              v-if="strategy.pine_script"
-              icon="i-heroicons-pencil"
-              size="sm"
-              class="bg-blue-600 hover:bg-blue-700 text-white"
-              @click="openPineScriptModal(strategy, $event)"
-              title="Edit Pine Script"
-            />
+              <div class="flex items-center justify-between gap-2">
+                <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">Stop Loss (%)</label>
+                <UInput 
+                  v-model.number="strategy.stop_loss_percent" 
+                  type="number" 
+                  min="0" 
+                  step="0.1" 
+                  placeholder="e.g. 1"
+                  size="xs"
+                  class="w-24"
+                  @blur="updateStrategyField(strategy, 'stop_loss_percent')"
+                />
+              </div>
+            </div>
           </div>
 
           <!-- Action Buttons -->
@@ -474,105 +501,6 @@
       </UCard>
     </div>
 
-    <!-- Pine Script Editor Modal -->
-    <UModal 
-      v-if="showPineScriptModal"
-      v-model="showPineScriptModal" 
-      :ui="{ 
-        width: pineScriptModalPosition ? `${pineScriptModalPosition.width}px` : 'sm:max-w-4xl',
-        overlay: { base: 'fixed inset-0 z-50 bg-black/50' },
-        container: { base: 'fixed inset-0 z-50 flex items-center justify-center p-4' },
-        inner: { base: 'relative' }
-      }"
-    >
-      <UCard>
-          <template #header>
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-lg font-semibold">Pine Script Editor</h3>
-                <p class="text-sm text-gray-500 mt-1">{{ selectedStrategy?.name }}</p>
-              </div>
-              <UButton
-                icon="i-heroicons-x-mark"
-                size="sm"
-                class="bg-gray-600 hover:bg-gray-700 text-white"
-                @click="showPineScriptModal = false"
-              />
-            </div>
-          </template>
-
-          <div class="space-y-4">
-            <!-- Version Selector -->
-            <div class="space-y-2">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Pine Script Version
-              </label>
-              <div class="flex gap-2">
-                <UButton
-                  :variant="pineScriptVersion === 'v4' ? 'solid' : 'outline'"
-                  :color="pineScriptVersion === 'v4' ? 'primary' : 'neutral'"
-                  size="sm"
-                  @click="pineScriptVersion = 'v4'"
-                >
-                  v4
-                </UButton>
-                <UButton
-                  :variant="pineScriptVersion === 'v5' ? 'solid' : 'outline'"
-                  :color="pineScriptVersion === 'v5' ? 'primary' : 'neutral'"
-                  size="sm"
-                  @click="pineScriptVersion = 'v5'"
-                >
-                  v5
-                </UButton>
-              </div>
-            </div>
-
-            <!-- Code Editor -->
-            <UFormField label="Pine Script Code">
-              <UTextarea
-                v-model="pineScriptCode"
-                :rows="20"
-                placeholder="Paste your Pine Script code here..."
-                class="font-mono text-sm"
-              />
-            </UFormField>
-
-            <!-- Helper Text -->
-            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <div class="flex gap-2">
-                <UIcon name="i-heroicons-information-circle" class="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div class="text-sm text-blue-900 dark:text-blue-100">
-                  <p class="font-semibold mb-1">Tips:</p>
-                  <ul class="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
-                    <li>Copy your Pine Script from TradingView</li>
-                    <li>Make sure it includes the @version directive</li>
-                    <li>Test your strategy in TradingView before saving</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <template #footer>
-            <div class="flex justify-end gap-3">
-              <UButton
-                label="Cancel"
-                size="md"
-                class="bg-gray-600 hover:bg-gray-700 text-white"
-                @click="showPineScriptModal = false"
-              />
-              <UButton
-                label="Save Pine Script"
-                size="md"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                :loading="saving"
-                @click="savePineScript"
-              />
-            </div>
-          </template>
-        </UCard>
-      </UModal>
-
   </div>
 </template>
 
@@ -582,9 +510,9 @@ import {
   getStrategies,
   createStrategy,
   updateStrategy,
-  updateStrategyPineScript,
   deleteStrategy as deleteStrategyAPI,
   toggleStrategyStatus as toggleStrategyStatusAPI,
+  getStrategyPnL,
   type Strategy,
   type AssetClass
 } from '~/utils/supabase';
@@ -599,15 +527,11 @@ const strategyView = ref<'your' | 'marketplace'>('your');
 
 // State
 const strategies = ref<Strategy[]>([]);
-const showPineScriptModal = ref(false);
+const strategyPnL = ref<Record<string, number>>({});
 const showStrategyModal = ref(false);
-const selectedStrategy = ref<Strategy | null>(null);
 const editingStrategy = ref<Strategy | null>(null);
 const editingStrategyId = ref<string | null>(null);
-const pineScriptCode = ref('');
-const pineScriptVersion = ref('v5');
 const saving = ref(false);
-const pineScriptModalPosition = ref<{ x: number; y: number; width: number } | null>(null);
 
 interface MarketplaceStrategy {
   id: string;
@@ -683,6 +607,8 @@ const strategyForm = ref({
   name: '',
   description: '',
   asset_class: null as string | null,
+  take_profit_percent: null as number | null,
+  stop_loss_percent: null as number | null,
 });
 
 // Multi-select asset classes
@@ -719,90 +645,22 @@ const toast = useToast()
 // Load strategies
 async function loadStrategies() {
   strategies.value = await getStrategies();
+  
+  // Load P&L for each strategy
+  const pnlMap: Record<string, number> = {};
+  await Promise.all(
+    strategies.value.map(async (strategy) => {
+      const pnl = await getStrategyPnL(strategy.id);
+      pnlMap[strategy.id] = pnl;
+    })
+  );
+  strategyPnL.value = pnlMap;
 }
 
-
-// Open Pine Script Modal
-function openPineScriptModal(strategy: Strategy, event?: Event) {
-  selectedStrategy.value = strategy;
-  pineScriptCode.value = strategy.pine_script || '';
-  pineScriptVersion.value = strategy.pine_script_version || 'v5';
-  
-  // Calculate position to center modal over the card
-  if (event && event.currentTarget) {
-    // Find the parent UCard element by traversing up the DOM
-    let cardElement = (event.currentTarget as HTMLElement).closest('[data-strategy-id]') as HTMLElement;
-    // Fallback: try to find any card-like container
-    if (!cardElement) {
-      cardElement = (event.currentTarget as HTMLElement).closest('.hover\\:shadow-xl, [class*="shadow"]') as HTMLElement;
-    }
-    if (cardElement) {
-      const rect = cardElement.getBoundingClientRect();
-      pineScriptModalPosition.value = {
-        x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY,
-        width: rect.width
-      };
-    }
-  } else {
-    pineScriptModalPosition.value = null;
-  }
-  
-  showPineScriptModal.value = true;
-  // Prevent body scroll when modal opens
-  nextTick(() => {
-    document.body.style.overflow = 'hidden';
-  });
-}
-
-// Save Pine Script
-async function savePineScript() {
-  if (!selectedStrategy.value) return;
-
-  if (!pineScriptCode.value.trim()) {
-    toast.add({
-      title: 'Pine Script required',
-      description: 'Please enter Pine Script code before saving.',
-      color: 'warning',
-    });
-    return;
-  }
-
-  saving.value = true;
-  try {
-    const success = await updateStrategyPineScript(
-      selectedStrategy.value.id,
-      pineScriptCode.value,
-      pineScriptVersion.value
-    );
-
-    if (success) {
-      showPineScriptModal.value = false;
-      pineScriptModalPosition.value = null;
-      await loadStrategies();
-      toast.add({
-        title: 'Pine Script saved',
-        description: 'Your Pine Script code has been saved successfully.',
-        icon: 'i-heroicons-check-circle',
-        color: 'success',
-      });
-    } else {
-      toast.add({
-        title: 'Failed to save Pine Script',
-        description: 'Please check the console for details.',
-        color: 'error',
-      });
-    }
-  } catch (error) {
-    console.error('Error saving Pine Script:', error);
-    toast.add({
-      title: 'Error saving Pine Script',
-      description: 'Please make sure the database is set up correctly.',
-      color: 'error',
-    });
-  } finally {
-    saving.value = false;
-  }
+// Calculate win rate for a strategy
+function calculateWinRate(strategy: Strategy): number {
+  if (strategy.total_trades === 0) return 0;
+  return (strategy.winning_trades / strategy.total_trades) * 100;
 }
 
 // Open Add Strategy (Inline Card)
@@ -813,6 +671,8 @@ function openAddStrategyModal() {
     name: '',
     description: '',
     asset_class: null,
+    take_profit_percent: null,
+    stop_loss_percent: null,
   };
   selectedAssetClasses.value = [];
   showStrategyModal.value = true;
@@ -836,6 +696,8 @@ function cancelAddStrategy() {
     name: '',
     description: '',
     asset_class: null,
+    take_profit_percent: null,
+    stop_loss_percent: null,
   };
   selectedAssetClasses.value = [];
 }
@@ -848,6 +710,8 @@ function startEditStrategy(strategy: Strategy) {
     name: strategy.name,
     description: strategy.description || '',
     asset_class: strategy.asset_class,
+    take_profit_percent: strategy.take_profit_percent || null,
+    stop_loss_percent: strategy.stop_loss_percent || null,
   };
   // Parse asset classes from notes field (ASSET_CLASSES:crypto,stocks,options)
   // or fall back to single asset_class enum value
@@ -879,6 +743,8 @@ function cancelEdit() {
     name: '',
     description: '',
     asset_class: null,
+    take_profit_percent: null,
+    stop_loss_percent: null,
   };
   selectedAssetClasses.value = [];
 }
@@ -906,12 +772,13 @@ async function saveStrategy() {
     let notes = '';
     if (editingStrategy.value?.notes) {
       // Remove old ASSET_CLASSES entry if it exists
-      notes = editingStrategy.value.notes.replace(/ASSET_CLASSES:[^;]*;?/g, '').trim();
+      notes = editingStrategy.value.notes.replace(/ASSET_CLASSES:[^\n]*/g, '').trim();
     }
     
-    // Add asset classes to notes in a parseable format
-    if (assetClassList) {
-      notes = notes ? `${notes}\nASSET_CLASSES:${assetClassList}` : `ASSET_CLASSES:${assetClassList}`;
+    // Add ALL asset classes to notes in a parseable format (comma-separated)
+    if (selectedAssetClasses.value.length > 0) {
+      const assetClassesString = selectedAssetClasses.value.join(',');
+      notes = notes ? `${notes}\nASSET_CLASSES:${assetClassesString}` : `ASSET_CLASSES:${assetClassesString}`;
     }
     
     // Ensure asset_class is always a single value (not comma-separated)
@@ -938,6 +805,8 @@ async function saveStrategy() {
       description: strategyForm.value.description || null,
       asset_class: singleAssetClass,  // Always a single enum value or null
       notes: notes || null,
+      take_profit_percent: strategyForm.value.take_profit_percent || null,
+      stop_loss_percent: strategyForm.value.stop_loss_percent || null,
     };
     
     // Debug log to verify we're sending the correct format
@@ -985,6 +854,35 @@ async function saveStrategy() {
     });
   } finally {
     saving.value = false;
+  }
+}
+
+// Update a single field on a strategy (for inline editing)
+async function updateStrategyField(strategy: Strategy, field: 'take_profit_percent' | 'stop_loss_percent') {
+  try {
+    const updateData = {
+      [field]: strategy[field] || null,
+    };
+    
+    const result = await updateStrategy(strategy.id, updateData);
+    
+    if (result) {
+      toast.add({
+        title: 'Updated',
+        description: `${field === 'take_profit_percent' ? 'Take Profit' : 'Stop Loss'} updated successfully.`,
+        icon: 'i-heroicons-check-circle',
+        color: 'success',
+      });
+    }
+  } catch (error) {
+    console.error(`Error updating ${field}:`, error);
+    toast.add({
+      title: 'Update failed',
+      description: `Failed to update ${field === 'take_profit_percent' ? 'Take Profit' : 'Stop Loss'}.`,
+      color: 'error',
+    });
+    // Reload to revert the change
+    await loadStrategies();
   }
 }
 
@@ -1107,13 +1005,6 @@ function getStatusColor(status: string) {
 watch(showStrategyModal, (isOpen) => {
   if (!isOpen) {
     document.body.style.overflow = '';
-  }
-});
-
-watch(showPineScriptModal, (isOpen) => {
-  if (!isOpen) {
-    document.body.style.overflow = '';
-    pineScriptModalPosition.value = null;
   }
 });
 

@@ -120,14 +120,6 @@
                 <UInput v-model.number="exchange.settings.maxPositionSize" type="number" min="0" step="50" placeholder="e.g. 1000" />
               </UFormField>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UFormField label="Take Profit Target (%)" help="Percent gain that triggers profit-taking.">
-                <UInput v-model.number="exchange.settings.takeProfit" type="number" min="0" step="0.1" placeholder="e.g. 2" />
-              </UFormField>
-              <UFormField label="Stop Loss Limit (%)" help="Percent drawdown where Sparky exits the trade.">
-                <UInput v-model.number="exchange.settings.stopLoss" type="number" min="0" step="0.1" placeholder="e.g. 1" />
-              </UFormField>
-            </div>
           </div>
 
           <div v-if="exchange.optionsSpecific" class="space-y-4 border-t border-gray-200 dark:border-gray-800 pt-4">
@@ -203,8 +195,6 @@ interface ExchangeSettings {
   customWindow: [string, string]
   maxTrades: number
   maxPositionSize: number
-  takeProfit: number
-  stopLoss: number
   allowWeekends: boolean
   positionSizePercent: number
   strikeTolerancePercent: number
@@ -332,8 +322,6 @@ function buildDefaultSettings(overrides: Partial<ExchangeSettings> = {}): Exchan
       : [...DEFAULT_WINDOW],
     maxTrades: overrides.maxTrades ?? 0,
     maxPositionSize: overrides.maxPositionSize ?? 0,
-    takeProfit: overrides.takeProfit ?? 0,
-    stopLoss: overrides.stopLoss ?? 0,
     allowWeekends: overrides.allowWeekends ?? false,
     positionSizePercent: overrides.positionSizePercent ?? 0,
     strikeTolerancePercent: overrides.strikeTolerancePercent ?? 1,
@@ -488,8 +476,6 @@ async function loadExchangeSettings() {
         customWindow: parseTradingWindow(row.trading_window),
         maxTrades: row.max_trades_per_day ?? target.settings.maxTrades,
         maxPositionSize: Number(row.max_position_size_usd) || 0,
-        takeProfit: Number(row.take_profit_percent) || 0,
-        stopLoss: Number(row.stop_loss_percent) || 0,
         allowWeekends: row.allow_weekends ?? target.settings.allowWeekends,
         positionSizePercent: Number(row.position_size_percent) || target.settings.positionSizePercent,
         strikeTolerancePercent:
@@ -527,8 +513,6 @@ async function saveSettings(exchangeKey: ExchangeKey) {
       trading_window: exchange.settings.customWindow,
       max_trades_per_day: exchange.settings.maxTrades,
       max_position_size_usd: exchange.settings.maxPositionSize,
-      take_profit_percent: exchange.settings.takeProfit,
-      stop_loss_percent: exchange.settings.stopLoss,
       allow_weekends: exchange.settings.allowWeekends,
       position_size_percent: exchange.settings.positionSizePercent,
       strike_tolerance_percent: exchange.settings.strikeTolerancePercent,
@@ -538,9 +522,29 @@ async function saveSettings(exchangeKey: ExchangeKey) {
       max_open_positions: exchange.settings.maxOpenPositions,
     }
 
-    const { error } = await supabase
+    // RLS will automatically filter by user_id
+    // First try to find existing record
+    const { data: existing } = await supabase
       .from('trade_settings_exchange')
-      .upsert(payload, { onConflict: 'exchange' })
+      .select('id')
+      .eq('exchange', exchange.key)
+      .single()
+
+    let error
+    if (existing) {
+      // Update existing record
+      const result = await supabase
+        .from('trade_settings_exchange')
+        .update(payload)
+        .eq('id', existing.id)
+      error = result.error
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from('trade_settings_exchange')
+        .insert(payload)
+      error = result.error
+    }
 
     if (error) throw error
 

@@ -56,15 +56,15 @@
                 <div class="space-y-4">
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">Name</p>
-                    <p class="text-lg font-semibold mt-1">{{ userProfile.name || 'John Doe' }}</p>
+                    <p class="text-lg font-semibold mt-1">{{ userProfile.name }}</p>
                   </div>
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                    <p class="text-lg font-semibold mt-1">{{ userProfile.email || 'john@example.com' }}</p>
+                    <p class="text-lg font-semibold mt-1">{{ userProfile.email }}</p>
                   </div>
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">Member Since</p>
-                    <p class="text-lg font-semibold mt-1">{{ userProfile.joinDate || 'Jan 15, 2024' }}</p>
+                    <p class="text-lg font-semibold mt-1">{{ userProfile.joinDate }}</p>
                   </div>
                   <UButton
                     label="Edit Profile"
@@ -1124,11 +1124,25 @@ const tabs: Tab[] = [
 
 const activeTab = ref<TabKey>('overview')
 
-// User Profile
-const userProfile = ref({
-  name: 'John Doe',
-  email: 'john@example.com',
-  joinDate: 'Jan 15, 2024'
+// Get authenticated user
+const user = useSupabaseUser()
+
+// User Profile (from Supabase Auth)
+const userProfile = computed(() => {
+  if (!user.value) return { name: '', email: '', joinDate: '' }
+  
+  const createdAt = user.value.created_at ? new Date(user.value.created_at) : new Date()
+  const joinDate = createdAt.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  })
+  
+  return {
+    name: user.value.email?.split('@')[0] || 'User',
+    email: user.value.email || '',
+    joinDate
+  }
 })
 
 // Subscription (Mock Data)

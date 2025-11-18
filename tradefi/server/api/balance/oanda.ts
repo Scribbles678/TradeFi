@@ -1,4 +1,5 @@
-import { defineEventHandler, useRuntimeConfig } from '#imports'
+import { defineEventHandler, useRuntimeConfig, createError } from '#imports'
+import { serverSupabaseClient } from '#supabase/server'
 
 interface OandaAccount {
   balance: string
@@ -16,19 +17,34 @@ interface OandaResponse {
 
 export default defineEventHandler(async (event) => {
   try {
-    const config = useRuntimeConfig()
-    const accountId = config.oandaAccountId
-    const apiKey = config.oandaApiKey
-    const baseUrl = config.oandaBaseUrl
+    // Get authenticated user
+    const user = event.context.user
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        message: 'Unauthorized - Please log in'
+      })
+    }
 
-    if (!accountId || !apiKey || !baseUrl) {
-      console.log('OANDA missing config')
+    // Get user's API credentials from database
+    const supabase = await serverSupabaseClient(event)
+    const { data: credentials, error: credError } = await supabase
+      .from('bot_credentials')
+      .select('api_key, account_id, base_url')
+      .eq('exchange', 'oanda')
+      .single()
+
+    if (credError || !credentials) {
       return {
         success: false,
         exchange: 'OANDA',
-        error: 'Missing OANDA configuration'
+        error: 'OANDA credentials not configured'
       }
     }
+
+    const accountId = credentials.account_id
+    const apiKey = credentials.api_key
+    const baseUrl = credentials.base_url || 'https://api-fxpractice.oanda.com'
 
     // Ensure baseUrl doesn't end with slash to avoid double slashes
     const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl

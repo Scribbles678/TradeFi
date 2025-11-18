@@ -17,12 +17,22 @@ type BotCredentialPayload = {
 export default defineEventHandler(async (event) => {
   const method = getMethod(event)
   const supabase = useServiceSupabaseClient()
+  const user = event.context.user
+
+  // Require authentication
+  if (!user) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Unauthorized'
+    })
+  }
 
   switch (method) {
     case 'GET': {
       const { data, error } = await supabase
         .from('bot_credentials')
         .select('*')
+        .eq('user_id', user.id)
         .order('label', { ascending: true })
 
       if (error) {
@@ -52,6 +62,7 @@ export default defineEventHandler(async (event) => {
         .from('bot_credentials')
         .select('*')
         .eq('exchange', normalized.exchange)
+        .eq('user_id', user.id)
         .maybeSingle()
 
       let upsertResult
@@ -64,6 +75,7 @@ export default defineEventHandler(async (event) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', existing.id)
+          .eq('user_id', user.id)
           .select()
           .single()
 
@@ -77,10 +89,11 @@ export default defineEventHandler(async (event) => {
 
         upsertResult = data
       } else {
-        const { data, error } = await supabase
+        const { data, error} = await supabase
           .from('bot_credentials')
           .insert({
             exchange: normalized.exchange,
+            user_id: user.id,
             ...normalized.fields
           })
           .select()
@@ -118,6 +131,7 @@ export default defineEventHandler(async (event) => {
         .from('bot_credentials')
         .delete()
         .eq('exchange', exchange)
+        .eq('user_id', user.id)
 
       if (error) {
         throw createError({

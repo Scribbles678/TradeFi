@@ -8,7 +8,8 @@ export default defineNuxtConfig({
     '@nuxt/fonts',
     '@nuxt/icon',
     '@nuxt/image',
-    '@nuxt/scripts'
+    '@nuxt/scripts',
+    '@nuxtjs/supabase'
   ],
 
   eslint: {
@@ -29,6 +30,15 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: '2024-11-27',
+
+  supabase: {
+    redirect: false, // We'll handle redirects manually
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      exclude: ['/login', '/register']
+    }
+  },
 
   runtimeConfig: {
     // Aster DEX (Crypto) - for account balances
@@ -63,7 +73,7 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    // Let Netlify auto-detect the preset (like the working scheduling-app)
+    preset: 'netlify',
     experimental: {
       wasm: true
     }
