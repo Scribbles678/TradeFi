@@ -53,14 +53,14 @@
           v-if="showStrategyModal && !editingStrategyId"
           key="add-strategy-card"
           data-add-strategy-card
-          class="w-full shadow-2xl border-2 border-green-500 dark:border-green-400 z-10 hover:shadow-xl transition-all duration-300"
+          class="w-full max-w-2xl mx-auto shadow-2xl border-2 border-green-500 dark:border-green-400 z-10 hover:shadow-xl transition-all duration-300"
         >
         <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Add New Strategy</h3>
+          <div class="flex items-center justify-between py-2">
+            <h3 class="text-base font-bold text-gray-900 dark:text-white">Add New Strategy</h3>
             <UButton
               icon="i-heroicons-x-mark"
-              size="sm"
+              size="xs"
               variant="ghost"
               class="text-gray-400 hover:text-gray-600"
               @click="cancelAddStrategy()"
@@ -68,54 +68,58 @@
           </div>
         </template>
 
-        <form @submit.prevent="saveStrategy" class="space-y-4">
+        <form @submit.prevent="saveStrategy" class="space-y-3 px-1">
           <!-- Strategy Name -->
-          <UFormField label="Strategy Name" help="A descriptive name for your trading strategy">
+          <UFormField label="Strategy Name" class="mb-2">
             <UInput 
               v-model="strategyForm.name" 
               placeholder="e.g., Momentum Breakout Strategy"
               icon="i-heroicons-tag"
               autofocus
               required
+              size="sm"
             />
           </UFormField>
 
           <!-- Description -->
-          <UFormField label="Description" help="Brief description of what this strategy does">
+          <UFormField label="Description" class="mb-2">
             <UTextarea
               v-model="strategyForm.description"
               placeholder="Describe your strategy's approach, entry/exit conditions, etc."
-              :rows="3"
+              :rows="2"
+              size="sm"
             />
           </UFormField>
 
           <!-- Asset Class - Multi-select Pills -->
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-gray-700 dark:text-gray-300">
               Asset Classes
             </label>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Select all asset classes this strategy trades</p>
-            <div class="flex flex-wrap gap-2">
-              <UButton
+            <div class="flex flex-wrap gap-1.5">
+              <button
                 v-for="option in assetClassOptions"
                 :key="option.value"
-                :variant="selectedAssetClasses.includes(option.value) ? 'solid' : 'outline'"
-                :color="selectedAssetClasses.includes(option.value) ? 'primary' : undefined"
-                :class="selectedAssetClasses.includes(option.value) ? '' : 'text-gray-400'"
-                size="sm"
+                type="button"
+                :class="[
+                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200',
+                  selectedAssetClasses.includes(option.value)
+                    ? 'border-2 border-green-500 text-green-500 bg-transparent'
+                    : 'border border-gray-600 text-gray-400 bg-transparent hover:border-gray-500'
+                ]"
                 @click="toggleAssetClass(option.value)"
               >
                 {{ option.label }}
-              </UButton>
+              </button>
             </div>
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+          <div class="flex flex-col sm:flex-row justify-end gap-2 pt-1">
             <UButton
               type="button"
               label="Cancel"
-              size="md"
+              size="sm"
               variant="ghost"
               class="w-full sm:w-auto text-gray-400 hover:text-gray-600"
               @click="cancelAddStrategy()"
@@ -123,7 +127,7 @@
             <UButton
               type="submit"
               label="Create Strategy"
-              size="md"
+              size="sm"
               icon="i-heroicons-check"
               class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               :loading="saving"
@@ -165,10 +169,16 @@
           <div v-else class="flex items-start justify-between gap-3">
             <div class="flex-1">
               <h4 class="font-bold text-lg text-gray-900 dark:text-white">{{ strategy.name }}</h4>
-              <!-- Asset Class Badge -->
-              <div v-if="strategy.asset_class" class="mt-2">
-                <UBadge color="neutral" variant="outline" size="xs">
-                  {{ strategy.asset_class.toUpperCase() }}
+              <!-- Asset Class Badge(s) -->
+              <div v-if="getStrategyAssetClasses(strategy).length > 0" class="mt-2 flex flex-wrap gap-1">
+                <UBadge 
+                  v-for="assetClass in getStrategyAssetClasses(strategy)"
+                  :key="assetClass"
+                  color="neutral" 
+                  variant="outline" 
+                  size="xs"
+                >
+                  {{ assetClass.toUpperCase() }}
                 </UBadge>
               </div>
             </div>
@@ -179,53 +189,58 @@
         </template>
 
         <!-- Edit Form -->
-        <form v-if="editingStrategyId === strategy.id" @submit.prevent="saveStrategy()" class="space-y-4">
+        <form v-if="editingStrategyId === strategy.id" @submit.prevent="saveStrategy()" class="space-y-3 px-1">
           <!-- Strategy Name -->
-          <UFormField label="Strategy Name" help="A descriptive name for your trading strategy">
+          <UFormField label="Strategy Name" class="mb-2">
             <UInput 
               v-model="strategyForm.name" 
               placeholder="e.g., Momentum Breakout Strategy"
               icon="i-heroicons-tag"
               autofocus
               required
+              size="sm"
             />
           </UFormField>
 
           <!-- Description -->
-          <UFormField label="Description" help="Brief description of what this strategy does">
+          <UFormField label="Description" class="mb-2">
             <UTextarea
               v-model="strategyForm.description"
               placeholder="Describe your strategy's approach, entry/exit conditions, etc."
-              :rows="3"
+              :rows="2"
+              size="sm"
             />
           </UFormField>
 
           <!-- Asset Class - Multi-select Pills -->
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-gray-700 dark:text-gray-300">
               Asset Classes
             </label>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Select all asset classes this strategy trades</p>
-            <div class="flex flex-wrap gap-2">
-              <UButton
+            <div class="flex flex-wrap gap-1.5">
+              <button
                 v-for="option in assetClassOptions"
                 :key="option.value"
-                :variant="selectedAssetClasses.includes(option.value) ? 'solid' : 'outline'"
-                :color="selectedAssetClasses.includes(option.value) ? 'primary' : 'gray'"
-                size="sm"
+                type="button"
+                :class="[
+                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200',
+                  selectedAssetClasses.includes(option.value)
+                    ? 'border-2 border-green-500 text-green-500 bg-transparent'
+                    : 'border border-gray-600 text-gray-400 bg-transparent hover:border-gray-500'
+                ]"
                 @click="toggleAssetClass(option.value)"
               >
                 {{ option.label }}
-              </UButton>
+              </button>
             </div>
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+          <div class="flex flex-col sm:flex-row justify-end gap-2 pt-1">
             <UButton
               type="button"
               label="Cancel"
-              size="md"
+              size="sm"
               variant="ghost"
               class="w-full sm:w-auto text-gray-400 hover:text-gray-600"
               @click="cancelEdit()"
@@ -233,7 +248,7 @@
             <UButton
               type="submit"
               label="Save Changes"
-              size="md"
+              size="sm"
               icon="i-heroicons-check"
               class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold"
               :loading="saving"
@@ -495,7 +510,7 @@
               <div class="flex gap-2">
                 <UButton
                   :variant="pineScriptVersion === 'v4' ? 'solid' : 'outline'"
-                  :color="pineScriptVersion === 'v4' ? 'primary' : 'gray'"
+                  :color="pineScriptVersion === 'v4' ? 'primary' : 'neutral'"
                   size="sm"
                   @click="pineScriptVersion = 'v4'"
                 >
@@ -503,7 +518,7 @@
                 </UButton>
                 <UButton
                   :variant="pineScriptVersion === 'v5' ? 'solid' : 'outline'"
-                  :color="pineScriptVersion === 'v5' ? 'primary' : 'gray'"
+                  :color="pineScriptVersion === 'v5' ? 'primary' : 'neutral'"
                   size="sm"
                   @click="pineScriptVersion = 'v5'"
                 >
@@ -570,7 +585,8 @@ import {
   updateStrategyPineScript,
   deleteStrategy as deleteStrategyAPI,
   toggleStrategyStatus as toggleStrategyStatusAPI,
-  type Strategy
+  type Strategy,
+  type AssetClass
 } from '~/utils/supabase';
 
 // View toggle
@@ -680,9 +696,10 @@ function toggleAssetClass(value: string) {
   } else {
     selectedAssetClasses.value.push(value)
   }
-  // Store as comma-separated string for database
+  // Store first asset class in enum field (database constraint)
+  // Full list will be stored in notes field
   strategyForm.value.asset_class = selectedAssetClasses.value.length > 0 
-    ? selectedAssetClasses.value.join(',') 
+    ? selectedAssetClasses.value[0] as AssetClass
     : null
 }
 
@@ -832,13 +849,18 @@ function startEditStrategy(strategy: Strategy) {
     description: strategy.description || '',
     asset_class: strategy.asset_class,
   };
-  // Parse asset classes from comma-separated string or single value
-  if (strategy.asset_class) {
-    selectedAssetClasses.value = strategy.asset_class.includes(',') 
-      ? strategy.asset_class.split(',')
-      : [strategy.asset_class];
-  } else {
-    selectedAssetClasses.value = [];
+  // Parse asset classes from notes field (ASSET_CLASSES:crypto,stocks,options)
+  // or fall back to single asset_class enum value
+  selectedAssetClasses.value = [];
+  if (strategy.notes) {
+    const assetClassMatch = strategy.notes.match(/ASSET_CLASSES:([^\n]+)/);
+    if (assetClassMatch && assetClassMatch[1]) {
+      selectedAssetClasses.value = assetClassMatch[1].split(',').filter(Boolean);
+    }
+  }
+  // Fallback: if no ASSET_CLASSES in notes, use the single enum value
+  if (selectedAssetClasses.value.length === 0 && strategy.asset_class) {
+    selectedAssetClasses.value = [strategy.asset_class];
   }
   // Scroll to the card being edited
   nextTick(() => {
@@ -874,14 +896,61 @@ async function saveStrategy() {
 
   saving.value = true;
   try {
+    // Prepare the data to save
+    // Store first asset class in enum field, full list in notes
+    const assetClassList = selectedAssetClasses.value.length > 0 
+      ? selectedAssetClasses.value[0] as AssetClass 
+      : '';
+    
+    // Preserve existing notes if editing, or create new notes with asset classes
+    let notes = '';
+    if (editingStrategy.value?.notes) {
+      // Remove old ASSET_CLASSES entry if it exists
+      notes = editingStrategy.value.notes.replace(/ASSET_CLASSES:[^;]*;?/g, '').trim();
+    }
+    
+    // Add asset classes to notes in a parseable format
+    if (assetClassList) {
+      notes = notes ? `${notes}\nASSET_CLASSES:${assetClassList}` : `ASSET_CLASSES:${assetClassList}`;
+    }
+    
+    // Ensure asset_class is always a single value (not comma-separated)
+    // Extract first asset class from selectedAssetClasses array and validate it
+    let singleAssetClass: AssetClass | null = null;
+    if (selectedAssetClasses.value.length > 0) {
+      const firstClass = selectedAssetClasses.value[0];
+      if (firstClass) {
+        // Validate it's a valid AssetClass enum value (not a comma-separated string)
+        const validAssetClasses: AssetClass[] = ['forex', 'crypto', 'options', 'stocks', 'futures'];
+        if (validAssetClasses.includes(firstClass as AssetClass) && !firstClass.includes(',')) {
+          singleAssetClass = firstClass as AssetClass;
+        } else {
+          console.warn('Invalid asset class value detected:', firstClass);
+          // Fallback: try to extract first valid class from the string
+          const firstValid = validAssetClasses.find(ac => firstClass.includes(ac));
+          singleAssetClass = firstValid || null;
+        }
+      }
+    }
+    
+    const dataToSave = {
+      name: strategyForm.value.name,
+      description: strategyForm.value.description || null,
+      asset_class: singleAssetClass,  // Always a single enum value or null
+      notes: notes || null,
+    };
+    
+    // Debug log to verify we're sending the correct format
+    console.log('Saving strategy with asset_class:', singleAssetClass, 'selectedAssetClasses:', selectedAssetClasses.value);
+    
     let result;
     if (editingStrategy.value) {
       // Update existing strategy
-      result = await updateStrategy(editingStrategy.value.id, strategyForm.value);
+      result = await updateStrategy(editingStrategy.value.id, dataToSave);
     } else {
       // Create new strategy
       result = await createStrategy({
-        ...strategyForm.value,
+        ...dataToSave,
         status: 'inactive',
       });
     }
@@ -1004,6 +1073,22 @@ function requestAccess(strategy: MarketplaceStrategy) {
   alert(`Request submitted for ${strategy.name}. We'll notify ${strategy.trader}. (Mock action)`);
 }
 
+// Helper function to extract asset classes from strategy
+function getStrategyAssetClasses(strategy: Strategy): string[] {
+  // First try to parse from notes field (ASSET_CLASSES:crypto,stocks,options)
+  if (strategy.notes) {
+    const assetClassMatch = strategy.notes.match(/ASSET_CLASSES:([^\n]+)/);
+    if (assetClassMatch && assetClassMatch[1]) {
+      return assetClassMatch[1].split(',').filter(Boolean);
+    }
+  }
+  // Fallback: use single asset_class enum value
+  if (strategy.asset_class) {
+    return [strategy.asset_class];
+  }
+  return [];
+}
+
 // Helper function for status colors
 function getStatusColor(status: string) {
   switch (status) {
@@ -1051,3 +1136,19 @@ definePageMeta({
   description: 'Manage your trading strategies'
 });
 </script>
+
+<style scoped>
+/* Asset Class Pills - Green Border Effect (matching form field focus) */
+/* Using native button elements now, so simpler styling */
+button[type="button"].border-green-500:hover {
+  border-color: #34d399 !important; /* green-400 - lighter green on hover */
+  color: #34d399 !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+button[type="button"]:not(.border-green-500):hover {
+  border-color: rgba(107, 114, 128, 0.8) !important;
+  transform: translateY(-1px);
+}
+</style>

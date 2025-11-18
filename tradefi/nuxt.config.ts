@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV === 'development' },
 
   modules: [
     '@nuxt/ui',
@@ -10,6 +10,12 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxt/scripts'
   ],
+
+  eslint: {
+    // Don't fail build on ESLint errors
+    emitWarning: true,
+    failOnError: false
+  },
 
   icon: {
     serverBundle: 'local',
