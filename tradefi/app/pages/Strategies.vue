@@ -345,6 +345,46 @@
                   @blur="updateStrategyField(strategy, 'stop_loss_percent')"
                 />
               </div>
+              
+              <!-- Trailing Stop Loss Section -->
+              <div class="pt-2 border-t dark:border-gray-700 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <label class="text-xs text-gray-600 dark:text-gray-400 font-semibold flex items-center gap-1">
+                    <UIcon name="i-heroicons-arrow-trending-up" class="w-3 h-3" />
+                    Trailing Stop Loss
+                  </label>
+                  <button
+                    @click="toggleTrailingStopLoss(strategy.id)"
+                    :class="[
+                      'px-2 py-1 text-xs font-semibold rounded transition-all duration-200',
+                      trailingStopLoss[strategy.id]?.enabled
+                        ? 'bg-gray-900 dark:bg-gray-950 text-green-400 border-2 border-green-400'
+                        : 'bg-gray-800 dark:bg-gray-800 text-gray-400 border border-gray-600 hover:border-gray-500'
+                    ]"
+                  >
+                    {{ trailingStopLoss[strategy.id]?.enabled ? 'ON' : 'OFF' }}
+                  </button>
+                </div>
+                
+                <!-- Trailing Stop Loss Input (shown when enabled) -->
+                <div v-if="trailingStopLoss[strategy.id]?.enabled" class="flex items-center justify-between gap-2 pl-4">
+                  <label class="text-xs text-gray-500 dark:text-gray-500 font-medium">Trail Distance (%)</label>
+                  <UInput 
+                    v-model.number="trailingStopLoss[strategy.id].trailPercent" 
+                    type="number" 
+                    min="0" 
+                    step="0.1" 
+                    placeholder="e.g. 0.5"
+                    size="xs"
+                    class="w-24"
+                  />
+                </div>
+                
+                <!-- Info text -->
+                <p v-if="trailingStopLoss[strategy.id]?.enabled" class="text-xs text-gray-500 dark:text-gray-500 pl-4">
+                  Stop loss will trail price by {{ trailingStopLoss[strategy.id].trailPercent || 0 }}% as it moves in your favor
+                </p>
+              </div>
             </div>
           </div>
 
@@ -533,6 +573,9 @@ const editingStrategy = ref<Strategy | null>(null);
 const editingStrategyId = ref<string | null>(null);
 const saving = ref(false);
 
+// Trailing Stop Loss State (mock data for now)
+const trailingStopLoss = ref<Record<string, { enabled: boolean; trailPercent: number }>>({});
+
 interface MarketplaceStrategy {
   id: string;
   name: string;
@@ -652,9 +695,38 @@ async function loadStrategies() {
     strategies.value.map(async (strategy) => {
       const pnl = await getStrategyPnL(strategy.id);
       pnlMap[strategy.id] = pnl;
+      
+      // Initialize trailing stop loss state (mock data for now)
+      if (!trailingStopLoss.value[strategy.id]) {
+        trailingStopLoss.value[strategy.id] = {
+          enabled: false,
+          trailPercent: 0.5
+        };
+      }
     })
   );
   strategyPnL.value = pnlMap;
+}
+
+// Toggle Trailing Stop Loss
+function toggleTrailingStopLoss(strategyId: string) {
+  if (!trailingStopLoss.value[strategyId]) {
+    trailingStopLoss.value[strategyId] = {
+      enabled: true,
+      trailPercent: 0.5
+    };
+  } else {
+    trailingStopLoss.value[strategyId].enabled = !trailingStopLoss.value[strategyId].enabled;
+  }
+  
+  // Show toast notification
+  const strategy = strategies.value.find(s => s.id === strategyId);
+  toast.add({
+    title: trailingStopLoss.value[strategyId].enabled ? 'Trailing Stop Loss Enabled' : 'Trailing Stop Loss Disabled',
+    description: `"${strategy?.name || 'Strategy'}" is now using ${trailingStopLoss.value[strategyId].enabled ? 'trailing' : 'fixed'} stop loss.`,
+    icon: 'i-heroicons-check-circle',
+    color: trailingStopLoss.value[strategyId].enabled ? 'success' : 'neutral',
+  });
 }
 
 // Calculate win rate for a strategy

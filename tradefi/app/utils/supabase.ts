@@ -16,7 +16,9 @@ function assertSupabaseEnv(url?: string, key?: string) {
   }
 }
 
-export function useSupabaseClient(): SupabaseClient {
+// Renamed to avoid conflict with @nuxtjs/supabase's useSupabaseClient
+// Use the Nuxt module's useSupabaseClient() in components instead
+export function getSupabaseClient(): SupabaseClient {
   if (supabaseClient) {
     return supabaseClient;
   }

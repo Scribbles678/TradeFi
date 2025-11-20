@@ -58,10 +58,12 @@ export default defineEventHandler(async (event) => {
 
       const normalized = normalizePayload(payload)
 
+      // Query by exchange AND environment to support separate Live/Paper credentials
       const { data: existing } = await supabase
         .from('bot_credentials')
         .select('*')
         .eq('exchange', normalized.exchange)
+        .eq('environment', normalized.fields.environment)
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -119,6 +121,7 @@ export default defineEventHandler(async (event) => {
     case 'DELETE': {
       const query = getQuery(event)
       const exchange = typeof query.exchange === 'string' ? query.exchange : null
+      const environment = typeof query.environment === 'string' ? query.environment : 'production'
 
       if (!exchange) {
         throw createError({
@@ -127,10 +130,12 @@ export default defineEventHandler(async (event) => {
         })
       }
 
+      // Delete by exchange AND environment to support separate Live/Paper credentials
       const { error } = await supabase
         .from('bot_credentials')
         .delete()
         .eq('exchange', exchange)
+        .eq('environment', environment)
         .eq('user_id', user.id)
 
       if (error) {

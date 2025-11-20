@@ -113,6 +113,100 @@
               </UCard>
             </div>
 
+            <!-- System Health Status -->
+            <UCard>
+              <template #header>
+                <div class="flex items-center gap-2">
+                  <UIcon name="i-heroicons-cpu-chip" class="w-5 h-5" />
+                  <h3 class="text-lg font-semibold">System Health</h3>
+                </div>
+              </template>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Sparky Bot Status -->
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <div class="flex-shrink-0">
+                    <div :class="[
+                      'w-10 h-10 rounded-full flex items-center justify-center',
+                      systemHealth.botOnline ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'
+                    ]">
+                      <UIcon 
+                        name="i-heroicons-server" 
+                        :class="systemHealth.botOnline ? 'text-green-600' : 'text-red-600'" 
+                        class="w-5 h-5" 
+                      />
+                    </div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Sparky Bot</p>
+                    <p :class="[
+                      'text-sm font-semibold',
+                      systemHealth.botOnline ? 'text-green-600' : 'text-red-600'
+                    ]">
+                      {{ systemHealth.botOnline ? 'Online' : 'Offline' }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Last Webhook -->
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <div class="flex-shrink-0">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                      <UIcon name="i-heroicons-bolt" class="text-blue-600 w-5 h-5" />
+                    </div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Last Webhook</p>
+                    <p class="text-sm font-semibold truncate">{{ systemHealth.lastWebhook }}</p>
+                  </div>
+                </div>
+
+                <!-- API Connections -->
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <div class="flex-shrink-0">
+                    <div :class="[
+                      'w-10 h-10 rounded-full flex items-center justify-center',
+                      connectedExchangesCount >= 3 ? 'bg-green-100 dark:bg-green-900' : 'bg-yellow-100 dark:bg-yellow-900'
+                    ]">
+                      <UIcon 
+                        name="i-heroicons-link" 
+                        :class="connectedExchangesCount >= 3 ? 'text-green-600' : 'text-yellow-600'" 
+                        class="w-5 h-5" 
+                      />
+                    </div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">API Connections</p>
+                    <p class="text-sm font-semibold">{{ connectedExchangesCount }}/4 Active</p>
+                  </div>
+                </div>
+
+                <!-- System Alerts -->
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <div class="flex-shrink-0">
+                    <div :class="[
+                      'w-10 h-10 rounded-full flex items-center justify-center',
+                      systemHealth.alertsCount === 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'
+                    ]">
+                      <UIcon 
+                        :name="systemHealth.alertsCount === 0 ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-triangle'" 
+                        :class="systemHealth.alertsCount === 0 ? 'text-green-600' : 'text-red-600'" 
+                        class="w-5 h-5" 
+                      />
+                    </div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">System Alerts</p>
+                    <p :class="[
+                      'text-sm font-semibold',
+                      systemHealth.alertsCount === 0 ? 'text-green-600' : 'text-red-600'
+                    ]">
+                      {{ systemHealth.alertsCount === 0 ? 'No Issues' : `${systemHealth.alertsCount} Alert${systemHealth.alertsCount > 1 ? 's' : ''}` }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </UCard>
+
             <!-- Usage & Limits -->
             <UCard>
               <template #header>
@@ -134,61 +228,129 @@
                 <div class="space-y-2">
                   <div class="flex items-center justify-between">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Active Exchanges</p>
-                    <p class="text-sm font-semibold">{{ usage.exchangesUsed }}/{{ usage.exchangesLimit }}</p>
+                    <div class="flex items-center gap-2">
+                      <p class="text-sm font-semibold">{{ usage.exchangesUsed }}/{{ usage.exchangesLimit }}</p>
+                      <UIcon 
+                        v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'warning'" 
+                        name="i-heroicons-exclamation-triangle" 
+                        class="w-4 h-4 text-yellow-500" 
+                      />
+                      <UIcon 
+                        v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'critical'" 
+                        name="i-heroicons-exclamation-circle" 
+                        class="w-4 h-4 text-red-500" 
+                      />
+                    </div>
                   </div>
                   <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                     <div 
-                      class="bg-blue-600 h-2.5 rounded-full transition-all"
-                      :style="{ width: `${(usage.exchangesUsed / usage.exchangesLimit) * 100}%` }"
+                      :class="getUsageBarColor(usage.exchangesUsed, usage.exchangesLimit)"
+                      class="h-2.5 rounded-full transition-all"
+                      :style="{ width: `${getUsagePercent(usage.exchangesUsed, usage.exchangesLimit)}%` }"
                     ></div>
                   </div>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ usage.exchangesLimit === Infinity ? 'Unlimited' : `${Math.round((usage.exchangesUsed / usage.exchangesLimit) * 100)}% used` }}
-                  </p>
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ usage.exchangesLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.exchangesUsed, usage.exchangesLimit))}% used` }}
+                    </p>
+                    <p v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'critical'" class="text-xs text-red-600 font-semibold">
+                      At limit!
+                    </p>
+                  </div>
+                  <UButton
+                    v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) !== 'safe'"
+                    label="Upgrade Plan"
+                    size="xs"
+                    variant="outline"
+                    class="w-full mt-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                    @click="activeTab = 'subscription'"
+                  />
                 </div>
 
                 <!-- Strategies Used -->
                 <div class="space-y-2">
                   <div class="flex items-center justify-between">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Active Strategies</p>
-                    <p class="text-sm font-semibold">{{ usage.strategiesUsed }}/{{ usage.strategiesLimit === Infinity ? '∞' : usage.strategiesLimit }}</p>
+                    <div class="flex items-center gap-2">
+                      <p class="text-sm font-semibold">{{ usage.strategiesUsed }}/{{ usage.strategiesLimit === Infinity ? '∞' : usage.strategiesLimit }}</p>
+                      <UIcon 
+                        v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'warning'" 
+                        name="i-heroicons-exclamation-triangle" 
+                        class="w-4 h-4 text-yellow-500" 
+                      />
+                      <UIcon 
+                        v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'critical'" 
+                        name="i-heroicons-exclamation-circle" 
+                        class="w-4 h-4 text-red-500" 
+                      />
+                    </div>
                   </div>
                   <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                     <div 
-                      v-if="usage.strategiesLimit !== Infinity"
-                      class="bg-green-600 h-2.5 rounded-full transition-all"
-                      :style="{ width: `${Math.min((usage.strategiesUsed / usage.strategiesLimit) * 100, 100)}%` }"
-                    ></div>
-                    <div 
-                      v-else
-                      class="bg-green-600 h-2.5 rounded-full w-full"
+                      :class="getUsageBarColor(usage.strategiesUsed, usage.strategiesLimit)"
+                      class="h-2.5 rounded-full transition-all"
+                      :style="{ width: `${getUsagePercent(usage.strategiesUsed, usage.strategiesLimit)}%` }"
                     ></div>
                   </div>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ usage.strategiesLimit === Infinity ? 'Unlimited' : `${Math.round((usage.strategiesUsed / usage.strategiesLimit) * 100)}% used` }}
-                  </p>
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ usage.strategiesLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.strategiesUsed, usage.strategiesLimit))}% used` }}
+                    </p>
+                    <p v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'critical'" class="text-xs text-red-600 font-semibold">
+                      At limit!
+                    </p>
+                  </div>
+                  <UButton
+                    v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) !== 'safe'"
+                    label="Upgrade Plan"
+                    size="xs"
+                    variant="outline"
+                    class="w-full mt-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                    @click="activeTab = 'subscription'"
+                  />
                 </div>
 
                 <!-- Webhooks This Month -->
                 <div class="space-y-2">
                   <div class="flex items-center justify-between">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Webhooks (This Month)</p>
-                    <p class="text-sm font-semibold">{{ usage.webhooksUsed }}/{{ usage.webhooksLimit === Infinity ? '∞' : usage.webhooksLimit }}</p>
+                    <div class="flex items-center gap-2">
+                      <p class="text-sm font-semibold">{{ usage.webhooksUsed }}/{{ usage.webhooksLimit === Infinity ? '∞' : usage.webhooksLimit }}</p>
+                      <UIcon 
+                        v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'warning'" 
+                        name="i-heroicons-exclamation-triangle" 
+                        class="w-4 h-4 text-yellow-500" 
+                      />
+                      <UIcon 
+                        v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'critical'" 
+                        name="i-heroicons-exclamation-circle" 
+                        class="w-4 h-4 text-red-500" 
+                      />
+                    </div>
                   </div>
                   <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                     <div 
-                      v-if="usage.webhooksLimit !== Infinity"
-                      class="bg-purple-600 h-2.5 rounded-full transition-all"
-                      :style="{ width: `${Math.min((usage.webhooksUsed / usage.webhooksLimit) * 100, 100)}%` }"
-                    ></div>
-                    <div 
-                      v-else
-                      class="bg-purple-600 h-2.5 rounded-full w-full"
+                      :class="getUsageBarColor(usage.webhooksUsed, usage.webhooksLimit)"
+                      class="h-2.5 rounded-full transition-all"
+                      :style="{ width: `${getUsagePercent(usage.webhooksUsed, usage.webhooksLimit)}%` }"
                     ></div>
                   </div>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ usage.webhooksLimit === Infinity ? 'Unlimited' : `${Math.round((usage.webhooksUsed / usage.webhooksLimit) * 100)}% used` }}
-                  </p>
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ usage.webhooksLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.webhooksUsed, usage.webhooksLimit))}% used` }}
+                    </p>
+                    <p v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'critical'" class="text-xs text-red-600 font-semibold">
+                      At limit!
+                    </p>
+                  </div>
+                  <UButton
+                    v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) !== 'safe'"
+                    label="Upgrade Plan"
+                    size="xs"
+                    variant="outline"
+                    class="w-full mt-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                    @click="activeTab = 'subscription'"
+                  />
                 </div>
               </div>
             </UCard>
@@ -426,36 +588,68 @@
                 class="space-y-2 compact-card"
               >
                 <template #header>
-                  <div class="flex items-center justify-between py-1">
-                    <div class="flex items-center gap-2">
-                      <UIcon :name="card.icon" class="w-5 h-5" />
-                      <div>
-                        <div class="flex items-center gap-2">
+                  <div class="flex items-start justify-between py-1 gap-3">
+                    <div class="flex items-start gap-2 flex-1 min-w-0">
+                      <UIcon :name="card.icon" class="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
                           <h3 class="text-base font-semibold">{{ card.name }}</h3>
-                          <UBadge :color="isCredentialConnected(card.key) ? 'success' : 'neutral'" size="xs">
-                            {{ isCredentialConnected(card.key) ? 'Connected' : 'Not Connected' }}
-                          </UBadge>
+                          <div class="flex items-center gap-1.5">
+                            <UIcon 
+                              :name="getCredentialStatus(card.key).icon" 
+                              :class="{
+                                'text-green-500': getCredentialStatus(card.key).color === 'success',
+                                'text-yellow-500': getCredentialStatus(card.key).color === 'warning',
+                                'text-red-500': getCredentialStatus(card.key).color === 'error',
+                                'text-gray-500': getCredentialStatus(card.key).color === 'neutral'
+                              }"
+                              class="w-4 h-4"
+                            />
+                            <UBadge :color="getCredentialStatus(card.key).color" size="xs">
+                              {{ getCredentialStatus(card.key).label }}
+                            </UBadge>
+                          </div>
                         </div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ card.description }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Last tested: {{ formatLastTested(credentialForms[card.key].lastTested) }}
+                        </p>
                       </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                      <!-- Environment Toggle (Live/Paper) - Only show for non-aster exchanges -->
-                      <div v-if="card.key !== 'aster'" class="flex items-center gap-2 toggle-container">
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Paper</span>
-                        <div 
-                          class="toggle-wrapper"
-                          :class="{ 'toggle-on': credentialForms[card.key].isLive }"
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      <!-- Environment Buttons (Live/Paper) - Only show for non-aster exchanges -->
+                      <div v-if="card.key !== 'aster'" class="flex items-center gap-2">
+                        <button
+                          @click="switchEnvironment(card.key, false)"
+                          :class="[
+                            'px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200',
+                            !credentialForms[card.key].isLive 
+                              ? 'bg-gray-900 dark:bg-gray-950 text-green-400 border-2 border-green-400 shadow-lg shadow-green-500/50' 
+                              : 'bg-gray-800 dark:bg-gray-800 text-gray-400 border border-gray-600 hover:border-gray-500'
+                          ]"
                         >
-                          <USwitch
-                            v-model="credentialForms[card.key].isLive"
-                            color="primary"
-                            size="sm"
-                            @update:model-value="updateEnvironment(card.key)"
-                          />
-                        </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Live</span>
+                          📄 Paper
+                        </button>
+                        <button
+                          @click="switchEnvironment(card.key, true)"
+                          :class="[
+                            'px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200',
+                            credentialForms[card.key].isLive 
+                              ? 'bg-gray-900 dark:bg-gray-950 text-green-400 border-2 border-green-400 shadow-lg shadow-green-500/50' 
+                              : 'bg-gray-800 dark:bg-gray-800 text-gray-400 border border-gray-600 hover:border-gray-500'
+                          ]"
+                        >
+                          🔴 Live
+                        </button>
                       </div>
+                      <UButton
+                        label="Test"
+                        icon="i-heroicons-beaker"
+                        variant="ghost"
+                        size="xs"
+                        :loading="testingCredential === card.key"
+                        :disabled="!isCredentialConnected(card.key)"
+                        @click="testConnection(card.key)"
+                      />
                       <UButton
                         label="Delete"
                         variant="ghost"
@@ -487,12 +681,25 @@
                     </UFormField>
 
                     <UFormField :label="card.key === 'oanda' ? 'API Token' : 'API Key'">
-                      <UInput
-                        v-model="credentialForms[card.key].apiKey"
-                        type="password"
-                        placeholder="API key or token"
-                        size="sm"
-                      />
+                      <div class="relative">
+                        <UInput
+                          v-model="credentialForms[card.key].apiKey"
+                          :type="credentialForms[card.key].showApiKey ? 'text' : 'password'"
+                          placeholder="API key or token"
+                          size="sm"
+                          class="pr-10"
+                        />
+                        <button
+                          type="button"
+                          @click="credentialForms[card.key].showApiKey = !credentialForms[card.key].showApiKey"
+                          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        >
+                          <UIcon 
+                            :name="credentialForms[card.key].showApiKey ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" 
+                            class="w-4 h-4"
+                          />
+                        </button>
+                      </div>
                     </UFormField>
 
                     <UFormField label="Account ID" v-if="card.key !== 'tastytrade'">
@@ -504,31 +711,53 @@
                     </UFormField>
 
                     <UFormField label="API Secret" v-if="card.showApiSecret !== false">
-                      <UInput
-                        v-model="credentialForms[card.key].apiSecret"
-                        type="password"
-                        placeholder="API secret (if required)"
-                        size="sm"
-                      />
+                      <div class="relative">
+                        <UInput
+                          v-model="credentialForms[card.key].apiSecret"
+                          :type="credentialForms[card.key].showApiSecret ? 'text' : 'password'"
+                          placeholder="API secret (if required)"
+                          size="sm"
+                          class="pr-10"
+                        />
+                        <button
+                          type="button"
+                          @click="credentialForms[card.key].showApiSecret = !credentialForms[card.key].showApiSecret"
+                          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        >
+                          <UIcon 
+                            :name="credentialForms[card.key].showApiSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" 
+                            class="w-4 h-4"
+                          />
+                        </button>
+                      </div>
                     </UFormField>
 
                     <UFormField
                       label="Passphrase"
                       v-if="card.showPassphrase"
-                      class="md:col-span-2 md:max-w-xs"
                     >
-                      <UInput
-                        v-model="credentialForms[card.key].passphrase"
-                        type="password"
-                        placeholder="Optional passphrase"
-                        size="sm"
-                      />
+                      <div class="relative">
+                        <UInput
+                          v-model="credentialForms[card.key].passphrase"
+                          :type="credentialForms[card.key].showPassphrase ? 'text' : 'password'"
+                          placeholder="Optional passphrase"
+                          size="sm"
+                          class="pr-10"
+                        />
+                        <button
+                          type="button"
+                          @click="credentialForms[card.key].showPassphrase = !credentialForms[card.key].showPassphrase"
+                          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        >
+                          <UIcon 
+                            :name="credentialForms[card.key].showPassphrase ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" 
+                            class="w-4 h-4"
+                          />
+                        </button>
+                      </div>
                     </UFormField>
                   </div>
 
-                  <p class="text-xs text-gray-500 dark:text-gray-400 pt-1 mb-0">
-                    Last updated: {{ formatUpdatedAt(credentialForms[card.key].updatedAt) }}
-                  </p>
                 </div>
               </UCard>
             </div>
@@ -1090,6 +1319,11 @@ interface CredentialForm {
   webhookSecret: string
   extraMetadata: Record<string, any>
   updatedAt?: string | null
+  lastTested?: string | null
+  testStatus?: 'success' | 'failed' | 'never' | null
+  showApiKey?: boolean
+  showApiSecret?: boolean
+  showPassphrase?: boolean
 }
 
 interface WebhookActivity {
@@ -1154,22 +1388,59 @@ const subscription = ref<Subscription>({
   paymentMethod: '•••• •••• •••• 4242'
 })
 
-// Usage (Mock Data)
+// Usage (Mock Data) - Set to show warning states
 const usage = ref<Usage>({
-  exchangesUsed: 2,
+  exchangesUsed: 3,  // 75% - safe (green)
   exchangesLimit: 4,
   strategiesUsed: 8,
-  strategiesLimit: Infinity,
+  strategiesLimit: Infinity, // Unlimited (green)
   webhooksUsed: 1245,
-  webhooksLimit: Infinity
+  webhooksLimit: Infinity  // Unlimited (green)
 })
+
+// System Health
+const systemHealth = ref({
+  botOnline: true,
+  lastWebhook: '2 min ago',
+  alertsCount: 0
+})
+
+// Connected Exchanges Count
+const connectedExchangesCount = computed(() => {
+  let count = 0
+  if (asterBalance.value.success) count++
+  if (oandaBalance.value.success) count++
+  if (tradierBalance.value.success) count++
+  if (tastytradeBalance.value.success && !tastytradeBalance.value.disabled) count++
+  return count
+})
+
+// Usage Helper Functions
+function getUsagePercent(used: number, limit: number | typeof Infinity): number {
+  if (limit === Infinity) return 100
+  return Math.min((used / limit) * 100, 100)
+}
+
+function getUsageLevel(used: number, limit: number | typeof Infinity): 'safe' | 'warning' | 'critical' {
+  if (limit === Infinity) return 'safe'
+  const percent = (used / limit) * 100
+  if (percent >= 100) return 'critical'
+  if (percent >= 80) return 'warning'
+  return 'safe'
+}
+
+function getUsageBarColor(used: number, limit: number | typeof Infinity): string {
+  const level = getUsageLevel(used, limit)
+  if (level === 'critical') return 'bg-red-600'
+  if (level === 'warning') return 'bg-yellow-500'
+  return 'bg-blue-600'
+}
 
 const credentialCards = [
   {
     key: 'aster' as const,
     name: 'Aster DEX',
     icon: 'i-simple-icons-bitcoin',
-    description: 'Crypto Futures',
     showApiSecret: true,
     showPassphrase: false
   },
@@ -1177,32 +1448,56 @@ const credentialCards = [
     key: 'oanda' as const,
     name: 'OANDA',
     icon: 'i-heroicons-currency-dollar',
-    description: 'Forex',
     showApiSecret: false
   },
   {
     key: 'tradier' as const,
     name: 'Tradier',
     icon: 'i-heroicons-chart-bar',
-    description: 'Stocks / Options',
     showApiSecret: false
   },
   {
     key: 'tastytrade' as const,
     name: 'Tasty Trade',
     icon: 'i-heroicons-chart-line',
-    description: 'Futures',
     showApiSecret: true,
     showPassphrase: true
   }
 ]
 
-const credentialForms = reactive<Record<CredentialKey, CredentialForm>>({
-  aster: createCredentialForm('Aster DEX'),
-  oanda: createCredentialForm('OANDA'),
-  tradier: createCredentialForm('Tradier'),
-  tastytrade: createCredentialForm('Tasty Trade'),
-  webhook: createCredentialForm('TradingView Webhook')
+// Store BOTH Live and Paper credentials for each exchange
+const credentialStore = reactive<Record<CredentialKey, { production: CredentialForm; practice: CredentialForm }>>({
+  aster: {
+    production: createCredentialForm('Aster DEX', 'production'),
+    practice: createCredentialForm('Aster DEX', 'practice')
+  },
+  oanda: {
+    production: createCredentialForm('OANDA', 'production'),
+    practice: createCredentialForm('OANDA', 'practice')
+  },
+  tradier: {
+    production: createCredentialForm('Tradier', 'production'),
+    practice: createCredentialForm('Tradier', 'practice')
+  },
+  tastytrade: {
+    production: createCredentialForm('Tasty Trade', 'production'),
+    practice: createCredentialForm('Tasty Trade', 'practice')
+  },
+  webhook: {
+    production: createCredentialForm('TradingView Webhook', 'production'),
+    practice: createCredentialForm('TradingView Webhook', 'practice')
+  }
+})
+
+// Expose the active form based on current environment toggle
+const credentialForms = computed(() => {
+  const forms: Record<CredentialKey, CredentialForm> = {} as any
+  for (const key in credentialStore) {
+    const exchangeKey = key as CredentialKey
+    const env = credentialStore[exchangeKey].production.isLive ? 'production' : 'practice'
+    forms[exchangeKey] = credentialStore[exchangeKey][env]
+  }
+  return forms
 })
 
 const environmentOptions = [
@@ -1214,6 +1509,7 @@ const environmentOptions = [
 const credentialsLoading = ref(false)
 const savingCredential = ref<string | null>(null)
 const deletingCredential = ref<string | null>(null)
+const testingCredential = ref<string | null>(null)
 
 // Show/Hide API Keys
 const showWebhookSecret = ref(false)
@@ -1221,8 +1517,8 @@ const showWebhookSecret = ref(false)
 const runtimeConfig = useRuntimeConfig()
 const toast = useToast()
 
-const webhookUrl = computed(() => credentialForms.webhook.extraMetadata?.webhookUrl || runtimeConfig.public?.sparkyWebhookUrl || 'http://localhost:3000/webhook')
-const webhookSecret = computed(() => credentialForms.webhook.webhookSecret || 'set-in-tradefi')
+const webhookUrl = computed(() => credentialForms.value.webhook.extraMetadata?.webhookUrl || runtimeConfig.public?.sparkyWebhookUrl || 'http://localhost:3000/webhook')
+const webhookSecret = computed(() => credentialForms.value.webhook.webhookSecret || 'set-in-tradefi')
 
 const webhookTemplate = computed(() => `{
   "secret": "${webhookSecret.value}",
@@ -1236,19 +1532,24 @@ const webhookActivity = ref<WebhookActivity>({
   lastReceived: '2 minutes ago'
 })
 
-function createCredentialForm(defaultLabel: string): CredentialForm {
+function createCredentialForm(defaultLabel: string, environment: string = 'production'): CredentialForm {
   return {
     id: null,
     label: defaultLabel,
-    environment: 'production',
-    isLive: true, // true = Live (production), false = Paper (practice)
+    environment,
+    isLive: environment === 'production', // true = Live (production), false = Paper (practice)
     accountId: '',
     apiKey: '',
     apiSecret: '',
     passphrase: '',
     webhookSecret: '',
     extraMetadata: { webhookUrl: '' },
-    updatedAt: null
+    updatedAt: null,
+    lastTested: null,
+    testStatus: null,
+    showApiKey: false,
+    showApiSecret: false,
+    showPassphrase: false
   }
 }
 
@@ -1267,7 +1568,7 @@ function formatUpdatedAt(timestamp?: string | null) {
 }
 
 function isCredentialConnected(key: CredentialKey) {
-  const form = credentialForms[key]
+  const form = credentialForms.value[key]
   if (!form) return false
   if (key === 'webhook') {
     return Boolean(form.webhookSecret)
@@ -1281,6 +1582,45 @@ function isCredentialConnected(key: CredentialKey) {
   return Boolean(form.apiKey && form.apiSecret)
 }
 
+function getCredentialStatus(key: CredentialKey): { color: 'success' | 'warning' | 'error' | 'neutral'; label: string; icon: string } {
+  const form = credentialForms.value[key]
+  if (!form) return { color: 'neutral', label: 'Not Configured', icon: 'i-heroicons-x-circle' }
+  
+  const hasCredentials = isCredentialConnected(key)
+  
+  if (!hasCredentials) {
+    return { color: 'neutral', label: 'Not Configured', icon: 'i-heroicons-minus-circle' }
+  }
+  
+  if (form.testStatus === 'success') {
+    return { color: 'success', label: 'Connected & Tested', icon: 'i-heroicons-check-circle' }
+  }
+  
+  if (form.testStatus === 'failed') {
+    return { color: 'error', label: 'Connection Failed', icon: 'i-heroicons-x-circle' }
+  }
+  
+  // Has credentials but not tested
+  return { color: 'warning', label: 'Saved (Not Tested)', icon: 'i-heroicons-exclamation-triangle' }
+}
+
+function formatLastTested(timestamp?: string | null): string {
+  if (!timestamp) return 'Never tested'
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`
+  
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+  
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+}
+
 async function loadCredentials() {
   credentialsLoading.value = true
   try {
@@ -1290,7 +1630,7 @@ async function loadCredentials() {
     console.error('Failed to load bot credentials', error)
     toast.add({
       title: 'Unable to load credentials',
-      color: 'red',
+      color: 'error',
       description: 'Check Supabase configuration and try again.'
     })
   } finally {
@@ -1300,16 +1640,17 @@ async function loadCredentials() {
 
 function applyCredential(record: BotCredentialRecord) {
   const key = record.exchange as CredentialKey
-  if (!credentialForms[key]) {
+  if (!credentialStore[key]) {
     return
   }
 
-  const target = credentialForms[key]
+  const environment = (record.environment || 'production') as 'production' | 'practice'
+  const target = credentialStore[key][environment]
+  
   target.id = record.id
   target.label = record.label || credentialTitle(key)
-  target.environment = record.environment || 'production'
-  // Set isLive based on environment: production = true (Live), practice/sandbox = false (Paper)
-  target.isLive = target.environment === 'production'
+  target.environment = environment
+  target.isLive = environment === 'production'
   target.accountId = record.account_id || ''
   target.apiKey = record.api_key || ''
   target.apiSecret = record.api_secret || ''
@@ -1320,29 +1661,39 @@ function applyCredential(record: BotCredentialRecord) {
     ...record.extra_metadata
   }
   target.updatedAt = record.updated_at
+  
+  // Sync the isLive toggle between both environments for this exchange
+  credentialStore[key].production.isLive = environment === 'production'
+  credentialStore[key].practice.isLive = environment === 'production'
 }
 
-// Update environment when toggle is switched
-function updateEnvironment(key: CredentialKey) {
-  const form = credentialForms[key]
-  // isLive = true means "production" (Live), isLive = false means "practice" (Paper)
-  form.environment = form.isLive ? 'production' : 'practice'
+// Switch between Live and Paper environments
+function switchEnvironment(key: CredentialKey, isLive: boolean) {
+  // Update both environments to stay in sync
+  credentialStore[key].production.isLive = isLive
+  credentialStore[key].practice.isLive = isLive
+  // Update environment field
+  credentialStore[key].production.environment = isLive ? 'production' : 'practice'
+  credentialStore[key].practice.environment = isLive ? 'production' : 'practice'
 }
 
 function resetCredentialForm(key: CredentialKey) {
-  const defaults = createCredentialForm(credentialTitle(key))
-  Object.assign(credentialForms[key], defaults)
+  const productionDefaults = createCredentialForm(credentialTitle(key), 'production')
+  const practiceDefaults = createCredentialForm(credentialTitle(key), 'practice')
+  Object.assign(credentialStore[key].production, productionDefaults)
+  Object.assign(credentialStore[key].practice, practiceDefaults)
 }
 
 async function saveCredential(key: CredentialKey) {
-  const form = credentialForms[key]
+  const form = credentialForms.value[key]
+  const currentEnv = form.isLive ? 'production' : 'practice'
   savingCredential.value = key
   try {
     const payload = {
       id: form.id,
       exchange: key,
       label: form.label,
-      environment: form.environment,
+      environment: currentEnv,
       accountId: form.accountId || null,
       apiKey: form.apiKey || null,
       apiSecret: form.apiSecret || null,
@@ -1357,15 +1708,24 @@ async function saveCredential(key: CredentialKey) {
     })
 
     applyCredential(response.credential)
+    
+    // Reset test status since credentials changed
+    form.testStatus = null
+    form.lastTested = null
+    
+    const envLabel = currentEnv === 'production' ? 'Live' : 'Paper'
     toast.add({
-      title: `${credentialTitle(key)} saved`,
-      description: 'Credentials updated successfully.'
+      title: `✓ ${credentialTitle(key)} (${envLabel}) Saved Successfully!`,
+      description: 'Credentials stored securely. Click "Test" to verify connection.',
+      color: 'success',
+      icon: 'i-heroicons-check-circle'
     })
   } catch (error) {
     console.error('Failed to save credential', error)
     toast.add({
-      title: `Failed to save ${credentialTitle(key)}`,
-      color: 'red',
+      title: `✗ Failed to Save ${credentialTitle(key)}`,
+      color: 'error',
+      icon: 'i-heroicons-x-circle',
       description: 'Please verify the values and try again.'
     })
   } finally {
@@ -1373,12 +1733,80 @@ async function saveCredential(key: CredentialKey) {
   }
 }
 
+async function testConnection(key: CredentialKey) {
+  const form = credentialForms.value[key]
+  testingCredential.value = key
+  
+  try {
+    // Call the appropriate balance API to test the connection
+    let apiEndpoint = ''
+    switch (key) {
+      case 'aster':
+        apiEndpoint = '/api/balance/aster'
+        break
+      case 'oanda':
+        apiEndpoint = '/api/balance/oanda'
+        break
+      case 'tradier':
+        apiEndpoint = '/api/balance/tradier'
+        break
+      case 'tastytrade':
+        apiEndpoint = '/api/balance/tastytrade'
+        break
+      default:
+        throw new Error('Invalid exchange')
+    }
+    
+    const response = await $fetch<ExchangeBalance>(apiEndpoint)
+    
+    if (response.success) {
+      form.testStatus = 'success'
+      form.lastTested = new Date().toISOString()
+      
+      toast.add({
+        title: `✓ ${credentialTitle(key)} Connection Successful!`,
+        description: `Connected successfully. Balance: $${response.balance?.toFixed(2) ?? 'N/A'}`,
+        color: 'success',
+        icon: 'i-heroicons-check-badge'
+      })
+    } else {
+      form.testStatus = 'failed'
+      form.lastTested = new Date().toISOString()
+      
+      toast.add({
+        title: `✗ ${credentialTitle(key)} Connection Failed`,
+        description: response.error || 'Unable to connect. Check your credentials.',
+        color: 'error',
+        icon: 'i-heroicons-exclamation-circle'
+      })
+    }
+  } catch (error: any) {
+    form.testStatus = 'failed'
+    form.lastTested = new Date().toISOString()
+    
+    console.error('Connection test failed:', error)
+    
+    toast.add({
+      title: `✗ ${credentialTitle(key)} Connection Error`,
+      description: error?.data?.error || error?.message || 'Failed to test connection. Please try again.',
+      color: 'error',
+      icon: 'i-heroicons-exclamation-triangle'
+    })
+  } finally {
+    testingCredential.value = null
+  }
+}
+
 async function deleteCredential(key: CredentialKey) {
+  const form = credentialForms.value[key]
+  const currentEnv = form.isLive ? 'production' : 'practice'
+  const envLabel = currentEnv === 'production' ? 'Live' : 'Paper'
+  
   if (key === 'webhook') {
     if (!confirm('Clear the stored webhook secret? Existing alerts will stop working.')) {
       return
     }
-  } else if (!confirm(`Remove credentials for ${credentialTitle(key)}?`)) {
+  } else if (!confirm(`Remove ${envLabel} credentials for ${credentialTitle(key)}? This action cannot be undone.`)) {
     return
   }
 
@@ -1386,19 +1814,26 @@ async function deleteCredential(key: CredentialKey) {
   try {
     await $fetch('/api/bot/credentials', {
       method: 'DELETE',
-      query: { exchange: key }
+      query: { exchange: key, environment: currentEnv }
     })
-    resetCredentialForm(key)
+    
+    // Reset only the current environment's form
+    const envKey = currentEnv as 'production' | 'practice'
+    Object.assign(credentialStore[key][envKey], createCredentialForm(credentialTitle(key), currentEnv))
+    
     toast.add({
-      title: `${credentialTitle(key)} removed`,
-      description: 'Credentials deleted.'
+      title: `✓ ${credentialTitle(key)} (${envLabel}) Removed`,
+      description: 'Credentials have been deleted successfully.',
+      color: 'warning',
+      icon: 'i-heroicons-trash'
     })
   } catch (error) {
     console.error('Failed to delete credential', error)
     toast.add({
-      title: `Failed to delete ${credentialTitle(key)}`,
-      color: 'red',
-      description: 'Try again in a moment.'
+      title: `✗ Failed to Delete ${credentialTitle(key)}`,
+      color: 'error',
+      icon: 'i-heroicons-exclamation-circle',
+      description: 'Please try again in a moment.'
     })
   } finally {
     deletingCredential.value = null
@@ -1458,11 +1893,25 @@ async function loadBalances() {
     tastytradeBalance.value = tastytrade as ExchangeBalance
 
     lastUpdate.value = new Date().toLocaleString()
+    
+    // Update system health based on API errors
+    systemHealth.value.alertsCount = hasErrors.value ? countErrors() : 0
   } catch (error) {
     console.error('Error loading balances:', error)
+    systemHealth.value.alertsCount = 1
   } finally {
     isLoading.value = false
   }
+}
+
+// Count API connection errors
+function countErrors(): number {
+  let errors = 0
+  if (!asterBalance.value.success) errors++
+  if (!oandaBalance.value.success) errors++
+  if (!tradierBalance.value.success) errors++
+  if (!tastytradeBalance.value.disabled && !tastytradeBalance.value.success) errors++
+  return errors
 }
 
 // Placeholder Functions
@@ -1487,14 +1936,6 @@ function viewUsageDetails() {
   alert('Usage Details - Coming Soon!')
 }
 
-async function testConnection(exchange: string) {
-  testingConnection.value = exchange
-  console.log(`Test Connection for ${exchange}`)
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  alert(`Test Connection for ${exchange} - Coming Soon!`)
-  testingConnection.value = null
-}
 
 function viewDocs(exchange: string) {
   console.log(`View Documentation for ${exchange}`)
@@ -1510,7 +1951,7 @@ function copyWebhookUrl() {
 }
 
 function copyWebhookSecret() {
-  navigator.clipboard.writeText(credentialForms.webhook.webhookSecret || '').then(() => {
+  navigator.clipboard.writeText(credentialForms.value.webhook.webhookSecret || '').then(() => {
     alert('Webhook secret copied to clipboard!')
   }).catch(() => {
     alert('Failed to copy webhook secret')
@@ -1521,7 +1962,9 @@ async function regenerateWebhookSecret() {
   if (!confirm('Are you sure you want to regenerate your webhook secret? This will invalidate your current TradingView alerts.')) {
     return
   }
-  credentialForms.webhook.webhookSecret = crypto.randomUUID?.() || Math.random().toString(36).slice(2, 18)
+  const currentEnv = credentialForms.value.webhook.isLive ? 'production' : 'practice'
+  const envKey = currentEnv as 'production' | 'practice'
+  credentialStore.webhook[envKey].webhookSecret = crypto.randomUUID?.() || Math.random().toString(36).slice(2, 18)
   await saveCredential('webhook')
 }
 

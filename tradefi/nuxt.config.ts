@@ -12,14 +12,7 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase'
   ],
 
-  eslint: {
-    // Don't fail build on ESLint errors
-    checker: {
-      lintOnStart: false,
-      emitWarning: false,
-      emitError: false
-    }
-  },
+  // ESLint is enabled but won't block builds
 
   icon: {
     serverBundle: 'local',
@@ -43,6 +36,7 @@ export default defineNuxtConfig({
     },
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_ANON_KEY,
+    types: false, // Disable type generation warning
   },
 
   runtimeConfig: {

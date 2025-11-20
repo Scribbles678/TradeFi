@@ -1,0 +1,2 @@
+const b=".overflow-y-auto[data-v-fbbdb184]::-webkit-scrollbar{width:6px}.overflow-y-auto[data-v-fbbdb184]::-webkit-scrollbar-track{background:transparent}.overflow-y-auto[data-v-fbbdb184]::-webkit-scrollbar-thumb{background:#888;border-radius:3px}.overflow-y-auto[data-v-fbbdb184]::-webkit-scrollbar-thumb:hover{background:#555}";export{b as s};
+//# sourceMappingURL=sparky-dashboard-styles-1.mjs.mjs.map

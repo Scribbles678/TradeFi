@@ -1,0 +1,2 @@
+const o=".fade-enter-active,.fade-leave-active{transition:opacity .2s}.fade-enter-from,.fade-leave-to{opacity:0}.UButton:hover,.btn:hover,button:hover{background:linear-gradient(90deg,var(--color-green-500),var(--color-gold-400));border-color:var(--color-gold-400);box-shadow:0 0 12px 0 var(--color-gold-400),0 4px 32px #0000002e;color:#fff!important;transform:translateY(-2px) scale(1.04)}.active-glow{box-shadow:none!important}";export{o as a};
+//# sourceMappingURL=app-styles-1.mjs.mjs.map
