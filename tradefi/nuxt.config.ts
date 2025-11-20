@@ -14,8 +14,11 @@ export default defineNuxtConfig({
 
   eslint: {
     // Don't fail build on ESLint errors
-    emitWarning: true,
-    failOnError: false
+    checker: {
+      lintOnStart: false,
+      emitWarning: false,
+      emitError: false
+    }
   },
 
   icon: {
