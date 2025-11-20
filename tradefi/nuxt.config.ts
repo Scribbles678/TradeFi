@@ -37,7 +37,9 @@ export default defineNuxtConfig({
       login: '/login',
       callback: '/confirm',
       exclude: ['/login', '/register']
-    }
+    },
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
   },
 
   runtimeConfig: {
@@ -76,7 +78,10 @@ export default defineNuxtConfig({
     preset: 'netlify',
     experimental: {
       wasm: true
-    }
+    },
+    // Ensure proper bundling for Netlify
+    node: true,
+    minify: true,
   },
 
   // Add WebSocket configuration
