@@ -32,6 +32,7 @@
     "lucide-vue-next": "^0.542.0",
     "nuxt": "^3.16.2",
     "nuxt-charts": "1.0.2",
+    "perfect-debounce": "^2.0.0",
     "reka-ui": "^2.6.0",
     "shadcn-nuxt": "2.2.0",
     "tailwind-merge": "^3.3.1",

@@ -11,19 +11,6 @@
       </Badge>
     </div>
 
-    <!-- Asset Class Filter -->
-    <Tabs :model-value="selectedAssetClass" @update:model-value="selectAssetClass">
-      <TabsList>
-        <TabsTrigger
-          v-for="asset in assetClasses"
-          :key="asset.value"
-          :value="asset.value"
-        >
-          {{ asset.label }}
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
-
     <!-- Performance Overview Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- Total P&L -->
@@ -84,86 +71,33 @@
       </Card>
     </div>
 
-    <!-- Strategy Performance & Recent Trades Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Strategy Performance Chart -->
-      <Card>
-        <CardHeader>
+    <!-- Strategy Performance Chart - Full Width -->
+    <Card>
+      <CardHeader>
+        <div class="flex items-center justify-between">
           <CardTitle>Strategy Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="h-64 flex items-center justify-center">
-            <div class="text-center">
-              <Icon name="i-heroicons-chart-pie" class="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <p class="text-muted-foreground">Strategy performance chart coming soon</p>
-            </div>
+          <div class="flex gap-2">
+            <Button
+              size="sm"
+              :variant="chartView === 'pnl' ? 'default' : 'outline'"
+              @click="chartView = 'pnl'"
+            >
+              P&L
+            </Button>
+            <Button
+              size="sm"
+              :variant="chartView === 'winrate' ? 'default' : 'outline'"
+              @click="chartView = 'winrate'"
+            >
+              Win Rate
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <!-- Recent Trades -->
-      <Card>
-        <CardHeader>
-          <div class="flex items-center justify-between">
-            <CardTitle>Recent Trades</CardTitle>
-            <Badge variant="outline" class="text-xs">{{ recentTrades.length }} trades</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div class="max-h-64 overflow-y-auto">
-            <Table v-if="recentTrades.length > 0">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Symbol</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead class="text-right">P&L</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow 
-                  v-for="trade in recentTrades.slice(0, 10)" 
-                  :key="trade.id"
-                  class="hover:bg-accent"
-                >
-                  <TableCell class="font-mono font-semibold">
-                    {{ trade.symbol }}
-                  </TableCell>
-                  <TableCell>
-                    <div class="flex items-center gap-2">
-                      <Badge :variant="trade.side === 'BUY' ? 'success' : 'error'" class="text-xs">
-                        {{ trade.side }}
-                      </Badge>
-                      <Badge v-if="trade.exchange" variant="outline" class="text-xs">
-                        {{ trade.exchange === 'aster' ? 'Crypto' : trade.exchange === 'oanda' ? 'Forex' : trade.exchange === 'tradier' ? 'Stocks' : trade.exchange }}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell class="text-muted-foreground text-sm">
-                    {{ formatTime(trade.exit_time) }}
-                  </TableCell>
-                  <TableCell class="text-right">
-                    <div :class="[
-                      'font-mono font-semibold',
-                      (trade.pnl_usd || 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                    ]">
-                      {{ (trade.pnl_usd || 0) >= 0 ? '+' : '' }}${{ (trade.pnl_usd || 0).toFixed(2) }}
-                    </div>
-                    <div class="text-xs text-muted-foreground">
-                      {{ trade.quantity }} @ ${{ (trade.price || 0).toFixed(2) }}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-            
-            <div v-else class="text-center py-8 text-muted-foreground">
-              No trades yet
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ChartsStrategyPerformance :strategies="activeStrategies" :chart-view="chartView" />
+      </CardContent>
+    </Card>
 
     <!-- Advanced Metrics -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -204,51 +138,28 @@
     <!-- Asset Class Performance -->
     <Card>
       <CardHeader>
-        <CardTitle>Asset Class Performance</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div class="text-center p-4 rounded-lg border bg-card">
-            <Icon name="i-heroicons-currency-dollar" class="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <p class="text-sm text-muted-foreground">Crypto</p>
-            <p :class="[
-              'text-lg font-bold',
-              cryptoPnL >= 0 ? 'text-green-400' : 'text-red-400'
-            ]">
-              {{ cryptoPnL >= 0 ? '+' : '' }}${{ cryptoPnL.toFixed(2) }}
-            </p>
-          </div>
-          <div class="text-center p-4 rounded-lg border bg-card">
-            <Icon name="i-heroicons-globe-alt" class="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <p class="text-sm text-muted-foreground">Forex</p>
-            <p :class="[
-              'text-lg font-bold',
-              forexPnL >= 0 ? 'text-green-400' : 'text-red-400'
-            ]">
-              {{ forexPnL >= 0 ? '+' : '' }}${{ forexPnL.toFixed(2) }}
-            </p>
-          </div>
-          <div class="text-center p-4 rounded-lg border bg-card">
-            <Icon name="i-heroicons-building-office" class="w-8 h-8 text-purple-400 mx-auto mb-2" />
-            <p class="text-sm text-muted-foreground">Stocks</p>
-            <p :class="[
-              'text-lg font-bold',
-              stocksPnL >= 0 ? 'text-green-400' : 'text-red-400'
-            ]">
-              {{ stocksPnL >= 0 ? '+' : '' }}${{ stocksPnL.toFixed(2) }}
-            </p>
-          </div>
-          <div class="text-center p-4 rounded-lg border bg-card">
-            <Icon name="i-heroicons-chart-line" class="w-8 h-8 text-indigo-400 mx-auto mb-2" />
-            <p class="text-sm text-muted-foreground">Futures</p>
-            <p :class="[
-              'text-lg font-bold',
-              futuresPnL >= 0 ? 'text-green-400' : 'text-red-400'
-            ]">
-              {{ futuresPnL >= 0 ? '+' : '' }}${{ futuresPnL.toFixed(2) }}
-            </p>
+        <div class="flex items-center justify-between">
+          <CardTitle>Asset Class Performance</CardTitle>
+          <div class="flex gap-2">
+            <Button
+              size="sm"
+              :variant="assetChartView === 'pnl' ? 'default' : 'outline'"
+              @click="assetChartView = 'pnl'"
+            >
+              P&L
+            </Button>
+            <Button
+              size="sm"
+              :variant="assetChartView === 'winrate' ? 'default' : 'outline'"
+              @click="assetChartView = 'winrate'"
+            >
+              Win Rate
+            </Button>
           </div>
         </div>
+      </CardHeader>
+      <CardContent>
+        <ChartsAssetClassPerformance :chart-view="assetChartView" />
       </CardContent>
     </Card>
   </div>
@@ -285,6 +196,9 @@ const todaysStats = ref({
   winRate: 0,
   totalTrades: 0
 })
+const chartView = ref<'pnl' | 'winrate'>('pnl')
+const assetChartView = ref<'pnl' | 'winrate'>('pnl')
+const activeStrategies = ref<any[]>([])
 
 // Filtered trades based on selected asset class
 const recentTrades = computed(() => {
@@ -393,22 +307,41 @@ function formatTime(dateString: string): string {
 // Select asset class filter
 function selectAssetClass(assetClass: 'all' | AssetClass) {
   selectedAssetClass.value = assetClass
-  console.log(`Performance: Switched to ${assetClass} filter`)
+}
+
+// Load active strategies
+async function loadStrategies() {
+  try {
+    const supabase = useSupabaseClient()
+    const { data, error } = await supabase
+      .from('strategies')
+      .select('id, name')
+      .eq('status', 'active')
+      .order('name')
+    
+    if (error) {
+      console.error('Error loading strategies:', error)
+      return
+    }
+    
+    activeStrategies.value = data || []
+  } catch (error) {
+    console.error('Error loading strategies:', error)
+  }
 }
 
 async function loadData() {
   try {
-    console.log('Performance: Loading data...')
-    
     // Load recent trades into allTrades (filtering done by computed)
     const trades = await getRecentTrades()
     allTrades.value = trades || []
-    console.log('Performance: Loaded trades:', allTrades.value.length)
     
     // Load today's stats
     const stats = await getTodaysStats()
     todaysStats.value = stats || { todayPnL: 0, winRate: 0, totalTrades: 0 }
-    console.log('Performance: Loaded stats:', todaysStats.value)
+    
+    // Load active strategies for chart
+    await loadStrategies()
     
   } catch (error) {
     console.error('Error loading performance data:', error)
@@ -421,7 +354,6 @@ onMounted(() => {
   
   // Set up auto-refresh every 30 seconds
   setInterval(() => {
-    console.log('Performance: Auto-refresh triggered...')
     loadData()
   }, 30000)
 })

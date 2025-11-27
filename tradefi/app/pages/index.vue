@@ -92,7 +92,7 @@
       <CardsWrapper>
         <template #stats-header>
           <div class="h-2 w-2 rounded-full bg-blue-500" />
-          <CardTitle>Cumulative P&L</CardTitle>
+          <CardTitle>P&L</CardTitle>
         </template>
         <template #stats-body>
           <div class="space-y-4">
@@ -117,6 +117,13 @@
                 :variant="chartDays === 30 ? 'default' : 'outline'"
               >
                 30D
+              </Button>
+              <Button
+                size="sm"
+                @click="chartDays = 365; loadChartData()"
+                :variant="chartDays === 365 ? 'default' : 'outline'"
+              >
+                1Y
               </Button>
             </div>
             <div class="pt-2">
@@ -449,8 +456,6 @@ async function loadData() {
     // Always load all data (no filtering)
     const assetFilter = undefined;
     
-    console.log('Dashboard: Loading all data');
-    
     // Load positions from both Supabase and direct APIs
     const [supabasePositions, trades, stats] = await Promise.all([
       getOpenPositions(assetFilter),
@@ -467,16 +472,10 @@ async function loadData() {
     
     // Load Aster DEX positions for "All" filter or "Crypto" filter
     if (assetFilter === undefined || assetFilter === 'crypto') {
-      console.log('Dashboard: Loading Aster DEX positions for', assetFilter === undefined ? 'All' : 'Crypto', 'filter...');
       try {
         const asterResponse = await $fetch('/api/balance/aster-positions');
-        console.log('Dashboard: Aster API response for', assetFilter === undefined ? 'All' : 'Crypto', 'filter:', asterResponse);
         if (asterResponse.success) {
           asterPositions = asterResponse.positions;
-          console.log('Dashboard: Loaded Aster DEX positions:', asterPositions.length);
-          console.log('Dashboard: Aster positions data:', asterPositions);
-        } else {
-          console.log('Dashboard: Aster API failed for', assetFilter === undefined ? 'All' : 'Crypto', 'filter:', asterResponse.error);
         }
       } catch (error) {
         console.error('Error loading Aster DEX positions:', error);
@@ -485,25 +484,10 @@ async function loadData() {
 
     // Load OANDA positions for "All" filter or "Forex" filter
     if (assetFilter === undefined || assetFilter === 'forex') {
-      console.log('Dashboard: Loading OANDA positions for', assetFilter === undefined ? 'All' : 'Forex', 'filter...');
       try {
         const oandaResponse = await $fetch('/api/balance/oanda-positions');
-        console.log('Dashboard: OANDA API response for', assetFilter === undefined ? 'All' : 'Forex', 'filter:', oandaResponse);
         if (oandaResponse.success) {
           oandaPositions = oandaResponse.positions;
-          console.log('Dashboard: Loaded OANDA positions:', oandaPositions.length);
-          console.log('Dashboard: OANDA positions data (full):', JSON.stringify(oandaPositions, null, 2));
-          console.log('Dashboard: OANDA positions P&L data:', oandaPositions.map(p => ({
-            symbol: p.symbol,
-            exchange: p.exchange,
-            unrealized_pnl_usd: p.unrealized_pnl_usd,
-            unrealized_pnl_percent: p.unrealized_pnl_percent,
-            entry_price: p.entry_price,
-            current_price: p.current_price,
-            quantity: p.quantity
-          })));
-        } else {
-          console.log('Dashboard: OANDA API failed for', assetFilter === undefined ? 'All' : 'Forex', 'filter:', oandaResponse.error);
         }
       } catch (error) {
         console.error('Error loading OANDA positions:', error);
@@ -517,25 +501,17 @@ async function loadData() {
       // For "All" filter, combine Supabase + live API positions
       // Prioritize API positions over Supabase (API positions are more accurate)
       finalPositions = [...asterPositions, ...oandaPositions, ...supabasePositions];
-      console.log('Dashboard: Loaded Supabase positions:', supabasePositions.length);
-      console.log('Dashboard: Loaded Aster DEX positions:', asterPositions.length);
-      console.log('Dashboard: Loaded OANDA positions:', oandaPositions.length);
     } else if (assetFilter === 'crypto') {
       // For "Crypto" filter, combine Supabase + Aster DEX live positions
       // Prioritize API positions
       finalPositions = [...asterPositions, ...supabasePositions];
-      console.log('Dashboard: Loaded Supabase crypto positions:', supabasePositions.length);
-      console.log('Dashboard: Loaded Aster DEX live positions:', asterPositions.length);
     } else if (assetFilter === 'forex') {
       // For "Forex" filter, combine Supabase + OANDA live positions
       // Prioritize API positions (OANDA has correct asset_class and real-time data)
       finalPositions = [...oandaPositions, ...supabasePositions];
-      console.log('Dashboard: Loaded Supabase forex positions:', supabasePositions.length);
-      console.log('Dashboard: Loaded OANDA live positions:', oandaPositions.length);
     } else {
       // For other asset filters (stocks, options), use only Supabase data
       finalPositions = supabasePositions;
-      console.log('Dashboard: Using Supabase data for', assetFilter, 'filter:', supabasePositions.length, 'positions');
     }
     
     // Deduplicate positions: prioritize API positions (more accurate, real-time) over Supabase
@@ -560,16 +536,6 @@ async function loadData() {
       return exchangePriority[exchange] || 0;
     };
     
-    console.log('Dashboard: Starting deduplication with', finalPositions.length, 'positions');
-    console.log('Dashboard: Positions before deduplication:', finalPositions.map(p => ({
-      symbol: p.symbol,
-      exchange: p.exchange,
-      isApi: isApiPosition(p),
-      priority: getExchangePriority(p),
-      unrealized_pnl_usd: p.unrealized_pnl_usd,
-      unrealized_pnl_percent: p.unrealized_pnl_percent
-    })));
-    
     // Process all positions and keep the one with highest priority for each symbol
     finalPositions.forEach(pos => {
       const key = (pos.symbol || '').toUpperCase();
@@ -579,41 +545,11 @@ async function loadData() {
       
       // Only replace if this position has higher priority
       if (!currentPos || newPriority > currentPriority) {
-        if (currentPos) {
-          console.log(`Dashboard: Replacing position ${key}: ${currentPos.exchange} (priority ${currentPriority}) -> ${pos.exchange} (priority ${newPriority})`);
-        } else {
-          console.log(`Dashboard: Adding position ${key} from ${pos.exchange} (priority ${newPriority}) with P&L:`, {
-            unrealized_pnl_usd: pos.unrealized_pnl_usd,
-            unrealized_pnl_percent: pos.unrealized_pnl_percent,
-            exchange: pos.exchange
-          });
-        }
         positionMap.set(key, pos);
-      } else {
-        console.log(`Dashboard: Keeping existing position ${key} from ${currentPos.exchange} (priority ${currentPriority}) over ${pos.exchange} (priority ${newPriority})`);
       }
     });
     
     finalPositions = Array.from(positionMap.values());
-    
-    console.log('Dashboard: After deduplication, total positions:', finalPositions.length);
-    console.log('Dashboard: Positions by source:', {
-      api: finalPositions.filter(p => isApiPosition(p)).length,
-      supabase: finalPositions.filter(p => !isApiPosition(p)).length
-    });
-    console.log('Dashboard: Final positions after deduplication:', finalPositions.map(p => ({
-      symbol: p.symbol,
-      exchange: p.exchange,
-      isApi: isApiPosition(p),
-      priority: getExchangePriority(p),
-      unrealized_pnl_usd: p.unrealized_pnl_usd,
-      unrealized_pnl_percent: p.unrealized_pnl_percent
-    })));
-    console.log('Dashboard: Loaded trades:', trades.length);
-
-    console.log('Dashboard: Setting openPositions.value to:', finalPositions);
-    console.log('Dashboard: Setting recentTrades.value to:', trades);
-    console.log('Dashboard: Setting todaysStats.value to:', stats);
     
     // Validate position data structure and fix asset_class if missing or incorrect
     const validatedPositions = finalPositions.map(pos => {
@@ -621,16 +557,6 @@ async function loadData() {
       const symbol = (pos.symbol || '').toUpperCase();
       let assetClass = pos.asset_class;
       
-      // DEBUG: Log position data before validation
-      console.log(`Dashboard: Validating position ${symbol}:`, {
-        exchange,
-        unrealized_pnl_usd: pos.unrealized_pnl_usd,
-        unrealized_pnl_percent: pos.unrealized_pnl_percent,
-        current_price: pos.current_price,
-        entry_price: pos.entry_price,
-        quantity: pos.quantity,
-        rawPosition: pos
-      });
       
       // CRITICAL: Always correct asset_class based on exchange (overrides incorrect Supabase data)
       // This ensures OANDA positions always show as 'forex', Aster as 'crypto', etc.
@@ -686,40 +612,12 @@ async function loadData() {
         take_profit_percent: pos.take_profit_percent != null ? pos.take_profit_percent : null
       };
       
-      // DEBUG: Log validated position
-      console.log(`Dashboard: Validated position ${symbol}:`, {
-        unrealized_pnl_usd: validatedPos.unrealized_pnl_usd,
-        unrealized_pnl_percent: validatedPos.unrealized_pnl_percent,
-        validatedPosition: validatedPos
-      });
-      
       return validatedPos;
     });
-    
-    // DEBUG: Log final validated positions before assignment
-    console.log('Dashboard: Final validated positions before assignment:', validatedPositions.map(p => ({
-      symbol: p.symbol,
-      exchange: p.exchange,
-      unrealized_pnl_usd: p.unrealized_pnl_usd,
-      unrealized_pnl_percent: p.unrealized_pnl_percent,
-      entry_price: p.entry_price,
-      current_price: p.current_price,
-      quantity: p.quantity
-    })));
     
     openPositions.value = validatedPositions as any;
     recentTrades.value = trades;
     todaysStats.value = stats;
-    
-    // DEBUG: Verify the values were set correctly
-    console.log('Dashboard: After setting values - openPositions.value.length:', openPositions.value.length);
-    console.log('Dashboard: After setting values - openPositions.value:', openPositions.value.map(p => ({
-      symbol: p.symbol,
-      exchange: p.exchange,
-      unrealized_pnl_usd: p.unrealized_pnl_usd,
-      unrealized_pnl_percent: p.unrealized_pnl_percent
-    })));
-    console.log('Dashboard: After setting values - recentTrades.value.length:', recentTrades.value.length);
   } catch (error) {
     console.error('Error loading data:', error);
     isConnected.value = false;
@@ -732,10 +630,7 @@ async function loadChartData() {
     isLoadingChart.value = true;
     // Always load all chart data (no filtering)
     const assetFilter = undefined;
-    console.log('Dashboard: Loading chart data for', chartDays.value, 'days');
-    
     const data = await getCumulativePnL(chartDays.value, assetFilter);
-    console.log('Dashboard: Chart data loaded:', data.length, 'points');
     
     // Transform data for Nuxt Charts
     chartData.value = data.map(d => ({
@@ -745,7 +640,6 @@ async function loadChartData() {
     
     // Handle single data point - add a starting point at zero
     if (chartData.value.length === 1) {
-      console.log('Dashboard: Only one data point - adding starting point');
       chartData.value = [
         { date: chartData.value[0].date, pnl: 0 },
         chartData.value[0]
@@ -820,8 +714,6 @@ function formatTime(isoString: string): string {
 let refreshInterval: NodeJS.Timeout | null = null;
 
 onMounted(async () => {
-  console.log('Dashboard: Component mounted, starting data load...');
-  
   // Wait for next tick to ensure canvas is available
   await nextTick();
   
@@ -829,11 +721,8 @@ onMounted(async () => {
   await loadChartData();
   await loadBalances();
   
-  console.log('Dashboard: Initial load complete, setting up auto-refresh...');
-  
   // Set up auto-refresh
   refreshInterval = setInterval(() => {
-    console.log('Dashboard: Auto-refresh triggered...');
     loadData();
     loadChartData(); // Also refresh chart data
     loadBalances();
