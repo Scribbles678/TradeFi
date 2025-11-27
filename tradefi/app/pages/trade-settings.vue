@@ -186,7 +186,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useSupabaseClient } from '~/utils/supabase'
+// useSupabaseClient is auto-imported by @nuxtjs/supabase
 
 type ExchangeKey = 'aster' | 'oanda' | 'tradier' | 'tradier_options'
 
