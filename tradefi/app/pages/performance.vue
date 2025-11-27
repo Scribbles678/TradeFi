@@ -11,6 +11,19 @@
       </Badge>
     </div>
 
+    <!-- Asset Class Filter -->
+    <Tabs :model-value="selectedAssetClass" @update:model-value="selectAssetClass">
+      <TabsList>
+        <TabsTrigger
+          v-for="asset in assetClasses"
+          :key="asset.value"
+          :value="asset.value"
+        >
+          {{ asset.label }}
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+
     <!-- Performance Overview Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- Total P&L -->
@@ -250,13 +263,50 @@ definePageMeta({
   title: 'Performance Analytics'
 })
 
+// Types
+type AssetClass = 'forex' | 'crypto' | 'stocks' | 'options' | 'futures'
+
+// Asset Class Options
+const assetClasses = [
+  { label: 'All', value: 'all' as const },
+  { label: 'Forex', value: 'forex' as const },
+  { label: 'Crypto', value: 'crypto' as const },
+  { label: 'Stocks', value: 'stocks' as const },
+  { label: 'Options', value: 'options' as const },
+  { label: 'Futures', value: 'futures' as const }
+]
+
 // State
 const isConnected = ref(true)
-const recentTrades = ref<any[]>([])
+const selectedAssetClass = ref<'all' | AssetClass>('all')
+const allTrades = ref<any[]>([])
 const todaysStats = ref({
   todayPnL: 0,
   winRate: 0,
   totalTrades: 0
+})
+
+// Filtered trades based on selected asset class
+const recentTrades = computed(() => {
+  if (selectedAssetClass.value === 'all') {
+    return allTrades.value
+  }
+  return allTrades.value.filter(trade => {
+    // Match by asset_class
+    if (trade.asset_class === selectedAssetClass.value) {
+      return true
+    }
+    // Fallback to exchange mapping
+    const exchangeMapping: Record<string, string> = {
+      'forex': 'oanda',
+      'crypto': 'aster',
+      'stocks': 'tradier',
+      'options': 'tradier',
+      'futures': 'tastytrade'
+    }
+    const expectedExchange = exchangeMapping[selectedAssetClass.value]
+    return trade.exchange === expectedExchange
+  })
 })
 
 // Computed metrics
@@ -340,14 +390,20 @@ function formatTime(dateString: string): string {
 }
 
 // Load data
+// Select asset class filter
+function selectAssetClass(assetClass: 'all' | AssetClass) {
+  selectedAssetClass.value = assetClass
+  console.log(`Performance: Switched to ${assetClass} filter`)
+}
+
 async function loadData() {
   try {
     console.log('Performance: Loading data...')
     
-    // Load recent trades
+    // Load recent trades into allTrades (filtering done by computed)
     const trades = await getRecentTrades()
-    recentTrades.value = trades || []
-    console.log('Performance: Loaded trades:', recentTrades.value.length)
+    allTrades.value = trades || []
+    console.log('Performance: Loaded trades:', allTrades.value.length)
     
     // Load today's stats
     const stats = await getTodaysStats()

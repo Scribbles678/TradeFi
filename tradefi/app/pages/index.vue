@@ -11,19 +11,6 @@
       </Badge>
     </div>
 
-    <!-- Asset Class Filter -->
-    <Tabs :model-value="selectedAssetClass" @update:model-value="selectAssetClass">
-      <TabsList>
-        <TabsTrigger
-          v-for="asset in assetClasses"
-          :key="asset.value"
-          :value="asset.value"
-        >
-          {{ asset.label }}
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
-
     <!-- Real-Time Stats Overview -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <!-- Total Portfolio -->
@@ -216,6 +203,13 @@
             <div class="flex justify-center gap-2">
               <Button
                 size="sm"
+                @click="chartDays = 1; loadChartData()"
+                :variant="chartDays === 1 ? 'default' : 'outline'"
+              >
+                24H
+              </Button>
+              <Button
+                size="sm"
                 @click="chartDays = 7; loadChartData()"
                 :variant="chartDays === 7 ? 'default' : 'outline'"
               >
@@ -227,15 +221,6 @@
                 :variant="chartDays === 30 ? 'default' : 'outline'"
               >
                 30D
-              </Button>
-              <Button
-                size="sm"
-                @click="syncTrades"
-                :disabled="isSyncingTrades"
-                variant="outline"
-              >
-                <span v-if="isSyncingTrades">Syncing...</span>
-                <span v-else>Sync Trades</span>
               </Button>
             </div>
             <div class="pt-2">
@@ -473,41 +458,14 @@ const toast = useToast()
 
 const tradeView = ref<'recent' | 'open'>('recent');
 const pnlView = ref<'realized' | 'unrealized'>('realized');
-const isSyncingTrades = ref(false);
-
-// Computed property for portfolio description
+// Computed property for portfolio description (always show all)
 const portfolioDescription = computed(() => {
-  switch (selectedAssetClass.value) {
-    case 'forex': return 'OANDA Forex only';
-    case 'crypto': return 'Aster DEX Crypto only';
-    case 'stocks': return 'Tradier Stocks only';
-    case 'options': return 'Tradier Options only';
-    case 'futures': return 'Tasty Trade Futures only';
-    default: return 'Across all exchanges';
-  }
+  return 'Across all exchanges';
 });
 
-// Computed property for filtered open positions (based on asset class filter)
+// Computed property for open positions (always show all)
 const filteredOpenPositions = computed(() => {
-  if (selectedAssetClass.value === 'all') {
-    return openPositions.value;
-  }
-  return openPositions.value.filter(pos => {
-    // Match by asset class
-    if (pos.asset_class === selectedAssetClass.value) {
-      return true;
-    }
-    // Fallback to exchange mapping if asset_class doesn't match
-    const exchangeMapping: Record<string, string> = {
-      'forex': 'oanda',
-      'crypto': 'aster',
-      'stocks': 'tradier',
-      'options': 'tradier',
-      'futures': 'tastytrade'
-    };
-    const expectedExchange = exchangeMapping[selectedAssetClass.value];
-    return pos.exchange === expectedExchange;
-  });
+  return openPositions.value;
 });
 
 // Computed property for total unrealized P&L
@@ -565,46 +523,15 @@ const formatChartDate = (i: number) => {
 
 
 // Asset class selection
-function selectAssetClass(assetClass: 'all' | AssetClass) {
-  selectedAssetClass.value = assetClass;
-  isLoading.value = true;
-  
-  // Show loading state immediately
-  console.log(`Dashboard: Switching to ${assetClass} filter...`);
-  
-  // Load all data in parallel for better performance
-  Promise.all([
-    loadData(),
-    loadChartData(),
-    loadBalances()
-  ]).then(() => {
-    console.log(`Dashboard: ${assetClass} filter data loaded successfully`);
-  }).catch((error) => {
-    console.error(`Dashboard: Error loading ${assetClass} filter data:`, error);
-  }).finally(() => {
-    isLoading.value = false;
-  });
-}
+// Removed selectAssetClass - dashboard now always shows all data
 
 // Load account balances
 async function loadBalances() {
   try {
     const result = await $fetch('/api/balances');
     if (result && result.success) {
-      // Filter balances based on selected asset class
+      // Use all balances (no filtering)
       let filteredBalances = result.balances;
-      
-      if (selectedAssetClass.value !== 'all') {
-        const exchangeMapping = {
-          'forex': 'OANDA',
-          'crypto': 'Aster DEX', 
-          'stocks': 'Tradier',
-          'options': 'Tradier',
-          'futures': 'Tasty Trade'
-        };
-        const targetExchange = exchangeMapping[selectedAssetClass.value];
-        filteredBalances = result.balances.filter((b: any) => b.exchange === targetExchange);
-      }
       
       // Calculate total from filtered balances
       const total = filteredBalances
@@ -624,9 +551,10 @@ async function loadData() {
   try {
     isConnected.value = true;
     
-    const assetFilter = selectedAssetClass.value === 'all' ? undefined : selectedAssetClass.value;
+    // Always load all data (no filtering)
+    const assetFilter = undefined;
     
-    console.log('Dashboard: Loading data with filter:', assetFilter);
+    console.log('Dashboard: Loading all data');
     
     // Load positions from both Supabase and direct APIs
     const [supabasePositions, trades, stats] = await Promise.all([
@@ -907,8 +835,9 @@ async function loadData() {
 async function loadChartData() {
   try {
     isLoadingChart.value = true;
-    const assetFilter = selectedAssetClass.value === 'all' ? undefined : selectedAssetClass.value;
-    console.log('Dashboard: Loading chart data for', chartDays.value, 'days with filter:', assetFilter);
+    // Always load all chart data (no filtering)
+    const assetFilter = undefined;
+    console.log('Dashboard: Loading chart data for', chartDays.value, 'days');
     
     const data = await getCumulativePnL(chartDays.value, assetFilter);
     console.log('Dashboard: Chart data loaded:', data.length, 'points');
@@ -990,48 +919,7 @@ function formatTime(isoString: string): string {
 }
 
 // Sync trades - detect closed positions and save them as trades
-async function syncTrades() {
-  try {
-    isSyncingTrades.value = true;
-    console.log('Dashboard: Syncing trades...');
-    
-    const response = await $fetch('/api/trades/sync', {
-      method: 'GET'
-    });
-    
-    if (response.success) {
-      console.log('Dashboard: Trade sync successful:', response);
-      // Reload chart data to show new trades
-      await loadChartData();
-      // Reload data to refresh recent trades
-      await loadData();
-      
-      const count = response.count || 0;
-      toast.add({
-        title: 'Trades synced',
-        description: `Successfully synced ${count} closed ${count === 1 ? 'trade' : 'trades'}.`,
-        icon: 'i-heroicons-check-circle',
-        color: 'success',
-      });
-    } else {
-      console.error('Dashboard: Trade sync failed:', response.error);
-      toast.add({
-        title: 'Trade sync failed',
-        description: response.error || 'Unknown error occurred.',
-        color: 'error',
-      });
-    }
-  } catch (error) {
-    console.error('Dashboard: Error syncing trades:', error);
-    toast.add({
-      title: 'Error syncing trades',
-      description: 'Check console for details.',
-      color: 'error',
-    });
-  } finally {
-    isSyncingTrades.value = false;
-  }
-}
+// Removed syncTrades function - no longer needed on dashboard
 
 // Auto-refresh data every 30 seconds
 let refreshInterval: NodeJS.Timeout | null = null;
