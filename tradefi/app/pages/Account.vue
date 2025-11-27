@@ -359,7 +359,7 @@
 
       <!-- Exchange Accounts Tab -->
       <TabsContent value="exchange-accounts" class="space-y-6">
-            <!-- Add Exchange Button -->
+        <!-- Add Exchange Button -->
             <div class="flex justify-end">
               <Button
                 size="sm"
@@ -557,7 +557,7 @@
 
       <!-- API Keys Tab -->
       <TabsContent value="api-keys" class="space-y-6">
-            <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-xl font-semibold text-foreground">Connect Your Exchange Accounts</h3>
                 <p class="text-sm text-muted-foreground mt-1">Manage your API keys securely</p>
@@ -772,8 +772,8 @@
             </div>
           </div>
 
-        <!-- Webhook Configuration Tab -->
-        <div v-if="activeTab === 'webhook'" class="space-y-6">
+      <!-- Webhook Tab -->
+      <TabsContent value="webhook" class="space-y-6">
             <div>
               <h3 class="text-xl font-semibold text-foreground">Your TradingView Webhook URL</h3>
               <p class="text-sm text-muted-foreground mt-1">Configure your webhook to receive TradingView alerts</p>
