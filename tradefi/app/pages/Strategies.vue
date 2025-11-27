@@ -197,8 +197,8 @@
           
           <!-- View Mode Header -->
           <div v-else class="flex items-start justify-between gap-3">
-            <div class="flex-1">
-              <CardTitle>{{ strategy.name }}</CardTitle>
+            <div class="flex-1 min-w-0">
+              <CardTitle class="break-words overflow-wrap-anywhere">{{ strategy.name }}</CardTitle>
               <!-- Asset Class Badge(s) -->
               <div v-if="getStrategyAssetClasses(strategy).length > 0" class="mt-2 flex flex-wrap gap-1">
                 <Badge 
@@ -211,7 +211,7 @@
                 </Badge>
               </div>
             </div>
-            <Badge :variant="getStatusColor(strategy.status) === 'success' ? 'success' : getStatusColor(strategy.status) === 'warning' ? 'pending' : 'outline'" class="text-xs">
+            <Badge :variant="getStatusColor(strategy.status) === 'success' ? 'success' : getStatusColor(strategy.status) === 'warning' ? 'pending' : 'outline'" class="text-xs flex-shrink-0">
               {{ strategy.status.toUpperCase() }}
             </Badge>
           </div>
