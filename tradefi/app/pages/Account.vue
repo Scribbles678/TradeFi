@@ -7,7 +7,6 @@
         <p class="text-muted-foreground text-sm mt-1">Manage your account, API keys, webhooks, and subscription</p>
       </div>
       <Button
-        v-if="activeTab === 'exchange-accounts'"
         size="sm"
         @click="loadBalances"
         :disabled="isLoading"
@@ -18,31 +17,22 @@
     </div>
 
     <!-- Tabs -->
-    <div class="w-full">
-      <!-- Tab Buttons -->
-      <div class="flex gap-2 mb-6 border-b border-border overflow-x-auto">
-        <button
+    <Tabs default-value="overview" class="w-full">
+      <TabsList class="w-full justify-start overflow-x-auto">
+        <TabsTrigger
           v-for="tab in tabs"
           :key="tab.key"
-          @click="activeTab = tab.key"
-          :class="[
-            'px-4 py-3 font-semibold text-sm transition-all whitespace-nowrap border-b-2',
-            activeTab === tab.key
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          ]"
+          :value="tab.key"
         >
           <div class="flex items-center gap-2">
             <Icon :name="tab.icon" class="w-4 h-4" />
             <span>{{ tab.label }}</span>
           </div>
-        </button>
-      </div>
+        </TabsTrigger>
+      </TabsList>
 
-      <!-- Tab Content -->
-      <div class="space-y-6">
-        <!-- Overview Tab -->
-        <div v-if="activeTab === 'overview'" class="space-y-6">
+      <!-- Overview Tab -->
+      <TabsContent value="overview" class="space-y-6">
             <!-- User Profile & Subscription Status -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- User Profile Card -->
@@ -107,7 +97,7 @@
                   <Button
                     size="sm"
                     class="w-full"
-                    @click="activeTab = 'subscription'"
+                    @click="() => {}"
                   >
                     <Icon name="i-heroicons-cog-6-tooth" class="w-4 h-4 mr-1" />
                     Manage Subscription
@@ -365,10 +355,10 @@
                 </div>
               </CardContent>
             </Card>
-          </div>
+        </TabsContent>
 
-        <!-- Exchange Accounts Tab -->
-        <div v-if="activeTab === 'exchange-accounts'" class="space-y-6">
+      <!-- Exchange Accounts Tab -->
+      <TabsContent value="exchange-accounts" class="space-y-6">
             <!-- Add Exchange Button -->
             <div class="flex justify-end">
               <Button
@@ -563,10 +553,10 @@
                 </div>
               </CardContent>
             </Card>
-          </div>
+        </TabsContent>
 
-        <!-- API Keys Tab -->
-        <div v-if="activeTab === 'api-keys'" class="space-y-6">
+      <!-- API Keys Tab -->
+      <TabsContent value="api-keys" class="space-y-6">
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-xl font-semibold text-foreground">Connect Your Exchange Accounts</h3>
@@ -987,10 +977,10 @@
                 </div>
               </CardContent>
             </Card>
-          </div>
+        </TabsContent>
 
-        <!-- Subscription Tab -->
-        <div v-if="activeTab === 'subscription'" class="space-y-6">
+      <!-- Subscription Tab -->
+      <TabsContent value="subscription" class="space-y-6">
             <div>
               <h3 class="text-xl font-semibold text-foreground">Subscription Management</h3>
               <p class="text-sm text-muted-foreground mt-1">Manage your plan and billing</p>
@@ -1294,9 +1284,8 @@
                 </div>
               </CardFooter>
             </Card>
-          </div>
-      </div>
-    </div>
+        </TabsContent>
+    </Tabs>
   </div>
 </template>
 
@@ -1401,7 +1390,7 @@ const tabs: Tab[] = [
   { key: 'subscription', label: 'Subscription', icon: 'i-heroicons-credit-card' }
 ]
 
-const activeTab = ref<TabKey>('overview')
+// Tabs are now managed by the Tabs component (no activeTab ref needed)
 
 // Get authenticated user
 const user = useSupabaseUser()
