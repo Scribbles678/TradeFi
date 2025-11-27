@@ -3,6 +3,7 @@ import {
   TrendingUp,
   Settings,
   BarChart3,
+  Key,
   User
 } from 'lucide-vue-next'
 
@@ -43,6 +44,12 @@ export const useMenuItems = () => {
         url: '/strategies',
         icon: BarChart3,
         isActive: route.path === '/strategies'
+      },
+      {
+        title: 'API Keys',
+        url: '/api-keys',
+        icon: Key,
+        isActive: route.path === '/api-keys'
       },
       {
         title: 'Account',
