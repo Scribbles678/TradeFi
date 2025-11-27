@@ -298,131 +298,133 @@
             </div>
             
             <!-- Recent Trades View -->
-            <div v-if="tradeView === 'recent'" class="space-y-2 max-h-72 overflow-y-auto">
-          <div v-if="isLoading" class="text-center py-8 text-muted-foreground">
-            <div class="animate-pulse">Loading trades...</div>
-          </div>
-          <div
-            v-else-if="recentTrades.length > 0"
-            v-for="trade in recentTrades"
-            :key="trade.id"
-            class="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
-          >
-            <div class="flex items-center gap-3">
-              <Badge :variant="trade.side === 'BUY' ? 'success' : 'error'" class="text-xs">
-                {{ trade.side }}
-              </Badge>
-              <span class="font-mono font-semibold">{{ trade.symbol }}</span>
-              <Badge v-if="trade.asset_class || trade.exchange" variant="outline" class="text-xs">
-                {{ getAssetClassLabel(trade.asset_class, trade.exchange) }}
-              </Badge>
-              <span class="text-sm text-muted-foreground">
-                {{ formatTime(trade.exit_time) }}
-              </span>
-            </div>
-            <div class="text-right">
-              <div :class="[
-                'font-mono font-semibold',
-                trade.is_winner ? 'text-green-400' : 'text-red-400'
-              ]">
-                {{ trade.pnl_usd >= 0 ? '+' : '' }}${{ trade.pnl_usd.toFixed(2) }}
+            <div v-if="tradeView === 'recent'" class="max-h-72 overflow-y-auto">
+              <div v-if="isLoading" class="text-center py-8 text-muted-foreground">
+                <div class="animate-pulse">Loading trades...</div>
               </div>
-              <div class="text-xs text-muted-foreground">
-                {{ trade.pnl_percent.toFixed(2) }}%
+              
+              <Table v-else-if="recentTrades.length > 0">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Symbol</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead class="text-right">P&L</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow 
+                    v-for="trade in recentTrades" 
+                    :key="trade.id"
+                    class="hover:bg-accent"
+                  >
+                    <TableCell class="font-mono font-semibold">
+                      {{ trade.symbol }}
+                    </TableCell>
+                    <TableCell>
+                      <div class="flex items-center gap-2">
+                        <Badge :variant="trade.side === 'BUY' ? 'success' : 'error'" class="text-xs">
+                          {{ trade.side }}
+                        </Badge>
+                        <Badge v-if="trade.asset_class || trade.exchange" variant="outline" class="text-xs">
+                          {{ getAssetClassLabel(trade.asset_class, trade.exchange) }}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell class="text-muted-foreground text-sm">
+                      {{ formatTime(trade.exit_time) }}
+                    </TableCell>
+                    <TableCell class="text-right">
+                      <div :class="[
+                        'font-mono font-semibold',
+                        trade.is_winner ? 'text-green-400' : 'text-red-400'
+                      ]">
+                        {{ trade.pnl_usd >= 0 ? '+' : '' }}${{ trade.pnl_usd.toFixed(2) }}
+                      </div>
+                      <div class="text-xs text-muted-foreground">
+                        {{ trade.pnl_percent.toFixed(2) }}%
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              
+              <div v-else class="text-center py-8 text-muted-foreground">
+                No trades yet
               </div>
             </div>
-          </div>
-          <div v-else-if="recentTrades.length === 0" class="text-center py-8 text-muted-foreground">
-            No trades yet
-          </div>
-        </div>
 
-        <!-- Open Trades View -->
-        <div v-else-if="tradeView === 'open'" class="space-y-3 max-h-96 overflow-y-auto">
-          <div v-if="isLoading" class="text-center py-8 text-muted-foreground">
-            <div class="animate-pulse">Loading positions...</div>
-          </div>
-          <template v-else-if="filteredOpenPositions.length > 0">
-            <div
-              v-for="position in filteredOpenPositions"
-              :key="position.id"
-              class="p-4 rounded-lg border hover:bg-accent transition-colors"
-            >
-              <!-- Header Row -->
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                  <Badge :variant="position.side === 'BUY' ? 'success' : 'error'" class="text-xs">
-                    {{ position.side }}
-                  </Badge>
-                  <span class="font-mono font-bold text-lg">{{ position.symbol }}</span>
-                  <Badge v-if="position.asset_class || position.exchange" variant="outline" class="text-xs">
-                    {{ getAssetClassLabel(position.asset_class, position.exchange) }}
-                  </Badge>
-                </div>
-                <div class="text-right">
-                  <div :class="[
-                    'font-mono font-bold text-lg',
-                    (position.unrealized_pnl_usd ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                  ]">
-                    {{ (position.unrealized_pnl_usd ?? 0) >= 0 ? '+' : '' }}${{ (position.unrealized_pnl_usd ?? 0).toFixed(2) }}
-                  </div>
-                  <div :class="[
-                    'text-sm font-semibold',
-                    (position.unrealized_pnl_percent ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                  ]">
-                    {{ (position.unrealized_pnl_percent ?? 0) >= 0 ? '+' : '' }}{{ (position.unrealized_pnl_percent ?? 0).toFixed(2) }}%
-                  </div>
-                </div>
+            <!-- Open Trades View -->
+            <div v-else-if="tradeView === 'open'" class="max-h-96 overflow-y-auto">
+              <div v-if="isLoading" class="text-center py-8 text-muted-foreground">
+                <div class="animate-pulse">Loading positions...</div>
               </div>
-
-              <!-- Details Grid -->
-              <div class="grid grid-cols-2 gap-3 text-sm">
-                <div class="space-y-2">
-                  <div class="flex justify-between">
-                    <span class="text-muted-foreground">Entry Price:</span>
-                    <span class="font-semibold text-foreground">${{ (position.entry_price || 0).toFixed(2) }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-muted-foreground">Current Price:</span>
-                    <span class="font-semibold text-foreground">${{ (position.current_price || position.entry_price || 0).toFixed(2) }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-muted-foreground">Quantity:</span>
-                    <span class="font-semibold text-foreground">{{ (position.quantity || 0).toFixed(4) }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-muted-foreground">Position Size:</span>
-                    <span class="font-semibold text-foreground">${{ (position.position_size_usd || 0).toFixed(2) }}</span>
-                  </div>
-                </div>
-                <div class="space-y-2">
-                  <div class="flex justify-between">
-                    <span class="text-muted-foreground">Time Open:</span>
-                    <span class="font-semibold text-foreground">{{ formatDuration(position.entry_time) }}</span>
-                  </div>
-                  <div v-if="position.stop_loss_price != null" class="flex justify-between">
-                    <span class="text-muted-foreground">Stop Loss:</span>
-                    <span class="font-semibold text-red-400">${{ position.stop_loss_price.toFixed(2) }}</span>
-                  </div>
-                  <div v-if="position.take_profit_price != null" class="flex justify-between">
-                    <span class="text-muted-foreground">Take Profit:</span>
-                    <span class="font-semibold text-green-400">${{ position.take_profit_price.toFixed(2) }}</span>
-                  </div>
-                  <div v-if="position.stop_loss_percent != null || position.take_profit_percent != null" class="flex justify-between">
-                    <span class="text-muted-foreground">Risk/Reward:</span>
-                    <span class="font-semibold text-foreground">
-                      {{ position.stop_loss_percent != null ? `-${position.stop_loss_percent}%` : 'N/A' }} / 
-                      {{ position.take_profit_percent != null ? `+${position.take_profit_percent}%` : 'N/A' }}
-                    </span>
-                  </div>
-                </div>
+              
+              <Table v-else-if="filteredOpenPositions.length > 0">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Symbol</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Entry</TableHead>
+                    <TableHead>Current</TableHead>
+                    <TableHead>Qty</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead class="text-right">P&L</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow 
+                    v-for="position in filteredOpenPositions" 
+                    :key="position.id"
+                    class="hover:bg-accent"
+                  >
+                    <TableCell class="font-mono font-semibold">
+                      {{ position.symbol }}
+                    </TableCell>
+                    <TableCell>
+                      <div class="flex items-center gap-2">
+                        <Badge :variant="position.side === 'BUY' ? 'success' : 'error'" class="text-xs">
+                          {{ position.side }}
+                        </Badge>
+                        <Badge v-if="position.asset_class || position.exchange" variant="outline" class="text-xs">
+                          {{ getAssetClassLabel(position.asset_class, position.exchange) }}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell class="text-sm">
+                      ${{ (position.entry_price || 0).toFixed(2) }}
+                    </TableCell>
+                    <TableCell class="text-sm">
+                      ${{ (position.current_price || position.entry_price || 0).toFixed(2) }}
+                    </TableCell>
+                    <TableCell class="text-sm">
+                      {{ (position.quantity || 0).toFixed(4) }}
+                    </TableCell>
+                    <TableCell class="text-sm text-muted-foreground">
+                      {{ formatDuration(position.entry_time) }}
+                    </TableCell>
+                    <TableCell class="text-right">
+                      <div :class="[
+                        'font-mono font-semibold',
+                        (position.unrealized_pnl_usd ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                      ]">
+                        {{ (position.unrealized_pnl_usd ?? 0) >= 0 ? '+' : '' }}${{ (position.unrealized_pnl_usd ?? 0).toFixed(2) }}
+                      </div>
+                      <div :class="[
+                        'text-xs',
+                        (position.unrealized_pnl_percent ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                      ]">
+                        {{ (position.unrealized_pnl_percent ?? 0) >= 0 ? '+' : '' }}{{ (position.unrealized_pnl_percent ?? 0).toFixed(2) }}%
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              
+              <div v-else class="text-center py-8 text-muted-foreground">
+                No open positions
               </div>
             </div>
-          </template>
-          <div v-else class="text-center py-8 text-muted-foreground">
-            No open positions
-          </div>
-        </div>
           </div>
         </template>
       </CardsWrapper>
