@@ -30,139 +30,35 @@
         </template>
       </CardsWrapper>
 
-      <!-- P&L Card -->
+      <!-- Today's Win Rate Card -->
       <CardsWrapper>
         <template #stats-header>
           <div class="h-2 w-2 rounded-full bg-yellow-500" />
-          <CardTitle>P&L</CardTitle>
+          <CardTitle>Today's Win Rate</CardTitle>
         </template>
         <template #stats-body>
-          <div class="space-y-4">
-            <div class="flex justify-center gap-2">
-              <Button
-                size="sm"
-                @click="pnlView = 'realized'"
-                :variant="pnlView === 'realized' ? 'default' : 'outline'"
-              >
-                Realized
-              </Button>
-              <Button
-                size="sm"
-                @click="pnlView = 'unrealized'"
-                :variant="pnlView === 'unrealized' ? 'default' : 'outline'"
-              >
-                Unrealized
-              </Button>
+          <div class="text-center space-y-2">
+            <div 
+              v-if="isLoading"
+              class="text-4xl font-bold text-muted-foreground animate-pulse"
+            >
+              Loading...
             </div>
-            
-            <div class="text-center space-y-4">
-              <!-- Realized P&L View -->
-              <div v-if="pnlView === 'realized'">
-                <div>
-                  <p class="text-xs text-muted-foreground mb-1">Today's Realized P&L</p>
-                  <p :class="[
-                    'text-3xl font-bold',
-                    isLoading ? 'text-muted-foreground' : (todaysStats.todayPnL >= 0 ? 'text-green-400' : 'text-red-400')
-                  ]">
-                    <span v-if="isLoading" class="animate-pulse">Loading...</span>
-                    <span v-else>{{ todaysStats.todayPnL >= 0 ? '+' : '' }}${{ todaysStats.todayPnL.toFixed(2) }}</span>
-                  </p>
-                </div>
-                
-                <div>
-                  <div class="flex items-center justify-center gap-2 mb-2">
-                    <Icon name="i-heroicons-star" class="w-4 h-4 text-muted-foreground" />
-                    <p class="text-sm text-muted-foreground font-medium">Win Rate</p>
-                  </div>
-                  <div 
-                    v-if="isLoading"
-                    class="text-3xl font-bold text-muted-foreground animate-pulse"
-                  >
-                    Loading...
-                  </div>
-                  <div 
-                    v-else
-                    class="text-3xl font-bold"
-                    :class="{
-                      'text-green-400': todaysStats.winRate >= 70,
-                      'text-yellow-400': todaysStats.winRate >= 50 && todaysStats.winRate < 70,
-                      'text-red-400': todaysStats.winRate < 50,
-                      'text-muted-foreground': todaysStats.totalTrades === 0
-                    }"
-                  >
-                    {{ todaysStats.winRate.toFixed(1) }}%
-                  </div>
-                  <div class="text-sm text-muted-foreground mt-1">
-                    {{ Math.round(todaysStats.totalTrades * todaysStats.winRate / 100) }}/{{ todaysStats.totalTrades }} trades
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Unrealized P&L View -->
-              <div v-else-if="pnlView === 'unrealized'">
-                <div>
-                  <p class="text-xs text-muted-foreground mb-1">Current Unrealized P&L</p>
-                  <p :class="[
-                    'text-3xl font-bold',
-                    isLoading ? 'text-muted-foreground' : (totalUnrealizedPnl >= 0 ? 'text-green-400' : 'text-red-400')
-                  ]">
-                    <span v-if="isLoading" class="animate-pulse">Loading...</span>
-                    <span v-else>{{ totalUnrealizedPnl >= 0 ? '+' : '' }}${{ totalUnrealizedPnl.toFixed(2) }}</span>
-                  </p>
-                </div>
-                
-                <div>
-                  <div class="flex items-center justify-center gap-2 mb-2">
-                    <Icon name="i-heroicons-shopping-cart" class="w-4 h-4 text-muted-foreground" />
-                    <p class="text-sm text-muted-foreground font-medium">Open Positions</p>
-                  </div>
-                  <div 
-                    v-if="isLoading"
-                    class="text-3xl font-bold text-muted-foreground animate-pulse"
-                  >
-                    Loading...
-                  </div>
-                  <div 
-                    v-else
-                    class="text-3xl font-bold text-foreground"
-                  >
-                    {{ filteredOpenPositions.length }}
-                  </div>
-                  <div class="text-sm text-muted-foreground mt-1">
-                    {{ filteredOpenPositions.length === 1 ? 'position' : 'positions' }}
-                  </div>
-                </div>
-                
-                <div>
-                  <div class="flex items-center justify-center gap-2 mb-2">
-                    <Icon name="i-heroicons-chart-bar-square" class="w-4 h-4 text-muted-foreground" />
-                    <p class="text-sm text-muted-foreground font-medium">Avg P&L %</p>
-                  </div>
-                  <div 
-                    v-if="isLoading"
-                    class="text-2xl font-bold text-muted-foreground animate-pulse"
-                  >
-                    Loading...
-                  </div>
-                  <div 
-                    v-else-if="filteredOpenPositions.length === 0"
-                    class="text-2xl font-bold text-muted-foreground"
-                  >
-                    N/A
-                  </div>
-                  <div 
-                    v-else
-                    class="text-2xl font-bold"
-                    :class="{
-                      'text-green-400': averageUnrealizedPnlPercent >= 0,
-                      'text-red-400': averageUnrealizedPnlPercent < 0
-                    }"
-                  >
-                    {{ averageUnrealizedPnlPercent >= 0 ? '+' : '' }}{{ averageUnrealizedPnlPercent.toFixed(2) }}%
-                  </div>
-                </div>
-              </div>
+            <div 
+              v-else
+              class="text-4xl font-bold"
+              :class="{
+                'text-green-400': todaysStats.winRate >= 70,
+                'text-yellow-400': todaysStats.winRate >= 50 && todaysStats.winRate < 70,
+                'text-red-400': todaysStats.winRate < 50,
+                'text-muted-foreground': todaysStats.totalTrades === 0
+              }"
+            >
+              {{ todaysStats.winRate.toFixed(1) }}%
             </div>
+            <p class="text-sm text-muted-foreground">
+              {{ Math.round(todaysStats.totalTrades * todaysStats.winRate / 100) }}/{{ todaysStats.totalTrades }} trades won
+            </p>
           </div>
         </template>
       </CardsWrapper>
@@ -457,7 +353,6 @@ const totalBalance = ref(0);
 const toast = useToast()
 
 const tradeView = ref<'recent' | 'open'>('recent');
-const pnlView = ref<'realized' | 'unrealized'>('realized');
 // Computed property for portfolio description (always show all)
 const portfolioDescription = computed(() => {
   return 'Across all exchanges';
