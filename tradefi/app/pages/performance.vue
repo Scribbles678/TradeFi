@@ -1,211 +1,223 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8 p-6">
     <!-- Page Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-white">Performance Analytics</h1>
-        <p class="text-gray-400 mt-1">Deep dive into your trading performance</p>
+        <h1 class="text-3xl font-semibold text-foreground">Performance Analytics</h1>
+        <p class="text-muted-foreground text-sm mt-1">Deep dive into your trading performance</p>
       </div>
-      <UBadge :color="isConnected ? 'success' : 'error'" size="lg">
+      <Badge :variant="isConnected ? 'success' : 'error'" class="text-sm px-3 py-1">
         {{ isConnected ? 'Connected' : 'Disconnected' }}
-      </UBadge>
+      </Badge>
     </div>
 
     <!-- Performance Overview Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- Total P&L -->
-      <UCard>
-        <div class="flex items-center justify-between">
+      <Card>
+        <CardContent class="text-center space-y-6 h-full flex flex-col justify-center py-6">
+          <div class="flex items-center justify-center gap-2">
+            <Icon name="i-heroicons-chart-bar" class="w-5 h-5 text-muted-foreground" />
+            <p class="text-sm text-muted-foreground font-medium">Total P&L</p>
+          </div>
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Total P&L</p>
             <p :class="[
-              'text-2xl font-bold mt-1',
-              totalPnL >= 0 ? 'text-green-500' : 'text-red-500'
+              'text-4xl font-bold',
+              totalPnL >= 0 ? 'text-green-400' : 'text-red-400'
             ]">
               {{ totalPnL >= 0 ? '+' : '' }}${{ totalPnL.toFixed(2) }}
             </p>
           </div>
-          <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
-            <UIcon name="i-heroicons-chart-bar" class="w-6 h-6 text-blue-600" />
-          </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
 
       <!-- Win Rate -->
-      <UCard>
-        <div class="flex items-center justify-between">
+      <Card>
+        <CardContent class="text-center space-y-6 h-full flex flex-col justify-center py-6">
+          <div class="flex items-center justify-center gap-2">
+            <Icon name="i-heroicons-trophy" class="w-5 h-5 text-muted-foreground" />
+            <p class="text-sm text-muted-foreground font-medium">Win Rate</p>
+          </div>
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Win Rate</p>
-            <p class="text-2xl font-bold mt-1 text-green-500">{{ winRate.toFixed(1) }}%</p>
+            <p class="text-4xl font-bold text-green-400">{{ winRate.toFixed(1) }}%</p>
           </div>
-          <div class="p-3 bg-green-100 dark:bg-green-900 rounded-full">
-            <UIcon name="i-heroicons-trophy" class="w-6 h-6 text-green-600" />
-          </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
 
       <!-- Total Trades -->
-      <UCard>
-        <div class="flex items-center justify-between">
+      <Card>
+        <CardContent class="text-center space-y-6 h-full flex flex-col justify-center py-6">
+          <div class="flex items-center justify-center gap-2">
+            <Icon name="i-heroicons-arrows-right-left" class="w-5 h-5 text-muted-foreground" />
+            <p class="text-sm text-muted-foreground font-medium">Total Trades</p>
+          </div>
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Total Trades</p>
-            <p class="text-2xl font-bold mt-1">{{ totalTrades }}</p>
+            <p class="text-4xl font-bold text-foreground">{{ totalTrades }}</p>
           </div>
-          <div class="p-3 bg-purple-100 dark:bg-purple-900 rounded-full">
-            <UIcon name="i-heroicons-arrows-right-left" class="w-6 h-6 text-purple-600" />
-          </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
 
       <!-- Best Strategy -->
-      <UCard>
-        <div class="flex items-center justify-between">
+      <Card>
+        <CardContent class="text-center space-y-6 h-full flex flex-col justify-center py-6">
+          <div class="flex items-center justify-center gap-2">
+            <Icon name="i-heroicons-star" class="w-5 h-5 text-muted-foreground" />
+            <p class="text-sm text-muted-foreground font-medium">Best Strategy</p>
+          </div>
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Best Strategy</p>
-            <p class="text-lg font-bold mt-1 text-yellow-500">{{ bestStrategy || 'N/A' }}</p>
+            <p class="text-2xl font-bold text-foreground">{{ bestStrategy || 'N/A' }}</p>
           </div>
-          <div class="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-full">
-            <UIcon name="i-heroicons-star" class="w-6 h-6 text-yellow-600" />
-          </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- Strategy Performance & Recent Trades Row -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Strategy Performance Chart -->
-      <UCard>
-        <template #header>
-          <h3 class="text-lg font-semibold">Strategy Performance</h3>
-        </template>
-        <div class="h-64 flex items-center justify-center">
-          <div class="text-center">
-            <UIcon name="i-heroicons-chart-pie" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p class="text-gray-500 dark:text-gray-400">Strategy performance chart coming soon</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Strategy Performance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="h-64 flex items-center justify-center">
+            <div class="text-center">
+              <Icon name="i-heroicons-chart-pie" class="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <p class="text-muted-foreground">Strategy performance chart coming soon</p>
+            </div>
           </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
 
       <!-- Recent Trades -->
-      <UCard>
-        <template #header>
+      <Card>
+        <CardHeader>
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold">Recent Trades</h3>
-            <UBadge color="blue" size="sm">{{ recentTrades.length }} trades</UBadge>
+            <CardTitle>Recent Trades</CardTitle>
+            <Badge variant="outline" class="text-xs">{{ recentTrades.length }} trades</Badge>
           </div>
-        </template>
-        <div class="space-y-3 max-h-64 overflow-y-auto">
-          <div
-            v-for="trade in recentTrades.slice(0, 10)"
-            :key="trade.id"
-            class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-          >
-            <div class="flex items-center gap-3">
-              <UBadge :color="trade.side === 'BUY' ? 'success' : 'error'" size="xs">
-                {{ trade.side }}
-              </UBadge>
-              <span class="font-mono font-semibold">{{ trade.symbol }}</span>
-              <UBadge v-if="trade.exchange" size="xs" color="neutral">
-                {{ trade.exchange === 'aster' ? 'Crypto' : trade.exchange === 'oanda' ? 'Forex' : trade.exchange === 'tradier' ? 'Stocks' : trade.exchange }}
-              </UBadge>
-              <span class="text-sm text-gray-500">
-                {{ formatTime(trade.exit_time) }}
-              </span>
-            </div>
-            <div class="text-right">
-              <div :class="[
-                'font-mono font-semibold',
-                (trade.pnl_usd || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-              ]">
-                {{ (trade.pnl_usd || 0) >= 0 ? '+' : '' }}${{ (trade.pnl_usd || 0).toFixed(2) }}
+        </CardHeader>
+        <CardContent>
+          <div class="space-y-2 max-h-64 overflow-y-auto">
+            <div
+              v-for="trade in recentTrades.slice(0, 10)"
+              :key="trade.id"
+              class="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
+            >
+              <div class="flex items-center gap-3">
+                <Badge :variant="trade.side === 'BUY' ? 'success' : 'error'" class="text-xs">
+                  {{ trade.side }}
+                </Badge>
+                <span class="font-mono font-semibold">{{ trade.symbol }}</span>
+                <Badge v-if="trade.exchange" variant="outline" class="text-xs">
+                  {{ trade.exchange === 'aster' ? 'Crypto' : trade.exchange === 'oanda' ? 'Forex' : trade.exchange === 'tradier' ? 'Stocks' : trade.exchange }}
+                </Badge>
+                <span class="text-sm text-muted-foreground">
+                  {{ formatTime(trade.exit_time) }}
+                </span>
               </div>
-              <div class="text-xs text-gray-500">
-                {{ trade.quantity }} @ ${{ (trade.price || 0).toFixed(2) }}
+              <div class="text-right">
+                <div :class="[
+                  'font-mono font-semibold',
+                  (trade.pnl_usd || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                ]">
+                  {{ (trade.pnl_usd || 0) >= 0 ? '+' : '' }}${{ (trade.pnl_usd || 0).toFixed(2) }}
+                </div>
+                <div class="text-xs text-muted-foreground">
+                  {{ trade.quantity }} @ ${{ (trade.price || 0).toFixed(2) }}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- Advanced Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <!-- Sharpe Ratio -->
-      <UCard>
-        <div class="text-center">
-          <UIcon name="i-heroicons-chart-bar-square" class="w-8 h-8 text-blue-500 mx-auto mb-2" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">Sharpe Ratio</p>
-          <p class="text-xl font-bold text-blue-500">{{ sharpeRatio.toFixed(2) }}</p>
-        </div>
-      </UCard>
+      <Card>
+        <CardContent class="text-center space-y-4 py-6">
+          <div class="flex items-center justify-center gap-2">
+            <Icon name="i-heroicons-chart-bar-square" class="w-5 h-5 text-muted-foreground" />
+            <p class="text-sm text-muted-foreground font-medium">Sharpe Ratio</p>
+          </div>
+          <p class="text-3xl font-bold text-foreground">{{ sharpeRatio.toFixed(2) }}</p>
+        </CardContent>
+      </Card>
 
       <!-- Max Drawdown -->
-      <UCard>
-        <div class="text-center">
-          <UIcon name="i-heroicons-arrow-trending-down" class="w-8 h-8 text-red-500 mx-auto mb-2" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">Max Drawdown</p>
-          <p class="text-xl font-bold text-red-500">{{ maxDrawdown.toFixed(2) }}%</p>
-        </div>
-      </UCard>
+      <Card>
+        <CardContent class="text-center space-y-4 py-6">
+          <div class="flex items-center justify-center gap-2">
+            <Icon name="i-heroicons-arrow-trending-down" class="w-5 h-5 text-muted-foreground" />
+            <p class="text-sm text-muted-foreground font-medium">Max Drawdown</p>
+          </div>
+          <p class="text-3xl font-bold text-red-400">{{ maxDrawdown.toFixed(2) }}%</p>
+        </CardContent>
+      </Card>
 
       <!-- Average Hold Time -->
-      <UCard>
-        <div class="text-center">
-          <UIcon name="i-heroicons-clock" class="w-8 h-8 text-purple-500 mx-auto mb-2" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">Avg Hold Time</p>
-          <p class="text-xl font-bold text-purple-500">{{ averageHoldTime }}</p>
-        </div>
-      </UCard>
+      <Card>
+        <CardContent class="text-center space-y-4 py-6">
+          <div class="flex items-center justify-center gap-2">
+            <Icon name="i-heroicons-clock" class="w-5 h-5 text-muted-foreground" />
+            <p class="text-sm text-muted-foreground font-medium">Avg Hold Time</p>
+          </div>
+          <p class="text-3xl font-bold text-foreground">{{ averageHoldTime }}</p>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- Asset Class Performance -->
-    <UCard>
-      <template #header>
-        <h3 class="text-lg font-semibold">Asset Class Performance</h3>
-      </template>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <UIcon name="i-heroicons-currency-dollar" class="w-8 h-8 text-green-500 mx-auto mb-2" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">Crypto</p>
-          <p :class="[
-            'text-lg font-bold',
-            cryptoPnL >= 0 ? 'text-green-500' : 'text-red-500'
-          ]">
-            {{ cryptoPnL >= 0 ? '+' : '' }}${{ cryptoPnL.toFixed(2) }}
-          </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Asset Class Performance</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="text-center p-4 rounded-lg border bg-card">
+            <Icon name="i-heroicons-currency-dollar" class="w-8 h-8 text-green-400 mx-auto mb-2" />
+            <p class="text-sm text-muted-foreground">Crypto</p>
+            <p :class="[
+              'text-lg font-bold',
+              cryptoPnL >= 0 ? 'text-green-400' : 'text-red-400'
+            ]">
+              {{ cryptoPnL >= 0 ? '+' : '' }}${{ cryptoPnL.toFixed(2) }}
+            </p>
+          </div>
+          <div class="text-center p-4 rounded-lg border bg-card">
+            <Icon name="i-heroicons-globe-alt" class="w-8 h-8 text-blue-400 mx-auto mb-2" />
+            <p class="text-sm text-muted-foreground">Forex</p>
+            <p :class="[
+              'text-lg font-bold',
+              forexPnL >= 0 ? 'text-green-400' : 'text-red-400'
+            ]">
+              {{ forexPnL >= 0 ? '+' : '' }}${{ forexPnL.toFixed(2) }}
+            </p>
+          </div>
+          <div class="text-center p-4 rounded-lg border bg-card">
+            <Icon name="i-heroicons-building-office" class="w-8 h-8 text-purple-400 mx-auto mb-2" />
+            <p class="text-sm text-muted-foreground">Stocks</p>
+            <p :class="[
+              'text-lg font-bold',
+              stocksPnL >= 0 ? 'text-green-400' : 'text-red-400'
+            ]">
+              {{ stocksPnL >= 0 ? '+' : '' }}${{ stocksPnL.toFixed(2) }}
+            </p>
+          </div>
+          <div class="text-center p-4 rounded-lg border bg-card">
+            <Icon name="i-heroicons-chart-line" class="w-8 h-8 text-indigo-400 mx-auto mb-2" />
+            <p class="text-sm text-muted-foreground">Futures</p>
+            <p :class="[
+              'text-lg font-bold',
+              futuresPnL >= 0 ? 'text-green-400' : 'text-red-400'
+            ]">
+              {{ futuresPnL >= 0 ? '+' : '' }}${{ futuresPnL.toFixed(2) }}
+            </p>
+          </div>
         </div>
-        <div class="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <UIcon name="i-heroicons-globe-alt" class="w-8 h-8 text-blue-500 mx-auto mb-2" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">Forex</p>
-          <p :class="[
-            'text-lg font-bold',
-            forexPnL >= 0 ? 'text-green-500' : 'text-red-500'
-          ]">
-            {{ forexPnL >= 0 ? '+' : '' }}${{ forexPnL.toFixed(2) }}
-          </p>
-        </div>
-        <div class="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <UIcon name="i-heroicons-building-office" class="w-8 h-8 text-purple-500 mx-auto mb-2" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">Stocks</p>
-          <p :class="[
-            'text-lg font-bold',
-            stocksPnL >= 0 ? 'text-green-500' : 'text-red-500'
-          ]">
-            {{ stocksPnL >= 0 ? '+' : '' }}${{ stocksPnL.toFixed(2) }}
-          </p>
-        </div>
-        <div class="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <UIcon name="i-heroicons-chart-line" class="w-8 h-8 text-indigo-500 mx-auto mb-2" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">Futures</p>
-          <p :class="[
-            'text-lg font-bold',
-            futuresPnL >= 0 ? 'text-green-500' : 'text-red-500'
-          ]">
-            {{ futuresPnL >= 0 ? '+' : '' }}${{ futuresPnL.toFixed(2) }}
-          </p>
-        </div>
-      </div>
-    </UCard>
+      </CardContent>
+    </Card>
   </div>
 </template>
 

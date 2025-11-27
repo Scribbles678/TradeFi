@@ -1,374 +1,363 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8 p-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">Dashboard Overview</h1>
-        <p class="text-gray-300 text-lg mt-1">Real-time analytics across all trading bots</p>
+        <h1 class="text-3xl font-semibold text-foreground">Dashboard Overview</h1>
+        <p class="text-muted-foreground text-sm mt-1">Real-time analytics across all trading bots</p>
       </div>
-      <UBadge :color="isConnected ? 'success' : 'error'" size="lg">
+      <Badge :variant="isConnected ? 'success' : 'error'" class="text-sm px-3 py-1">
         {{ isConnected ? 'Connected' : 'Disconnected' }}
-      </UBadge>
+      </Badge>
     </div>
 
     <!-- Asset Class Filter -->
     <div class="flex gap-2 flex-wrap">
-      <UButton
+      <Button
         v-for="asset in assetClasses"
         :key="asset.value"
         @click="selectAssetClass(asset.value)"
-        size="md"
-        :class="[
-          'font-semibold py-3 px-4 min-w-[100px] transition-all duration-200',
-          selectedAssetClass === asset.value 
-            ? 'bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25 border border-blue-500/30' 
-            : 'bg-gradient-to-br from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white border border-gray-500/30'
-        ]"
+        :variant="selectedAssetClass === asset.value ? 'default' : 'outline'"
+        size="sm"
       >
-        <span class="text-base font-bold">{{ asset.label }}</span>
-      </UButton>
+        {{ asset.label }}
+      </Button>
     </div>
 
     <!-- Real-Time Stats Overview -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <!-- Total Portfolio -->
-      <UCard class="bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-500/20 shadow-lg shadow-blue-500/10">
-        <div class="text-center space-y-6 h-full flex flex-col justify-center">
-          <div class="flex items-center justify-center gap-2">
-            <UIcon name="i-heroicons-currency-dollar" class="w-5 h-5 text-blue-400" />
-            <p class="text-sm text-blue-300 font-medium">Total Portfolio</p>
-          </div>
-          
-          <div>
-            <p class="text-4xl font-bold text-white">
+      <CardsWrapper>
+        <template #stats-header>
+          <div class="h-2 w-2 rounded-full bg-primary" />
+          <CardTitle>Total Portfolio</CardTitle>
+        </template>
+        <template #stats-body>
+          <div class="text-center space-y-2">
+            <p class="text-4xl font-bold text-foreground">
               <span v-if="isLoading" class="animate-pulse">Loading...</span>
               <span v-else>${{ totalBalance.toFixed(2) }}</span>
             </p>
-            <p class="text-base text-blue-200/70 mt-3">{{ portfolioDescription }}</p>
+            <p class="text-sm text-muted-foreground">{{ portfolioDescription }}</p>
           </div>
-          
-        </div>
-      </UCard>
+        </template>
+      </CardsWrapper>
 
       <!-- P&L Card -->
-      <UCard class="bg-gradient-to-br from-green-900/20 to-emerald-800/10 border border-green-500/20 shadow-lg shadow-green-500/10">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-green-400" />
-              <p class="text-sm text-green-300 font-medium">P&L</p>
-            </div>
-            <div class="flex gap-2">
-              <UButton
+      <CardsWrapper>
+        <template #stats-header>
+          <div class="h-2 w-2 rounded-full bg-yellow-500" />
+          <CardTitle>P&L</CardTitle>
+        </template>
+        <template #stats-body>
+          <div class="space-y-4">
+            <div class="flex justify-center gap-2">
+              <Button
                 size="sm"
                 @click="pnlView = 'realized'"
-                :class="[
-                  'font-medium transition-all',
-                  pnlView === 'realized'
-                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                ]"
+                :variant="pnlView === 'realized' ? 'default' : 'outline'"
               >
                 Realized
-              </UButton>
-              <UButton
+              </Button>
+              <Button
                 size="sm"
                 @click="pnlView = 'unrealized'"
-                :class="[
-                  'font-medium transition-all',
-                  pnlView === 'unrealized'
-                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                ]"
+                :variant="pnlView === 'unrealized' ? 'default' : 'outline'"
               >
                 Unrealized
-              </UButton>
+              </Button>
+            </div>
+            
+            <div class="text-center space-y-4">
+              <!-- Realized P&L View -->
+              <div v-if="pnlView === 'realized'">
+                <div>
+                  <p class="text-xs text-muted-foreground mb-1">Today's Realized P&L</p>
+                  <p :class="[
+                    'text-3xl font-bold',
+                    isLoading ? 'text-muted-foreground' : (todaysStats.todayPnL >= 0 ? 'text-green-400' : 'text-red-400')
+                  ]">
+                    <span v-if="isLoading" class="animate-pulse">Loading...</span>
+                    <span v-else>{{ todaysStats.todayPnL >= 0 ? '+' : '' }}${{ todaysStats.todayPnL.toFixed(2) }}</span>
+                  </p>
+                </div>
+                
+                <div>
+                  <div class="flex items-center justify-center gap-2 mb-2">
+                    <Icon name="i-heroicons-star" class="w-4 h-4 text-muted-foreground" />
+                    <p class="text-sm text-muted-foreground font-medium">Win Rate</p>
+                  </div>
+                  <div 
+                    v-if="isLoading"
+                    class="text-3xl font-bold text-muted-foreground animate-pulse"
+                  >
+                    Loading...
+                  </div>
+                  <div 
+                    v-else
+                    class="text-3xl font-bold"
+                    :class="{
+                      'text-green-400': todaysStats.winRate >= 70,
+                      'text-yellow-400': todaysStats.winRate >= 50 && todaysStats.winRate < 70,
+                      'text-red-400': todaysStats.winRate < 50,
+                      'text-muted-foreground': todaysStats.totalTrades === 0
+                    }"
+                  >
+                    {{ todaysStats.winRate.toFixed(1) }}%
+                  </div>
+                  <div class="text-sm text-muted-foreground mt-1">
+                    {{ Math.round(todaysStats.totalTrades * todaysStats.winRate / 100) }}/{{ todaysStats.totalTrades }} trades
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Unrealized P&L View -->
+              <div v-else-if="pnlView === 'unrealized'">
+                <div>
+                  <p class="text-xs text-muted-foreground mb-1">Current Unrealized P&L</p>
+                  <p :class="[
+                    'text-3xl font-bold',
+                    isLoading ? 'text-muted-foreground' : (totalUnrealizedPnl >= 0 ? 'text-green-400' : 'text-red-400')
+                  ]">
+                    <span v-if="isLoading" class="animate-pulse">Loading...</span>
+                    <span v-else>{{ totalUnrealizedPnl >= 0 ? '+' : '' }}${{ totalUnrealizedPnl.toFixed(2) }}</span>
+                  </p>
+                </div>
+                
+                <div>
+                  <div class="flex items-center justify-center gap-2 mb-2">
+                    <Icon name="i-heroicons-shopping-cart" class="w-4 h-4 text-muted-foreground" />
+                    <p class="text-sm text-muted-foreground font-medium">Open Positions</p>
+                  </div>
+                  <div 
+                    v-if="isLoading"
+                    class="text-3xl font-bold text-muted-foreground animate-pulse"
+                  >
+                    Loading...
+                  </div>
+                  <div 
+                    v-else
+                    class="text-3xl font-bold text-foreground"
+                  >
+                    {{ filteredOpenPositions.length }}
+                  </div>
+                  <div class="text-sm text-muted-foreground mt-1">
+                    {{ filteredOpenPositions.length === 1 ? 'position' : 'positions' }}
+                  </div>
+                </div>
+                
+                <div>
+                  <div class="flex items-center justify-center gap-2 mb-2">
+                    <Icon name="i-heroicons-chart-bar-square" class="w-4 h-4 text-muted-foreground" />
+                    <p class="text-sm text-muted-foreground font-medium">Avg P&L %</p>
+                  </div>
+                  <div 
+                    v-if="isLoading"
+                    class="text-2xl font-bold text-muted-foreground animate-pulse"
+                  >
+                    Loading...
+                  </div>
+                  <div 
+                    v-else-if="filteredOpenPositions.length === 0"
+                    class="text-2xl font-bold text-muted-foreground"
+                  >
+                    N/A
+                  </div>
+                  <div 
+                    v-else
+                    class="text-2xl font-bold"
+                    :class="{
+                      'text-green-400': averageUnrealizedPnlPercent >= 0,
+                      'text-red-400': averageUnrealizedPnlPercent < 0
+                    }"
+                  >
+                    {{ averageUnrealizedPnlPercent >= 0 ? '+' : '' }}{{ averageUnrealizedPnlPercent.toFixed(2) }}%
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </template>
-        <div class="text-center space-y-4">
-          <!-- Realized P&L View -->
-          <div v-if="pnlView === 'realized'">
-            <div>
-              <p class="text-xs text-green-200/70 mb-1">Today's Realized P&L</p>
-              <p :class="[
-                'text-3xl font-bold',
-                isLoading ? 'text-gray-400' : (todaysStats.todayPnL >= 0 ? 'text-green-400' : 'text-red-400')
-              ]">
-                <span v-if="isLoading" class="animate-pulse">Loading...</span>
-                <span v-else>{{ todaysStats.todayPnL >= 0 ? '+' : '' }}${{ todaysStats.todayPnL.toFixed(2) }}</span>
-              </p>
-            </div>
-            
-            <div>
-              <div class="flex items-center justify-center gap-2 mb-2">
-                <UIcon name="i-heroicons-star" class="w-4 h-4 text-green-400" />
-                <p class="text-sm text-green-300 font-medium">Win Rate</p>
-              </div>
-              <div 
-                v-if="isLoading"
-                class="text-3xl font-bold text-gray-400 animate-pulse"
-              >
-                Loading...
-              </div>
-              <div 
-                v-else
-                class="text-3xl font-bold"
-                :class="{
-                  'text-green-400': todaysStats.winRate >= 70,
-                  'text-yellow-400': todaysStats.winRate >= 50 && todaysStats.winRate < 70,
-                  'text-red-400': todaysStats.winRate < 50,
-                  'text-gray-400': todaysStats.totalTrades === 0
-                }"
-              >
-                {{ todaysStats.winRate.toFixed(1) }}%
-              </div>
-              <div class="text-sm text-green-200/70 mt-1">
-                {{ Math.round(todaysStats.totalTrades * todaysStats.winRate / 100) }}/{{ todaysStats.totalTrades }} trades
-              </div>
-            </div>
-          </div>
-          
-          <!-- Unrealized P&L View -->
-          <div v-else-if="pnlView === 'unrealized'">
-            <div>
-              <p class="text-xs text-green-200/70 mb-1">Current Unrealized P&L</p>
-              <p :class="[
-                'text-3xl font-bold',
-                isLoading ? 'text-gray-400' : (totalUnrealizedPnl >= 0 ? 'text-green-400' : 'text-red-400')
-              ]">
-                <span v-if="isLoading" class="animate-pulse">Loading...</span>
-                <span v-else>{{ totalUnrealizedPnl >= 0 ? '+' : '' }}${{ totalUnrealizedPnl.toFixed(2) }}</span>
-              </p>
-            </div>
-            
-            <div>
-              <div class="flex items-center justify-center gap-2 mb-2">
-                <UIcon name="i-heroicons-shopping-cart" class="w-4 h-4 text-green-400" />
-                <p class="text-sm text-green-300 font-medium">Open Positions</p>
-              </div>
-              <div 
-                v-if="isLoading"
-                class="text-3xl font-bold text-gray-400 animate-pulse"
-              >
-                Loading...
-              </div>
-              <div 
-                v-else
-                class="text-3xl font-bold text-white"
-              >
-                {{ filteredOpenPositions.length }}
-              </div>
-              <div class="text-sm text-green-200/70 mt-1">
-                {{ filteredOpenPositions.length === 1 ? 'position' : 'positions' }}
-              </div>
-            </div>
-            
-            <div>
-              <div class="flex items-center justify-center gap-2 mb-2">
-                <UIcon name="i-heroicons-chart-bar-square" class="w-4 h-4 text-green-400" />
-                <p class="text-sm text-green-300 font-medium">Avg P&L %</p>
-              </div>
-              <div 
-                v-if="isLoading"
-                class="text-2xl font-bold text-gray-400 animate-pulse"
-              >
-                Loading...
-              </div>
-              <div 
-                v-else-if="filteredOpenPositions.length === 0"
-                class="text-2xl font-bold text-gray-400"
-              >
-                N/A
-              </div>
-              <div 
-                v-else
-                class="text-2xl font-bold"
-                :class="{
-                  'text-green-400': averageUnrealizedPnlPercent >= 0,
-                  'text-red-400': averageUnrealizedPnlPercent < 0
-                }"
-              >
-                {{ averageUnrealizedPnlPercent >= 0 ? '+' : '' }}{{ averageUnrealizedPnlPercent.toFixed(2) }}%
-              </div>
-            </div>
-          </div>
-        </div>
-      </UCard>
+      </CardsWrapper>
 
       <!-- Open Positions -->
-      <UCard class="bg-gradient-to-br from-orange-900/20 to-amber-800/10 border border-orange-500/20 shadow-lg shadow-orange-500/10">
-        <div class="text-center space-y-4">
-          <div class="flex items-center justify-center gap-2">
-            <UIcon name="i-heroicons-shopping-cart" class="w-5 h-5 text-orange-400" />
-            <p class="text-sm text-orange-300 font-medium">Open Positions</p>
+      <CardsWrapper>
+        <template #stats-header>
+          <div class="h-2 w-2 rounded-full bg-green-500" />
+          <CardTitle>Open Positions</CardTitle>
+        </template>
+        <template #stats-body>
+          <div class="text-center space-y-4">
+            <div>
+              <p class="text-4xl font-bold text-foreground">{{ filteredOpenPositions.length }}</p>
+              <p class="text-sm text-muted-foreground mt-1">Active Positions</p>
+            </div>
+            
+            <div>
+              <p class="text-lg font-semibold text-foreground">{{ todaysStats.totalTrades }}</p>
+              <p class="text-sm text-muted-foreground">Today's Trades</p>
+            </div>
           </div>
-          
-          <div>
-            <p class="text-4xl font-bold text-white">{{ filteredOpenPositions.length }}</p>
-            <p class="text-sm text-orange-200/70 mt-1">Active Positions</p>
-          </div>
-          
-          <div>
-            <p class="text-lg font-semibold text-orange-300">{{ todaysStats.totalTrades }}</p>
-            <p class="text-sm text-orange-200/70">Today's Trades</p>
-          </div>
-          
-        </div>
-      </UCard>
+        </template>
+      </CardsWrapper>
     </div>
 
 
     <!-- P&L Chart and Recent Trades Row -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- P&L Chart -->
-      <UCard class="bg-gradient-to-br from-cyan-900/20 to-blue-800/10 border border-cyan-500/20 shadow-lg shadow-cyan-500/10">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-cyan-300">Cumulative P&L</h3>
-            <div class="flex gap-2">
-              <UButton
+      <CardsWrapper>
+        <template #stats-header>
+          <div class="h-2 w-2 rounded-full bg-blue-500" />
+          <CardTitle>Cumulative P&L</CardTitle>
+        </template>
+        <template #stats-body>
+          <div class="space-y-4">
+            <div class="flex justify-center gap-2">
+              <Button
                 size="sm"
                 @click="chartDays = 7; loadChartData()"
-                :class="[
-                  'font-medium',
-                  chartDays === 7 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                ]"
+                :variant="chartDays === 7 ? 'default' : 'outline'"
               >
                 7D
-              </UButton>
-              <UButton
+              </Button>
+              <Button
                 size="sm"
                 @click="chartDays = 30; loadChartData()"
-                :class="[
-                  'font-medium',
-                  chartDays === 30 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                ]"
+                :variant="chartDays === 30 ? 'default' : 'outline'"
               >
                 30D
-              </UButton>
-              <UButton
+              </Button>
+              <Button
                 size="sm"
                 @click="syncTrades"
                 :disabled="isSyncingTrades"
-                :class="[
-                  'font-medium',
-                  isSyncingTrades
-                    ? 'bg-gray-500 cursor-not-allowed text-white' 
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                ]"
+                variant="outline"
               >
                 <span v-if="isSyncingTrades">Syncing...</span>
                 <span v-else>Sync Trades</span>
-              </UButton>
+              </Button>
+            </div>
+            <div class="pt-2">
+              <!-- Loading state -->
+              <div v-if="isLoadingChart" class="h-64 flex items-center justify-center">
+                <div class="text-center">
+                  <div class="animate-pulse text-muted-foreground">Loading chart...</div>
+                </div>
+              </div>
+              
+              <!-- Empty state -->
+              <div v-else-if="!chartData || chartData.length === 0" class="h-64 flex items-center justify-center">
+                <div class="text-center">
+                  <p class="text-muted-foreground">No closed trades in the selected period</p>
+                </div>
+              </div>
+              
+              <!-- Nuxt Charts AreaChart -->
+              <AreaChart
+                v-else
+                :data="chartData"
+                :height="256"
+                :categories="{ pnl: { name: 'Cumulative P&L', color: chartColor } }"
+                :y-axis="['pnl']"
+                :y-formatter="formatCurrency"
+                :x-formatter="formatChartDate"
+                curve-type="monotoneX"
+                legend-position="bottomCenter"
+                :y-num-ticks="5"
+                :grid-line-y="true"
+              />
             </div>
           </div>
         </template>
-        <div class="h-64" ref="chartContainer">
-          <!-- Chart will be rendered here -->
-          <canvas ref="pnlChart"></canvas>
-        </div>
-      </UCard>
+      </CardsWrapper>
 
       <!-- Recent Trades / Open Trades -->
-      <UCard class="bg-gradient-to-br from-indigo-900/20 to-purple-800/10 border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-indigo-300">Trades</h3>
-            <div class="flex gap-2">
-              <UButton
+      <CardsWrapper>
+        <template #stats-header>
+          <div class="h-2 w-2 rounded-full bg-purple-500" />
+          <CardTitle>Trades</CardTitle>
+        </template>
+        <template #stats-body>
+          <div class="space-y-4">
+            <div class="flex justify-center gap-2">
+              <Button
                 size="sm"
                 @click="tradeView = 'recent'"
-                :class="[
-                  'font-medium transition-all',
-                  tradeView === 'recent'
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                ]"
+                :variant="tradeView === 'recent' ? 'default' : 'outline'"
               >
                 Recent Trades
-              </UButton>
-              <UButton
+              </Button>
+              <Button
                 size="sm"
                 @click="tradeView = 'open'"
-                :class="[
-                  'font-medium transition-all',
-                  tradeView === 'open'
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                ]"
+                :variant="tradeView === 'open' ? 'default' : 'outline'"
               >
                 Open Trades
-              </UButton>
+              </Button>
             </div>
-          </div>
-        </template>
-        
-        <!-- Recent Trades View -->
-        <div v-if="tradeView === 'recent'" class="space-y-2 max-h-72 overflow-y-auto">
-          <div v-if="isLoading" class="text-center py-8 text-gray-500">
+            
+            <!-- Recent Trades View -->
+            <div v-if="tradeView === 'recent'" class="space-y-2 max-h-72 overflow-y-auto">
+          <div v-if="isLoading" class="text-center py-8 text-muted-foreground">
             <div class="animate-pulse">Loading trades...</div>
           </div>
           <div
             v-else-if="recentTrades.length > 0"
             v-for="trade in recentTrades"
             :key="trade.id"
-            class="flex items-center justify-between p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm hover:bg-indigo-500/20 transition-colors"
+            class="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
           >
             <div class="flex items-center gap-3">
-              <UBadge :color="trade.side === 'BUY' ? 'success' : 'error'" size="xs">
+              <Badge :variant="trade.side === 'BUY' ? 'success' : 'error'" class="text-xs">
                 {{ trade.side }}
-              </UBadge>
+              </Badge>
               <span class="font-mono font-semibold">{{ trade.symbol }}</span>
-              <UBadge v-if="trade.asset_class || trade.exchange" size="xs" color="neutral">
+              <Badge v-if="trade.asset_class || trade.exchange" variant="outline" class="text-xs">
                 {{ getAssetClassLabel(trade.asset_class, trade.exchange) }}
-              </UBadge>
-              <span class="text-sm text-gray-500">
+              </Badge>
+              <span class="text-sm text-muted-foreground">
                 {{ formatTime(trade.exit_time) }}
               </span>
             </div>
             <div class="text-right">
               <div :class="[
                 'font-mono font-semibold',
-                trade.is_winner ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                trade.is_winner ? 'text-green-400' : 'text-red-400'
               ]">
                 {{ trade.pnl_usd >= 0 ? '+' : '' }}${{ trade.pnl_usd.toFixed(2) }}
               </div>
-              <div class="text-xs text-gray-500">
+              <div class="text-xs text-muted-foreground">
                 {{ trade.pnl_percent.toFixed(2) }}%
               </div>
             </div>
           </div>
-          <div v-else-if="recentTrades.length === 0" class="text-center py-8 text-gray-500">
+          <div v-else-if="recentTrades.length === 0" class="text-center py-8 text-muted-foreground">
             No trades yet
           </div>
         </div>
 
         <!-- Open Trades View -->
         <div v-else-if="tradeView === 'open'" class="space-y-3 max-h-96 overflow-y-auto">
-          <div v-if="isLoading" class="text-center py-8 text-gray-500">
+          <div v-if="isLoading" class="text-center py-8 text-muted-foreground">
             <div class="animate-pulse">Loading positions...</div>
           </div>
           <template v-else-if="filteredOpenPositions.length > 0">
             <div
               v-for="position in filteredOpenPositions"
               :key="position.id"
-              class="p-4 rounded-lg bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-sm hover:bg-indigo-500/20 transition-colors"
+              class="p-4 rounded-lg border hover:bg-accent transition-colors"
             >
               <!-- Header Row -->
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3">
-                  <UBadge :color="position.side === 'BUY' ? 'success' : 'error'" size="sm">
+                  <Badge :variant="position.side === 'BUY' ? 'success' : 'error'" class="text-xs">
                     {{ position.side }}
-                  </UBadge>
+                  </Badge>
                   <span class="font-mono font-bold text-lg">{{ position.symbol }}</span>
-                  <UBadge v-if="position.asset_class || position.exchange" size="xs" color="neutral">
+                  <Badge v-if="position.asset_class || position.exchange" variant="outline" class="text-xs">
                     {{ getAssetClassLabel(position.asset_class, position.exchange) }}
-                  </UBadge>
+                  </Badge>
                 </div>
                 <div class="text-right">
                   <div :class="[
@@ -390,38 +379,38 @@
               <div class="grid grid-cols-2 gap-3 text-sm">
                 <div class="space-y-2">
                   <div class="flex justify-between">
-                    <span class="text-gray-400">Entry Price:</span>
-                    <span class="font-semibold text-white">${{ (position.entry_price || 0).toFixed(2) }}</span>
+                    <span class="text-muted-foreground">Entry Price:</span>
+                    <span class="font-semibold text-foreground">${{ (position.entry_price || 0).toFixed(2) }}</span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-gray-400">Current Price:</span>
-                    <span class="font-semibold text-white">${{ (position.current_price || position.entry_price || 0).toFixed(2) }}</span>
+                    <span class="text-muted-foreground">Current Price:</span>
+                    <span class="font-semibold text-foreground">${{ (position.current_price || position.entry_price || 0).toFixed(2) }}</span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-gray-400">Quantity:</span>
-                    <span class="font-semibold text-white">{{ (position.quantity || 0).toFixed(4) }}</span>
+                    <span class="text-muted-foreground">Quantity:</span>
+                    <span class="font-semibold text-foreground">{{ (position.quantity || 0).toFixed(4) }}</span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-gray-400">Position Size:</span>
-                    <span class="font-semibold text-white">${{ (position.position_size_usd || 0).toFixed(2) }}</span>
+                    <span class="text-muted-foreground">Position Size:</span>
+                    <span class="font-semibold text-foreground">${{ (position.position_size_usd || 0).toFixed(2) }}</span>
                   </div>
                 </div>
                 <div class="space-y-2">
                   <div class="flex justify-between">
-                    <span class="text-gray-400">Time Open:</span>
-                    <span class="font-semibold text-white">{{ formatDuration(position.entry_time) }}</span>
+                    <span class="text-muted-foreground">Time Open:</span>
+                    <span class="font-semibold text-foreground">{{ formatDuration(position.entry_time) }}</span>
                   </div>
                   <div v-if="position.stop_loss_price != null" class="flex justify-between">
-                    <span class="text-gray-400">Stop Loss:</span>
+                    <span class="text-muted-foreground">Stop Loss:</span>
                     <span class="font-semibold text-red-400">${{ position.stop_loss_price.toFixed(2) }}</span>
                   </div>
                   <div v-if="position.take_profit_price != null" class="flex justify-between">
-                    <span class="text-gray-400">Take Profit:</span>
+                    <span class="text-muted-foreground">Take Profit:</span>
                     <span class="font-semibold text-green-400">${{ position.take_profit_price.toFixed(2) }}</span>
                   </div>
                   <div v-if="position.stop_loss_percent != null || position.take_profit_percent != null" class="flex justify-between">
-                    <span class="text-gray-400">Risk/Reward:</span>
-                    <span class="font-semibold text-white">
+                    <span class="text-muted-foreground">Risk/Reward:</span>
+                    <span class="font-semibold text-foreground">
                       {{ position.stop_loss_percent != null ? `-${position.stop_loss_percent}%` : 'N/A' }} / 
                       {{ position.take_profit_percent != null ? `+${position.take_profit_percent}%` : 'N/A' }}
                     </span>
@@ -430,11 +419,13 @@
               </div>
             </div>
           </template>
-          <div v-else class="text-center py-8 text-gray-500">
+          <div v-else class="text-center py-8 text-muted-foreground">
             No open positions
           </div>
         </div>
-      </UCard>
+          </div>
+        </template>
+      </CardsWrapper>
     </div>
   </div>
 </template>
@@ -450,7 +441,6 @@ import {
   type Trade,
   type AssetClass
 } from '~/utils/supabase';
-import Chart from 'chart.js/auto';
 
 // Asset Classes
 const assetClasses = [
@@ -474,8 +464,8 @@ const todaysStats = ref({
   totalTrades: 0,
 });
 const chartDays = ref(7);
-const pnlChart = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
+const chartData = ref<Array<{ date: string; pnl: number }>>([]);
+const isLoadingChart = ref(false);
 const totalBalance = ref(0);
 const toast = useToast()
 
@@ -554,6 +544,22 @@ const averageUnrealizedPnlPercent = computed(() => {
   
   return totalWeightedPnl / totalPositionSize;
 });
+
+// Chart color based on final P&L
+const chartColor = computed(() => {
+  if (chartData.value.length === 0) return '#6b7280';
+  const finalPnl = chartData.value[chartData.value.length - 1]?.pnl ?? 0;
+  return finalPnl >= 0 ? '#10b981' : '#ef4444';
+});
+
+// Chart formatters
+const formatCurrency = (value: number) => {
+  return `$${value.toFixed(2)}`;
+};
+
+const formatChartDate = (i: number) => {
+  return chartData.value[i]?.date || '';
+};
 
 
 // Asset class selection
@@ -898,160 +904,33 @@ async function loadData() {
 // Load chart data
 async function loadChartData() {
   try {
+    isLoadingChart.value = true;
     const assetFilter = selectedAssetClass.value === 'all' ? undefined : selectedAssetClass.value;
     console.log('Dashboard: Loading chart data for', chartDays.value, 'days with filter:', assetFilter);
+    
     const data = await getCumulativePnL(chartDays.value, assetFilter);
-    console.log('Dashboard: Chart data loaded:', data);
-    console.log('Dashboard: Chart data length:', data.length);
-    if (data.length === 0) {
-      console.log('Dashboard: No chart data available - no closed trades in the last', chartDays.value, 'days');
+    console.log('Dashboard: Chart data loaded:', data.length, 'points');
+    
+    // Transform data for Nuxt Charts
+    chartData.value = data.map(d => ({
+      date: d.date,
+      pnl: d.cumulative_pnl
+    }));
+    
+    // Handle single data point - add a starting point at zero
+    if (chartData.value.length === 1) {
+      console.log('Dashboard: Only one data point - adding starting point');
+      chartData.value = [
+        { date: chartData.value[0].date, pnl: 0 },
+        chartData.value[0]
+      ];
     }
-    renderChart(data);
   } catch (error) {
     console.error('Error loading chart data:', error);
+    chartData.value = [];
+  } finally {
+    isLoadingChart.value = false;
   }
-}
-
-// Render chart
-function renderChart(data: Array<{ date: string; cumulative_pnl: number }>) {
-  if (!pnlChart.value) {
-    console.log('Dashboard: Chart canvas not available');
-    return;
-  }
-
-  // Destroy existing chart
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-
-  const ctx = pnlChart.value.getContext('2d');
-  if (!ctx) {
-    console.log('Dashboard: Chart context not available');
-    return;
-  }
-
-  // Handle empty data
-  if (!data || data.length === 0) {
-    console.log('Dashboard: No data to render in chart - showing empty state');
-    // Create a chart with empty data that shows a message
-    chartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Cumulative P&L',
-          data: [],
-          borderColor: '#6b7280',
-          backgroundColor: 'rgba(107, 114, 128, 0.1)',
-          borderWidth: 0,
-          fill: false,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            enabled: false
-          }
-        },
-        scales: {
-          x: {
-            display: false
-          },
-          y: {
-            display: false
-          }
-        }
-      },
-      plugins: [{
-        id: 'empty-state',
-        afterDraw: (chart) => {
-          const { ctx, chartArea } = chart;
-          if (!chartArea) return;
-          
-          ctx.save();
-          ctx.fillStyle = '#9ca3af';
-          ctx.font = '14px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(
-            'No closed trades in the selected period',
-            (chartArea.left + chartArea.right) / 2,
-            (chartArea.top + chartArea.bottom) / 2
-          );
-          ctx.restore();
-        }
-      }]
-    });
-    return;
-  }
-
-  // Handle single data point (need at least 2 points for a line to be visible)
-  if (data.length === 1) {
-    console.log('Dashboard: Only one data point - duplicating for chart visibility');
-    // Duplicate the single point to create a visible line
-    data = [
-      { date: data[0].date, cumulative_pnl: 0 }, // Start at zero
-      data[0] // Then show the actual P&L
-    ];
-  }
-
-  console.log('Dashboard: Rendering chart with', data.length, 'data points');
-  console.log('Dashboard: Chart data:', data);
-
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: data.map(d => d.date),
-      datasets: [{
-        label: 'Cumulative P&L',
-        data: data.map(d => d.cumulative_pnl),
-        borderColor: (data[data.length - 1]?.cumulative_pnl ?? 0) >= 0 ? '#10b981' : '#ef4444',
-        backgroundColor: (data[data.length - 1]?.cumulative_pnl ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-        pointRadius: data.length <= 10 ? 4 : 0, // Show points if few data points
-        pointHoverRadius: 6,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              return `P&L: $${context.parsed.y.toFixed(2)}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          display: data.length > 0,
-          ticks: {
-            maxRotation: 45,
-            minRotation: 45
-          }
-        },
-        y: {
-          beginAtZero: false, // Don't force zero - show actual range
-          ticks: {
-            callback: (value) => `$${value.toFixed(2)}`
-          }
-        }
-      }
-    }
-  });
 }
 
 // Get asset class label from asset_class or exchange
@@ -1181,9 +1060,6 @@ onMounted(async () => {
 onUnmounted(() => {
   if (refreshInterval) {
     clearInterval(refreshInterval);
-  }
-  if (chartInstance) {
-    chartInstance.destroy();
   }
 });
 

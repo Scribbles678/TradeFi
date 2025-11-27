@@ -1,26 +1,26 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8 p-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">Account</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Manage your account, API keys, webhooks, and subscription</p>
+        <h1 class="text-3xl font-semibold text-foreground">Account</h1>
+        <p class="text-muted-foreground text-sm mt-1">Manage your account, API keys, webhooks, and subscription</p>
       </div>
-      <UButton
+      <Button
         v-if="activeTab === 'exchange-accounts'"
-        icon="i-heroicons-arrow-path"
-        label="Refresh"
-        size="md"
+        size="sm"
         @click="loadBalances"
-        :loading="isLoading"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-      />
+        :disabled="isLoading"
+      >
+        <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-1" />
+        Refresh
+      </Button>
     </div>
 
     <!-- Tabs -->
     <div class="w-full">
       <!-- Tab Buttons -->
-      <div class="flex gap-2 mb-6 border-b border-gray-700 dark:border-gray-600 overflow-x-auto">
+      <div class="flex gap-2 mb-6 border-b border-border overflow-x-auto">
         <button
           v-for="tab in tabs"
           :key="tab.key"
@@ -28,12 +28,12 @@
           :class="[
             'px-4 py-3 font-semibold text-sm transition-all whitespace-nowrap border-b-2',
             activeTab === tab.key
-              ? 'border-blue-500 text-blue-500 dark:text-blue-400'
-              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           ]"
         >
           <div class="flex items-center gap-2">
-            <UIcon :name="tab.icon" class="w-4 h-4" />
+            <Icon :name="tab.icon" class="w-4 h-4" />
             <span>{{ tab.label }}</span>
           </div>
         </button>
@@ -46,571 +46,588 @@
             <!-- User Profile & Subscription Status -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- User Profile Card -->
-              <UCard>
-                <template #header>
+              <Card>
+                <CardHeader>
                   <div class="flex items-center gap-2">
-                    <UIcon name="i-heroicons-user-circle" class="w-5 h-5" />
-                    <h3 class="text-lg font-semibold">User Profile</h3>
+                    <Icon name="i-heroicons-user-circle" class="w-5 h-5 text-muted-foreground" />
+                    <CardTitle>User Profile</CardTitle>
                   </div>
-                </template>
-                <div class="space-y-4">
+                </CardHeader>
+                <CardContent class="space-y-4">
                   <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Name</p>
-                    <p class="text-lg font-semibold mt-1">{{ userProfile.name }}</p>
-                  </div>
-                  <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                    <p class="text-lg font-semibold mt-1">{{ userProfile.email }}</p>
+                    <p class="text-sm text-muted-foreground">Name</p>
+                    <p class="text-lg font-semibold mt-1 text-foreground">{{ userProfile.name }}</p>
                   </div>
                   <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Member Since</p>
-                    <p class="text-lg font-semibold mt-1">{{ userProfile.joinDate }}</p>
+                    <p class="text-sm text-muted-foreground">Email</p>
+                    <p class="text-lg font-semibold mt-1 text-foreground">{{ userProfile.email }}</p>
                   </div>
-                  <UButton
-                    label="Edit Profile"
-                    icon="i-heroicons-pencil"
-                    size="md"
-                    class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold"
+                  <div>
+                    <p class="text-sm text-muted-foreground">Member Since</p>
+                    <p class="text-lg font-semibold mt-1 text-foreground">{{ userProfile.joinDate }}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="w-full"
                     @click="editProfile"
-                  />
-                </div>
-              </UCard>
+                  >
+                    <Icon name="i-heroicons-pencil" class="w-4 h-4 mr-1" />
+                    Edit Profile
+                  </Button>
+                </CardContent>
+              </Card>
 
               <!-- Subscription Status Card -->
-              <UCard>
-                <template #header>
+              <Card>
+                <CardHeader>
                   <div class="flex items-center gap-2">
-                    <UIcon name="i-heroicons-credit-card" class="w-5 h-5" />
-                    <h3 class="text-lg font-semibold">Subscription Status</h3>
+                    <Icon name="i-heroicons-credit-card" class="w-5 h-5 text-muted-foreground" />
+                    <CardTitle>Subscription Status</CardTitle>
                   </div>
-                </template>
-                <div class="space-y-4">
+                </CardHeader>
+                <CardContent class="space-y-4">
                   <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Current Plan</p>
+                    <p class="text-sm text-muted-foreground">Current Plan</p>
                     <div class="flex items-center gap-2 mt-1">
-                      <p class="text-lg font-semibold">{{ subscription.plan || 'Pro' }}</p>
-                      <UBadge :color="subscription.status === 'active' ? 'success' : 'warning'" size="sm">
+                      <p class="text-lg font-semibold text-foreground">{{ subscription.plan || 'Pro' }}</p>
+                      <Badge :variant="subscription.status === 'active' ? 'success' : 'pending'" class="text-xs">
                         {{ subscription.status === 'active' ? 'Active' : 'Inactive' }}
-                      </UBadge>
+                      </Badge>
                     </div>
                   </div>
                   <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Next Billing Date</p>
-                    <p class="text-lg font-semibold mt-1">{{ subscription.nextBilling || 'Mar 15, 2024' }}</p>
+                    <p class="text-sm text-muted-foreground">Next Billing Date</p>
+                    <p class="text-lg font-semibold mt-1 text-foreground">{{ subscription.nextBilling || 'Mar 15, 2024' }}</p>
                   </div>
                   <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Monthly Cost</p>
-                    <p class="text-lg font-semibold mt-1">${{ subscription.cost || '99.00' }}/mo</p>
+                    <p class="text-sm text-muted-foreground">Monthly Cost</p>
+                    <p class="text-lg font-semibold mt-1 text-foreground">${{ subscription.cost || '99.00' }}/mo</p>
                   </div>
-                  <UButton
-                    label="Manage Subscription"
-                    icon="i-heroicons-cog-6-tooth"
-                    size="md"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                  <Button
+                    size="sm"
+                    class="w-full"
                     @click="activeTab = 'subscription'"
-                  />
-                </div>
-              </UCard>
+                  >
+                    <Icon name="i-heroicons-cog-6-tooth" class="w-4 h-4 mr-1" />
+                    Manage Subscription
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
 
             <!-- System Health Status -->
-            <UCard>
-              <template #header>
+            <Card>
+              <CardHeader>
                 <div class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-cpu-chip" class="w-5 h-5" />
-                  <h3 class="text-lg font-semibold">System Health</h3>
+                  <Icon name="i-heroicons-cpu-chip" class="w-5 h-5 text-muted-foreground" />
+                  <CardTitle>System Health</CardTitle>
                 </div>
-              </template>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Sparky Bot Status -->
-                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <div class="flex-shrink-0">
-                    <div :class="[
-                      'w-10 h-10 rounded-full flex items-center justify-center',
-                      systemHealth.botOnline ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'
-                    ]">
-                      <UIcon 
-                        name="i-heroicons-server" 
-                        :class="systemHealth.botOnline ? 'text-green-600' : 'text-red-600'" 
-                        class="w-5 h-5" 
-                      />
+              </CardHeader>
+              <CardContent>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <!-- Sparky Bot Status -->
+                  <div class="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                    <div class="flex-shrink-0">
+                      <div :class="[
+                        'w-10 h-10 rounded-full flex items-center justify-center',
+                        systemHealth.botOnline ? 'bg-green-500/20' : 'bg-red-500/20'
+                      ]">
+                        <Icon 
+                          name="i-heroicons-server" 
+                          :class="systemHealth.botOnline ? 'text-green-400' : 'text-red-400'" 
+                          class="w-5 h-5" 
+                        />
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs text-muted-foreground">Sparky Bot</p>
+                      <p :class="[
+                        'text-sm font-semibold',
+                        systemHealth.botOnline ? 'text-green-400' : 'text-red-400'
+                      ]">
+                        {{ systemHealth.botOnline ? 'Online' : 'Offline' }}
+                      </p>
                     </div>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Sparky Bot</p>
-                    <p :class="[
-                      'text-sm font-semibold',
-                      systemHealth.botOnline ? 'text-green-600' : 'text-red-600'
-                    ]">
-                      {{ systemHealth.botOnline ? 'Online' : 'Offline' }}
-                    </p>
-                  </div>
-                </div>
 
-                <!-- Last Webhook -->
-                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <div class="flex-shrink-0">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                      <UIcon name="i-heroicons-bolt" class="text-blue-600 w-5 h-5" />
+                  <!-- Last Webhook -->
+                  <div class="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                    <div class="flex-shrink-0">
+                      <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <Icon name="i-heroicons-bolt" class="text-blue-400 w-5 h-5" />
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs text-muted-foreground">Last Webhook</p>
+                      <p class="text-sm font-semibold truncate text-foreground">{{ systemHealth.lastWebhook }}</p>
                     </div>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Last Webhook</p>
-                    <p class="text-sm font-semibold truncate">{{ systemHealth.lastWebhook }}</p>
-                  </div>
-                </div>
 
-                <!-- API Connections -->
-                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <div class="flex-shrink-0">
-                    <div :class="[
-                      'w-10 h-10 rounded-full flex items-center justify-center',
-                      connectedExchangesCount >= 3 ? 'bg-green-100 dark:bg-green-900' : 'bg-yellow-100 dark:bg-yellow-900'
-                    ]">
-                      <UIcon 
-                        name="i-heroicons-link" 
-                        :class="connectedExchangesCount >= 3 ? 'text-green-600' : 'text-yellow-600'" 
-                        class="w-5 h-5" 
-                      />
+                  <!-- API Connections -->
+                  <div class="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                    <div class="flex-shrink-0">
+                      <div :class="[
+                        'w-10 h-10 rounded-full flex items-center justify-center',
+                        connectedExchangesCount >= 3 ? 'bg-green-500/20' : 'bg-yellow-500/20'
+                      ]">
+                        <Icon 
+                          name="i-heroicons-link" 
+                          :class="connectedExchangesCount >= 3 ? 'text-green-400' : 'text-yellow-400'" 
+                          class="w-5 h-5" 
+                        />
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs text-muted-foreground">API Connections</p>
+                      <p class="text-sm font-semibold text-foreground">{{ connectedExchangesCount }}/4 Active</p>
                     </div>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">API Connections</p>
-                    <p class="text-sm font-semibold">{{ connectedExchangesCount }}/4 Active</p>
-                  </div>
-                </div>
 
-                <!-- System Alerts -->
-                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <div class="flex-shrink-0">
-                    <div :class="[
-                      'w-10 h-10 rounded-full flex items-center justify-center',
-                      systemHealth.alertsCount === 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'
-                    ]">
-                      <UIcon 
-                        :name="systemHealth.alertsCount === 0 ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-triangle'" 
-                        :class="systemHealth.alertsCount === 0 ? 'text-green-600' : 'text-red-600'" 
-                        class="w-5 h-5" 
-                      />
+                  <!-- System Alerts -->
+                  <div class="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                    <div class="flex-shrink-0">
+                      <div :class="[
+                        'w-10 h-10 rounded-full flex items-center justify-center',
+                        systemHealth.alertsCount === 0 ? 'bg-green-500/20' : 'bg-red-500/20'
+                      ]">
+                        <Icon 
+                          :name="systemHealth.alertsCount === 0 ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-triangle'" 
+                          :class="systemHealth.alertsCount === 0 ? 'text-green-400' : 'text-red-400'" 
+                          class="w-5 h-5" 
+                        />
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs text-muted-foreground">System Alerts</p>
+                      <p :class="[
+                        'text-sm font-semibold',
+                        systemHealth.alertsCount === 0 ? 'text-green-400' : 'text-red-400'
+                      ]">
+                        {{ systemHealth.alertsCount === 0 ? 'No Issues' : `${systemHealth.alertsCount} Alert${systemHealth.alertsCount > 1 ? 's' : ''}` }}
+                      </p>
                     </div>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">System Alerts</p>
-                    <p :class="[
-                      'text-sm font-semibold',
-                      systemHealth.alertsCount === 0 ? 'text-green-600' : 'text-red-600'
-                    ]">
-                      {{ systemHealth.alertsCount === 0 ? 'No Issues' : `${systemHealth.alertsCount} Alert${systemHealth.alertsCount > 1 ? 's' : ''}` }}
-                    </p>
-                  </div>
                 </div>
-              </div>
-            </UCard>
+              </CardContent>
+            </Card>
 
             <!-- Usage & Limits -->
-            <UCard>
-              <template #header>
+            <Card>
+              <CardHeader>
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <UIcon name="i-heroicons-chart-bar" class="w-5 h-5" />
-                    <h3 class="text-lg font-semibold">Usage & Limits</h3>
+                    <Icon name="i-heroicons-chart-bar" class="w-5 h-5 text-muted-foreground" />
+                    <CardTitle>Usage & Limits</CardTitle>
                   </div>
-                  <UButton
-                    label="View Full Details"
+                  <Button
                     variant="ghost"
                     size="sm"
                     @click="viewUsageDetails"
-                  />
+                  >
+                    View Full Details
+                  </Button>
                 </div>
-              </template>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Exchanges Used -->
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Active Exchanges</p>
-                    <div class="flex items-center gap-2">
-                      <p class="text-sm font-semibold">{{ usage.exchangesUsed }}/{{ usage.exchangesLimit }}</p>
-                      <UIcon 
-                        v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'warning'" 
-                        name="i-heroicons-exclamation-triangle" 
-                        class="w-4 h-4 text-yellow-500" 
-                      />
-                      <UIcon 
-                        v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'critical'" 
-                        name="i-heroicons-exclamation-circle" 
-                        class="w-4 h-4 text-red-500" 
-                      />
+              </CardHeader>
+              <CardContent>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <!-- Exchanges Used -->
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <p class="text-sm text-muted-foreground">Active Exchanges</p>
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-semibold text-foreground">{{ usage.exchangesUsed }}/{{ usage.exchangesLimit }}</p>
+                        <Icon 
+                          v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'warning'" 
+                          name="i-heroicons-exclamation-triangle" 
+                          class="w-4 h-4 text-yellow-400" 
+                        />
+                        <Icon 
+                          v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'critical'" 
+                          name="i-heroicons-exclamation-circle" 
+                          class="w-4 h-4 text-red-400" 
+                        />
+                      </div>
                     </div>
+                    <div class="w-full bg-muted rounded-full h-2.5">
+                      <div 
+                        :class="getUsageBarColor(usage.exchangesUsed, usage.exchangesLimit)"
+                        class="h-2.5 rounded-full transition-all"
+                        :style="{ width: `${getUsagePercent(usage.exchangesUsed, usage.exchangesLimit)}%` }"
+                      ></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <p class="text-xs text-muted-foreground">
+                        {{ usage.exchangesLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.exchangesUsed, usage.exchangesLimit))}% used` }}
+                      </p>
+                      <p v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'critical'" class="text-xs text-red-400 font-semibold">
+                        At limit!
+                      </p>
+                    </div>
+                    <Button
+                      v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) !== 'safe'"
+                      variant="outline"
+                      size="sm"
+                      class="w-full mt-2"
+                      @click="activeTab = 'subscription'"
+                    >
+                      Upgrade Plan
+                    </Button>
                   </div>
-                  <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                    <div 
-                      :class="getUsageBarColor(usage.exchangesUsed, usage.exchangesLimit)"
-                      class="h-2.5 rounded-full transition-all"
-                      :style="{ width: `${getUsagePercent(usage.exchangesUsed, usage.exchangesLimit)}%` }"
-                    ></div>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ usage.exchangesLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.exchangesUsed, usage.exchangesLimit))}% used` }}
-                    </p>
-                    <p v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) === 'critical'" class="text-xs text-red-600 font-semibold">
-                      At limit!
-                    </p>
-                  </div>
-                  <UButton
-                    v-if="getUsageLevel(usage.exchangesUsed, usage.exchangesLimit) !== 'safe'"
-                    label="Upgrade Plan"
-                    size="xs"
-                    variant="outline"
-                    class="w-full mt-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
-                    @click="activeTab = 'subscription'"
-                  />
-                </div>
 
-                <!-- Strategies Used -->
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Active Strategies</p>
-                    <div class="flex items-center gap-2">
-                      <p class="text-sm font-semibold">{{ usage.strategiesUsed }}/{{ usage.strategiesLimit === Infinity ? '∞' : usage.strategiesLimit }}</p>
-                      <UIcon 
-                        v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'warning'" 
-                        name="i-heroicons-exclamation-triangle" 
-                        class="w-4 h-4 text-yellow-500" 
-                      />
-                      <UIcon 
-                        v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'critical'" 
-                        name="i-heroicons-exclamation-circle" 
-                        class="w-4 h-4 text-red-500" 
-                      />
+                  <!-- Strategies Used -->
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <p class="text-sm text-muted-foreground">Active Strategies</p>
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-semibold text-foreground">{{ usage.strategiesUsed }}/{{ usage.strategiesLimit === Infinity ? '∞' : usage.strategiesLimit }}</p>
+                        <Icon 
+                          v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'warning'" 
+                          name="i-heroicons-exclamation-triangle" 
+                          class="w-4 h-4 text-yellow-400" 
+                        />
+                        <Icon 
+                          v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'critical'" 
+                          name="i-heroicons-exclamation-circle" 
+                          class="w-4 h-4 text-red-400" 
+                        />
+                      </div>
                     </div>
+                    <div class="w-full bg-muted rounded-full h-2.5">
+                      <div 
+                        :class="getUsageBarColor(usage.strategiesUsed, usage.strategiesLimit)"
+                        class="h-2.5 rounded-full transition-all"
+                        :style="{ width: `${getUsagePercent(usage.strategiesUsed, usage.strategiesLimit)}%` }"
+                      ></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <p class="text-xs text-muted-foreground">
+                        {{ usage.strategiesLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.strategiesUsed, usage.strategiesLimit))}% used` }}
+                      </p>
+                      <p v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'critical'" class="text-xs text-red-400 font-semibold">
+                        At limit!
+                      </p>
+                    </div>
+                    <Button
+                      v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) !== 'safe'"
+                      variant="outline"
+                      size="sm"
+                      class="w-full mt-2"
+                      @click="activeTab = 'subscription'"
+                    >
+                      Upgrade Plan
+                    </Button>
                   </div>
-                  <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                    <div 
-                      :class="getUsageBarColor(usage.strategiesUsed, usage.strategiesLimit)"
-                      class="h-2.5 rounded-full transition-all"
-                      :style="{ width: `${getUsagePercent(usage.strategiesUsed, usage.strategiesLimit)}%` }"
-                    ></div>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ usage.strategiesLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.strategiesUsed, usage.strategiesLimit))}% used` }}
-                    </p>
-                    <p v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) === 'critical'" class="text-xs text-red-600 font-semibold">
-                      At limit!
-                    </p>
-                  </div>
-                  <UButton
-                    v-if="getUsageLevel(usage.strategiesUsed, usage.strategiesLimit) !== 'safe'"
-                    label="Upgrade Plan"
-                    size="xs"
-                    variant="outline"
-                    class="w-full mt-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
-                    @click="activeTab = 'subscription'"
-                  />
-                </div>
 
-                <!-- Webhooks This Month -->
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Webhooks (This Month)</p>
-                    <div class="flex items-center gap-2">
-                      <p class="text-sm font-semibold">{{ usage.webhooksUsed }}/{{ usage.webhooksLimit === Infinity ? '∞' : usage.webhooksLimit }}</p>
-                      <UIcon 
-                        v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'warning'" 
-                        name="i-heroicons-exclamation-triangle" 
-                        class="w-4 h-4 text-yellow-500" 
-                      />
-                      <UIcon 
-                        v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'critical'" 
-                        name="i-heroicons-exclamation-circle" 
-                        class="w-4 h-4 text-red-500" 
-                      />
+                  <!-- Webhooks This Month -->
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <p class="text-sm text-muted-foreground">Webhooks (This Month)</p>
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-semibold text-foreground">{{ usage.webhooksUsed }}/{{ usage.webhooksLimit === Infinity ? '∞' : usage.webhooksLimit }}</p>
+                        <Icon 
+                          v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'warning'" 
+                          name="i-heroicons-exclamation-triangle" 
+                          class="w-4 h-4 text-yellow-400" 
+                        />
+                        <Icon 
+                          v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'critical'" 
+                          name="i-heroicons-exclamation-circle" 
+                          class="w-4 h-4 text-red-400" 
+                        />
+                      </div>
                     </div>
+                    <div class="w-full bg-muted rounded-full h-2.5">
+                      <div 
+                        :class="getUsageBarColor(usage.webhooksUsed, usage.webhooksLimit)"
+                        class="h-2.5 rounded-full transition-all"
+                        :style="{ width: `${getUsagePercent(usage.webhooksUsed, usage.webhooksLimit)}%` }"
+                      ></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <p class="text-xs text-muted-foreground">
+                        {{ usage.webhooksLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.webhooksUsed, usage.webhooksLimit))}% used` }}
+                      </p>
+                      <p v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'critical'" class="text-xs text-red-400 font-semibold">
+                        At limit!
+                      </p>
+                    </div>
+                    <Button
+                      v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) !== 'safe'"
+                      variant="outline"
+                      size="sm"
+                      class="w-full mt-2"
+                      @click="activeTab = 'subscription'"
+                    >
+                      Upgrade Plan
+                    </Button>
                   </div>
-                  <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                    <div 
-                      :class="getUsageBarColor(usage.webhooksUsed, usage.webhooksLimit)"
-                      class="h-2.5 rounded-full transition-all"
-                      :style="{ width: `${getUsagePercent(usage.webhooksUsed, usage.webhooksLimit)}%` }"
-                    ></div>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ usage.webhooksLimit === Infinity ? 'Unlimited' : `${Math.round(getUsagePercent(usage.webhooksUsed, usage.webhooksLimit))}% used` }}
-                    </p>
-                    <p v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) === 'critical'" class="text-xs text-red-600 font-semibold">
-                      At limit!
-                    </p>
-                  </div>
-                  <UButton
-                    v-if="getUsageLevel(usage.webhooksUsed, usage.webhooksLimit) !== 'safe'"
-                    label="Upgrade Plan"
-                    size="xs"
-                    variant="outline"
-                    class="w-full mt-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
-                    @click="activeTab = 'subscription'"
-                  />
                 </div>
-              </div>
-            </UCard>
+              </CardContent>
+            </Card>
           </div>
 
         <!-- Exchange Accounts Tab -->
         <div v-if="activeTab === 'exchange-accounts'" class="space-y-6">
             <!-- Add Exchange Button -->
             <div class="flex justify-end">
-              <UButton
-                icon="i-heroicons-plus"
-                label="Add Exchange"
-                size="md"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              <Button
+                size="sm"
                 @click="addExchange"
-              />
+              >
+                <Icon name="i-heroicons-plus" class="w-4 h-4 mr-1" />
+                Add Exchange
+              </Button>
             </div>
 
     <!-- Exchange Balances -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- Aster DEX (Crypto) -->
-      <UCard>
-        <template #header>
+      <Card>
+        <CardHeader>
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold flex items-center gap-2">
-              <UIcon name="i-simple-icons-bitcoin" class="text-orange-500" />
+            <CardTitle class="flex items-center gap-2">
+              <Icon name="i-simple-icons-bitcoin" class="text-orange-500" />
               Aster DEX
-            </h3>
-            <UBadge :color="asterBalance.success ? 'success' : 'error'" size="sm">
+            </CardTitle>
+            <Badge :variant="asterBalance.success ? 'success' : 'error'" class="text-xs">
               {{ asterBalance.success ? 'Connected' : 'Error' }}
-            </UBadge>
+            </Badge>
           </div>
-        </template>
-        <div class="space-y-4">
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Total Balance</p>
-            <p class="text-2xl font-bold mt-1">
+            <p class="text-sm text-muted-foreground">Total Balance</p>
+            <p class="text-2xl font-bold mt-1 text-foreground">
               ${{ asterBalance.balance?.toFixed(2) ?? '---' }}
             </p>
           </div>
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p class="text-gray-500 dark:text-gray-400">Available</p>
-              <p class="font-semibold">${{ asterBalance.availableBalance?.toFixed(2) ?? '---' }}</p>
+              <p class="text-muted-foreground">Available</p>
+              <p class="font-semibold text-foreground">${{ asterBalance.availableBalance?.toFixed(2) ?? '---' }}</p>
             </div>
             <div>
-              <p class="text-gray-500 dark:text-gray-400">Unrealized P&L</p>
+              <p class="text-muted-foreground">Unrealized P&L</p>
               <p :class="[
                 'font-semibold',
-                (asterBalance.totalUnrealizedPnl ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                (asterBalance.totalUnrealizedPnl ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
               ]">
                 {{ (asterBalance.totalUnrealizedPnl ?? 0) >= 0 ? '+' : '' }}${{ asterBalance.totalUnrealizedPnl?.toFixed(2) ?? '0.00' }}
               </p>
             </div>
           </div>
-          <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500">Asset Class: <span class="font-semibold">Crypto</span></p>
-            <p class="text-xs text-gray-500">Market: <span class="font-semibold">24/7 Trading</span></p>
+          <div class="pt-2 border-t border-border">
+            <p class="text-xs text-muted-foreground">Asset Class: <span class="font-semibold text-foreground">Crypto</span></p>
+            <p class="text-xs text-muted-foreground">Market: <span class="font-semibold text-foreground">24/7 Trading</span></p>
           </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
 
       <!-- OANDA (Forex) -->
-      <UCard>
-        <template #header>
+      <Card>
+        <CardHeader>
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold flex items-center gap-2">
-              <UIcon name="i-heroicons-currency-dollar" class="text-green-500" />
+            <CardTitle class="flex items-center gap-2">
+              <Icon name="i-heroicons-currency-dollar" class="text-green-500" />
               OANDA
-            </h3>
-            <UBadge :color="oandaBalance.success ? 'success' : 'error'" size="sm">
+            </CardTitle>
+            <Badge :variant="oandaBalance.success ? 'success' : 'error'" class="text-xs">
               {{ oandaBalance.success ? 'Connected' : 'Error' }}
-            </UBadge>
+            </Badge>
           </div>
-        </template>
-        <div class="space-y-4">
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Total Balance</p>
-            <p class="text-2xl font-bold mt-1">
+            <p class="text-sm text-muted-foreground">Total Balance</p>
+            <p class="text-2xl font-bold mt-1 text-foreground">
               ${{ oandaBalance.balance?.toFixed(2) ?? '---' }}
             </p>
           </div>
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p class="text-gray-500 dark:text-gray-400">Margin Available</p>
-              <p class="font-semibold">${{ oandaBalance.marginAvailable?.toFixed(2) ?? '---' }}</p>
+              <p class="text-muted-foreground">Margin Available</p>
+              <p class="font-semibold text-foreground">${{ oandaBalance.marginAvailable?.toFixed(2) ?? '---' }}</p>
             </div>
             <div>
-              <p class="text-gray-500 dark:text-gray-400">Unrealized P&L</p>
+              <p class="text-muted-foreground">Unrealized P&L</p>
               <p :class="[
                 'font-semibold',
-                (oandaBalance.unrealizedPL ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                (oandaBalance.unrealizedPL ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
               ]">
                 {{ (oandaBalance.unrealizedPL ?? 0) >= 0 ? '+' : '' }}${{ oandaBalance.unrealizedPL?.toFixed(2) ?? '0.00' }}
               </p>
             </div>
           </div>
-          <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500">Asset Class: <span class="font-semibold">Forex</span></p>
-            <p class="text-xs text-gray-500">Market: <span class="font-semibold">24/5 Trading</span></p>
+          <div class="pt-2 border-t border-border">
+            <p class="text-xs text-muted-foreground">Asset Class: <span class="font-semibold text-foreground">Forex</span></p>
+            <p class="text-xs text-muted-foreground">Market: <span class="font-semibold text-foreground">24/5 Trading</span></p>
           </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
 
       <!-- Tradier (Stocks) -->
-      <UCard>
-        <template #header>
+      <Card>
+        <CardHeader>
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold flex items-center gap-2">
-              <UIcon name="i-heroicons-chart-bar" class="text-blue-500" />
+            <CardTitle class="flex items-center gap-2">
+              <Icon name="i-heroicons-chart-bar" class="text-blue-500" />
               Tradier
-            </h3>
-            <UBadge :color="tradierBalance.success ? 'success' : 'error'" size="sm">
+            </CardTitle>
+            <Badge :variant="tradierBalance.success ? 'success' : 'error'" class="text-xs">
               {{ tradierBalance.success ? 'Connected' : 'Error' }}
-            </UBadge>
+            </Badge>
           </div>
-        </template>
-        <div class="space-y-4">
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Total Equity</p>
-            <p class="text-2xl font-bold mt-1">
+            <p class="text-sm text-muted-foreground">Total Equity</p>
+            <p class="text-2xl font-bold mt-1 text-foreground">
               ${{ tradierBalance.balance?.toFixed(2) ?? '---' }}
             </p>
           </div>
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p class="text-gray-500 dark:text-gray-400">Cash Available</p>
-              <p class="font-semibold">${{ tradierBalance.cashAvailable?.toFixed(2) ?? '---' }}</p>
+              <p class="text-muted-foreground">Cash Available</p>
+              <p class="font-semibold text-foreground">${{ tradierBalance.cashAvailable?.toFixed(2) ?? '---' }}</p>
             </div>
             <div>
-              <p class="text-gray-500 dark:text-gray-400">Market Value</p>
-              <p class="font-semibold">${{ tradierBalance.totalMarketValue?.toFixed(2) ?? '---' }}</p>
+              <p class="text-muted-foreground">Market Value</p>
+              <p class="font-semibold text-foreground">${{ tradierBalance.totalMarketValue?.toFixed(2) ?? '---' }}</p>
             </div>
           </div>
-          <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500">Asset Class: <span class="font-semibold">Stocks/Options</span></p>
-            <p class="text-xs text-gray-500">Market: <span class="font-semibold">Market Hours</span></p>
+          <div class="pt-2 border-t border-border">
+            <p class="text-xs text-muted-foreground">Asset Class: <span class="font-semibold text-foreground">Stocks/Options</span></p>
+            <p class="text-xs text-muted-foreground">Market: <span class="font-semibold text-foreground">Market Hours</span></p>
           </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
 
       <!-- Tasty Trade (Futures) - Only show if not disabled -->
-      <UCard v-if="!tastytradeBalance.disabled">
-        <template #header>
+      <Card v-if="!tastytradeBalance.disabled">
+        <CardHeader>
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold flex items-center gap-2">
-              <UIcon name="i-heroicons-chart-line" class="text-indigo-500" />
+            <CardTitle class="flex items-center gap-2">
+              <Icon name="i-heroicons-chart-line" class="text-indigo-500" />
               Tasty Trade
-            </h3>
-            <UBadge :color="tastytradeBalance.success ? 'success' : 'error'" size="sm">
+            </CardTitle>
+            <Badge :variant="tastytradeBalance.success ? 'success' : 'error'" class="text-xs">
               {{ tastytradeBalance.success ? 'Connected' : 'Error' }}
-            </UBadge>
+            </Badge>
           </div>
-        </template>
-        <div class="space-y-4">
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Total Equity</p>
-            <p class="text-2xl font-bold mt-1">
+            <p class="text-sm text-muted-foreground">Total Equity</p>
+            <p class="text-2xl font-bold mt-1 text-foreground">
               ${{ tastytradeBalance.balance?.toFixed(2) ?? '---' }}
             </p>
           </div>
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p class="text-gray-500 dark:text-gray-400">Available Funds</p>
-              <p class="font-semibold">${{ tastytradeBalance.availableFunds?.toFixed(2) ?? '---' }}</p>
+              <p class="text-muted-foreground">Available Funds</p>
+              <p class="font-semibold text-foreground">${{ tastytradeBalance.availableFunds?.toFixed(2) ?? '---' }}</p>
             </div>
             <div>
-              <p class="text-gray-500 dark:text-gray-400">Buying Power</p>
-              <p class="font-semibold">${{ tastytradeBalance.buyingPower?.toFixed(2) ?? '---' }}</p>
+              <p class="text-muted-foreground">Buying Power</p>
+              <p class="font-semibold text-foreground">${{ tastytradeBalance.buyingPower?.toFixed(2) ?? '---' }}</p>
             </div>
           </div>
-          <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <p class="text-xs text-gray-500">Asset Class: <span class="font-semibold">Futures</span></p>
-            <p class="text-xs text-gray-500">Market: <span class="font-semibold">Extended Hours</span></p>
+          <div class="pt-2 border-t border-border">
+            <p class="text-xs text-muted-foreground">Asset Class: <span class="font-semibold text-foreground">Futures</span></p>
+            <p class="text-xs text-muted-foreground">Market: <span class="font-semibold text-foreground">Extended Hours</span></p>
           </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
     </div>
 
             <!-- Error Messages -->
-            <UCard v-if="hasErrors" class="border-red-500 border-2">
-              <template #header>
-                <h3 class="text-lg font-semibold text-red-600 dark:text-red-400">Connection Errors</h3>
-              </template>
-              <div class="space-y-2">
-                <div v-if="!asterBalance.success" class="text-sm">
-                  <span class="font-semibold">Aster DEX:</span> {{ asterBalance.error }}
+            <Card v-if="hasErrors" class="border-red-500 border-2">
+              <CardHeader>
+                <CardTitle class="text-red-400">Connection Errors</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div class="space-y-2">
+                  <div v-if="!asterBalance.success" class="text-sm text-foreground">
+                    <span class="font-semibold">Aster DEX:</span> {{ asterBalance.error }}
+                  </div>
+                  <div v-if="!oandaBalance.success" class="text-sm text-foreground">
+                    <span class="font-semibold">OANDA:</span> {{ oandaBalance.error }}
+                  </div>
+                  <div v-if="!tradierBalance.success" class="text-sm text-foreground">
+                    <span class="font-semibold">Tradier:</span> {{ tradierBalance.error }}
+                  </div>
+                  <div v-if="!tastytradeBalance.success && !tastytradeBalance.disabled" class="text-sm text-foreground">
+                    <span class="font-semibold">Tasty Trade:</span> {{ tastytradeBalance.error }}
+                  </div>
                 </div>
-                <div v-if="!oandaBalance.success" class="text-sm">
-                  <span class="font-semibold">OANDA:</span> {{ oandaBalance.error }}
-                </div>
-                <div v-if="!tradierBalance.success" class="text-sm">
-                  <span class="font-semibold">Tradier:</span> {{ tradierBalance.error }}
-                </div>
-                <div v-if="!tastytradeBalance.success && !tastytradeBalance.disabled" class="text-sm">
-                  <span class="font-semibold">Tasty Trade:</span> {{ tastytradeBalance.error }}
-                </div>
-              </div>
-            </UCard>
+              </CardContent>
+            </Card>
           </div>
 
         <!-- API Keys Tab -->
         <div v-if="activeTab === 'api-keys'" class="space-y-6">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-xl font-semibold">Connect Your Exchange Accounts</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your API keys securely</p>
+                <h3 class="text-xl font-semibold text-foreground">Connect Your Exchange Accounts</h3>
+                <p class="text-sm text-muted-foreground mt-1">Manage your API keys securely</p>
               </div>
-              <UButton
-                icon="i-heroicons-arrow-path"
-                label="Refresh"
-                size="md"
-                :loading="credentialsLoading"
+              <Button
+                size="sm"
+                :disabled="credentialsLoading"
                 @click="loadCredentials"
-              />
+              >
+                <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-1" />
+                Refresh
+              </Button>
             </div>
 
             <!-- Security Notice -->
-            <UCard class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-              <div class="flex gap-3">
-                <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div class="text-sm text-blue-900 dark:text-blue-100">
-                  <p class="font-semibold mb-1">Security Notice</p>
-                  <p class="text-blue-800 dark:text-blue-200">
+            <Card class="border-blue-500/20 bg-blue-500/5">
+              <CardContent class="flex gap-3 py-4">
+                <Icon name="i-heroicons-shield-check" class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div class="text-sm">
+                  <p class="font-semibold mb-1 text-foreground">Security Notice</p>
+                  <p class="text-muted-foreground">
                     API credentials are stored in Supabase, encrypted at rest, and never exposed to the browser. Updates from this page flow directly to Sparky.
                   </p>
                 </div>
-              </div>
-            </UCard>
+              </CardContent>
+            </Card>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UCard
+              <Card
                 v-for="card in credentialCards"
                 :key="card.key"
-                class="space-y-2 compact-card"
+                class="compact-card"
               >
-                <template #header>
+                <CardHeader>
                   <div class="flex items-start justify-between py-1 gap-3">
                     <div class="flex items-start gap-2 flex-1 min-w-0">
-                      <UIcon :name="card.icon" class="w-5 h-5 mt-0.5 flex-shrink-0" />
+                      <Icon :name="card.icon" class="w-5 h-5 mt-0.5 flex-shrink-0 text-muted-foreground" />
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                          <h3 class="text-base font-semibold">{{ card.name }}</h3>
+                          <CardTitle class="text-base">{{ card.name }}</CardTitle>
                           <div class="flex items-center gap-1.5">
-                            <UIcon 
+                            <Icon 
                               :name="getCredentialStatus(card.key).icon" 
                               :class="{
-                                'text-green-500': getCredentialStatus(card.key).color === 'success',
-                                'text-yellow-500': getCredentialStatus(card.key).color === 'warning',
-                                'text-red-500': getCredentialStatus(card.key).color === 'error',
-                                'text-gray-500': getCredentialStatus(card.key).color === 'neutral'
+                                'text-green-400': getCredentialStatus(card.key).color === 'success',
+                                'text-yellow-400': getCredentialStatus(card.key).color === 'warning',
+                                'text-red-400': getCredentialStatus(card.key).color === 'error',
+                                'text-muted-foreground': getCredentialStatus(card.key).color === 'neutral'
                               }"
                               class="w-4 h-4"
                             />
-                            <UBadge :color="getCredentialStatus(card.key).color" size="xs">
+                            <Badge 
+                              :variant="getCredentialStatus(card.key).color === 'success' ? 'success' : getCredentialStatus(card.key).color === 'error' ? 'error' : 'outline'" 
+                              class="text-xs"
+                            >
                               {{ getCredentialStatus(card.key).label }}
-                            </UBadge>
+                            </Badge>
                           </div>
                         </div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        <p class="text-xs text-muted-foreground mt-0.5">
                           Last tested: {{ formatLastTested(credentialForms[card.key].lastTested) }}
                         </p>
                       </div>
@@ -623,8 +640,8 @@
                           :class="[
                             'px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200',
                             !credentialForms[card.key].isLive 
-                              ? 'bg-gray-900 dark:bg-gray-950 text-green-400 border-2 border-green-400 shadow-lg shadow-green-500/50' 
-                              : 'bg-gray-800 dark:bg-gray-800 text-gray-400 border border-gray-600 hover:border-gray-500'
+                              ? 'bg-card text-green-400 border-2 border-green-400' 
+                              : 'bg-card text-muted-foreground border border-border hover:border-foreground/20'
                           ]"
                         >
                           📄 Paper
@@ -634,41 +651,42 @@
                           :class="[
                             'px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200',
                             credentialForms[card.key].isLive 
-                              ? 'bg-gray-900 dark:bg-gray-950 text-green-400 border-2 border-green-400 shadow-lg shadow-green-500/50' 
-                              : 'bg-gray-800 dark:bg-gray-800 text-gray-400 border border-gray-600 hover:border-gray-500'
+                              ? 'bg-card text-green-400 border-2 border-green-400' 
+                              : 'bg-card text-muted-foreground border border-border hover:border-foreground/20'
                           ]"
                         >
                           🔴 Live
                         </button>
                       </div>
-                      <UButton
-                        label="Test"
-                        icon="i-heroicons-beaker"
+                      <Button
                         variant="ghost"
-                        size="xs"
-                        :loading="testingCredential === card.key"
-                        :disabled="!isCredentialConnected(card.key)"
+                        size="sm"
+                        :disabled="testingCredential === card.key || !isCredentialConnected(card.key)"
                         @click="testConnection(card.key)"
-                      />
-                      <UButton
-                        label="Delete"
+                      >
+                        <Icon name="i-heroicons-beaker" class="w-4 h-4 mr-1" />
+                        Test
+                      </Button>
+                      <Button
                         variant="ghost"
-                        color="error"
-                        size="xs"
-                        :loading="deletingCredential === card.key"
+                        size="sm"
+                        :disabled="deletingCredential === card.key"
                         @click="deleteCredential(card.key)"
-                      />
-                      <UButton
-                        label="Save"
-                        icon="i-heroicons-check"
-                        size="xs"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                        :loading="savingCredential === card.key"
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        size="sm"
+                        :disabled="savingCredential === card.key"
                         @click="saveCredential(card.key)"
-                      />
+                      >
+                        <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                        Save
+                      </Button>
                     </div>
                   </div>
-                </template>
+                </CardHeader>
+                <CardContent>
 
                 <div class="space-y-2">
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -694,7 +712,7 @@
                           @click="credentialForms[card.key].showApiKey = !credentialForms[card.key].showApiKey"
                           class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                         >
-                          <UIcon 
+                          <Icon 
                             :name="credentialForms[card.key].showApiKey ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" 
                             class="w-4 h-4"
                           />
@@ -724,7 +742,7 @@
                           @click="credentialForms[card.key].showApiSecret = !credentialForms[card.key].showApiSecret"
                           class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                         >
-                          <UIcon 
+                          <Icon 
                             :name="credentialForms[card.key].showApiSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" 
                             class="w-4 h-4"
                           />
@@ -749,7 +767,7 @@
                           @click="credentialForms[card.key].showPassphrase = !credentialForms[card.key].showPassphrase"
                           class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                         >
-                          <UIcon 
+                          <Icon 
                             :name="credentialForms[card.key].showPassphrase ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" 
                             class="w-4 h-4"
                           />
@@ -759,28 +777,29 @@
                   </div>
 
                 </div>
-              </UCard>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
         <!-- Webhook Configuration Tab -->
         <div v-if="activeTab === 'webhook'" class="space-y-6">
             <div>
-              <h3 class="text-xl font-semibold">Your TradingView Webhook URL</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure your webhook to receive TradingView alerts</p>
+              <h3 class="text-xl font-semibold text-foreground">Your TradingView Webhook URL</h3>
+              <p class="text-sm text-muted-foreground mt-1">Configure your webhook to receive TradingView alerts</p>
             </div>
 
             <!-- Webhook URL Card -->
-            <UCard>
-              <template #header>
+            <Card>
+              <CardHeader>
                 <div class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-link" class="w-5 h-5" />
-                  <h3 class="text-lg font-semibold">Webhook Configuration</h3>
+                  <Icon name="i-heroicons-link" class="w-5 h-5 text-muted-foreground" />
+                  <CardTitle>Webhook Configuration</CardTitle>
                 </div>
-              </template>
-              <div class="space-y-4">
+              </CardHeader>
+              <CardContent class="space-y-4">
                 <div>
-                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Webhook URL</label>
+                  <label class="text-sm font-medium text-foreground mb-2 block">Webhook URL</label>
                   <div class="flex flex-col gap-3">
                     <div class="flex flex-col md:flex-row gap-2 items-stretch">
                       <UInput
@@ -788,35 +807,37 @@
                         placeholder="https://your-sparky-bot/webhook"
                         class="flex-1"
                       />
-                      <UButton
-                        icon="i-heroicons-clipboard-document"
-                        label="Copy URL"
-                        size="sm"
+                      <Button
                         variant="outline"
+                        size="sm"
                         @click="copyWebhookUrl"
-                      />
+                      >
+                        <Icon name="i-heroicons-clipboard-document" class="w-4 h-4 mr-1" />
+                        Copy URL
+                      </Button>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                      <UButton
-                        icon="i-heroicons-check"
-                        label="Save Webhook URL"
+                      <Button
                         size="sm"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                        :loading="savingCredential === 'webhook'"
+                        :disabled="savingCredential === 'webhook'"
                         @click="saveCredential('webhook')"
-                      />
-                      <UButton
-                        icon="i-heroicons-arrow-path"
-                        label="Reset to Default"
-                        size="sm"
+                      >
+                        <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                        Save Webhook URL
+                      </Button>
+                      <Button
                         variant="ghost"
+                        size="sm"
                         @click="credentialForms.webhook.extraMetadata.webhookUrl = runtimeConfig.public?.sparkyWebhookUrl || 'http://localhost:3000/webhook'"
-                      />
+                      >
+                        <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-1" />
+                        Reset to Default
+                      </Button>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Webhook Secret</label>
+                  <label class="text-sm font-medium text-foreground mb-2 block">Webhook Secret</label>
                   <div class="flex flex-col gap-3">
                     <div class="flex flex-col md:flex-row gap-2 items-stretch">
                       <UInput
@@ -825,68 +846,70 @@
                         placeholder="Enter webhook secret"
                         class="flex-1"
                       />
-                      <UButton
-                        :icon="showWebhookSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
-                        :label="showWebhookSecret ? 'Hide' : 'Show'"
-                        size="sm"
+                      <Button
                         variant="ghost"
+                        size="sm"
                         @click="showWebhookSecret = !showWebhookSecret"
-                      />
+                      >
+                        <Icon :name="showWebhookSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="w-4 h-4 mr-1" />
+                        {{ showWebhookSecret ? 'Hide' : 'Show' }}
+                      </Button>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                      <UButton
-                        icon="i-heroicons-clipboard-document"
-                        label="Copy Secret"
-                        size="sm"
+                      <Button
                         variant="outline"
+                        size="sm"
                         @click="copyWebhookSecret"
-                      />
-                      <UButton
-                        icon="i-heroicons-check"
-                        label="Save Secret"
+                      >
+                        <Icon name="i-heroicons-clipboard-document" class="w-4 h-4 mr-1" />
+                        Copy Secret
+                      </Button>
+                      <Button
                         size="sm"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                        :loading="savingCredential === 'webhook'"
+                        :disabled="savingCredential === 'webhook'"
                         @click="saveCredential('webhook')"
-                      />
-                      <UButton
-                        icon="i-heroicons-arrow-path"
-                        label="Regenerate"
-                        size="sm"
+                      >
+                        <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                        Save Secret
+                      </Button>
+                      <Button
                         variant="outline"
-                        color="warning"
-                        @click="regenerateWebhookSecret"
-                      />
-                      <UButton
-                        icon="i-heroicons-trash"
-                        label="Clear"
                         size="sm"
+                        @click="regenerateWebhookSecret"
+                      >
+                        <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-1" />
+                        Regenerate
+                      </Button>
+                      <Button
                         variant="ghost"
-                        color="error"
-                        :loading="deletingCredential === 'webhook'"
+                        size="sm"
+                        :disabled="deletingCredential === 'webhook'"
                         @click="deleteCredential('webhook')"
-                      />
+                      >
+                        <Icon name="i-heroicons-trash" class="w-4 h-4 mr-1" />
+                        Clear
+                      </Button>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                    <p class="text-xs text-muted-foreground">
                       ⚠️ Keep your secret secure. Never share it publicly.
                     </p>
                   </div>
                 </div>
-              </div>
-            </UCard>
+              </CardContent>
+            </Card>
 
             <!-- TradingView Setup Guide -->
-            <UCard>
-              <template #header>
+            <Card>
+              <CardHeader>
                 <div class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-academic-cap" class="w-5 h-5" />
-                  <h3 class="text-lg font-semibold">TradingView Alert Setup</h3>
+                  <Icon name="i-heroicons-academic-cap" class="w-5 h-5 text-muted-foreground" />
+                  <CardTitle>TradingView Alert Setup</CardTitle>
                 </div>
-              </template>
-              <div class="space-y-4">
+              </CardHeader>
+              <CardContent class="space-y-4">
                 <div class="space-y-2">
-                  <p class="text-sm font-medium">Step-by-step instructions:</p>
-                  <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  <p class="text-sm font-medium text-foreground">Step-by-step instructions:</p>
+                  <ol class="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
                     <li>Go to your TradingView chart</li>
                     <li>Click "Create Alert" on the chart</li>
                     <li>Set your alert conditions</li>
@@ -895,360 +918,382 @@
                   </ol>
                 </div>
                 <div>
-                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">JSON Template</label>
-                  <div class="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
-                    <pre>{{ webhookTemplate }}</pre>
+                  <label class="text-sm font-medium text-foreground mb-2 block">JSON Template</label>
+                  <div class="bg-card border rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                    <pre class="text-foreground">{{ webhookTemplate }}</pre>
                   </div>
                   <div class="flex gap-2 mt-2">
-                    <UButton
-                      icon="i-heroicons-clipboard-document"
-                      label="Copy Template"
+                    <Button
                       size="sm"
-                      class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                       @click="copyWebhookTemplate"
-                    />
-                    <UButton
-                      icon="i-heroicons-document-text"
-                      label="View Full Guide"
-                      size="sm"
+                    >
+                      <Icon name="i-heroicons-clipboard-document" class="w-4 h-4 mr-1" />
+                      Copy Template
+                    </Button>
+                    <Button
                       variant="ghost"
+                      size="sm"
                       @click="viewWebhookGuide"
-                    />
+                    >
+                      <Icon name="i-heroicons-document-text" class="w-4 h-4 mr-1" />
+                      View Full Guide
+                    </Button>
                   </div>
                 </div>
-              </div>
-            </UCard>
+              </CardContent>
+            </Card>
 
             <!-- Recent Webhook Activity -->
-            <UCard>
-              <template #header>
+            <Card>
+              <CardHeader>
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <UIcon name="i-heroicons-clock" class="w-5 h-5" />
-                    <h3 class="text-lg font-semibold">Recent Webhook Activity</h3>
+                    <Icon name="i-heroicons-clock" class="w-5 h-5 text-muted-foreground" />
+                    <CardTitle>Recent Webhook Activity</CardTitle>
                   </div>
-                  <UButton
-                    label="View All Logs"
+                  <Button
                     variant="ghost"
                     size="sm"
                     @click="viewWebhookLogs"
-                  />
+                  >
+                    View All Logs
+                  </Button>
                 </div>
-              </template>
-              <div class="space-y-3">
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-gray-500 dark:text-gray-400">Last 24 hours:</span>
-                  <span class="font-semibold">{{ webhookActivity.received24h || '45' }} webhooks received</span>
+              </CardHeader>
+              <CardContent>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-muted-foreground">Last 24 hours:</span>
+                    <span class="font-semibold text-foreground">{{ webhookActivity.received24h || '45' }} webhooks received</span>
+                  </div>
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-muted-foreground">Status:</span>
+                    <Badge variant="success" class="text-xs">All successful ✓</Badge>
+                  </div>
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-muted-foreground">Last webhook:</span>
+                    <span class="font-semibold text-foreground">{{ webhookActivity.lastReceived || '2 minutes ago' }}</span>
+                  </div>
+                  <div class="pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      @click="testWebhook"
+                    >
+                      <Icon name="i-heroicons-bolt" class="w-4 h-4 mr-1" />
+                      Test Webhook
+                    </Button>
+                  </div>
                 </div>
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-gray-500 dark:text-gray-400">Status:</span>
-                  <UBadge color="success" size="sm">All successful ✓</UBadge>
-                </div>
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-gray-500 dark:text-gray-400">Last webhook:</span>
-                  <span class="font-semibold">{{ webhookActivity.lastReceived || '2 minutes ago' }}</span>
-                </div>
-                <div class="pt-2">
-                  <UButton
-                    icon="i-heroicons-bolt"
-                    label="Test Webhook"
-                    size="sm"
-                    variant="outline"
-                    @click="testWebhook"
-                  />
-                </div>
-              </div>
-            </UCard>
+              </CardContent>
+            </Card>
           </div>
 
         <!-- Subscription Tab -->
         <div v-if="activeTab === 'subscription'" class="space-y-6">
             <div>
-              <h3 class="text-xl font-semibold">Subscription Management</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your plan and billing</p>
+              <h3 class="text-xl font-semibold text-foreground">Subscription Management</h3>
+              <p class="text-sm text-muted-foreground mt-1">Manage your plan and billing</p>
             </div>
 
             <!-- Current Plan -->
-            <UCard>
-              <template #header>
+            <Card>
+              <CardHeader>
                 <div class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-credit-card" class="w-5 h-5" />
-                  <h3 class="text-lg font-semibold">Current Plan</h3>
+                  <Icon name="i-heroicons-credit-card" class="w-5 h-5 text-muted-foreground" />
+                  <CardTitle>Current Plan</CardTitle>
                 </div>
-              </template>
-              <div class="space-y-4">
+              </CardHeader>
+              <CardContent class="space-y-4">
                 <div class="flex items-center justify-between">
                   <div>
-                    <p class="text-2xl font-bold">{{ subscription.plan || 'Pro' }}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">${{ subscription.cost || '99.00' }}/month</p>
+                    <p class="text-2xl font-bold text-foreground">{{ subscription.plan || 'Pro' }}</p>
+                    <p class="text-sm text-muted-foreground mt-1">${{ subscription.cost || '99.00' }}/month</p>
                   </div>
-                  <UBadge :color="subscription.status === 'active' ? 'success' : 'warning'" size="lg">
+                  <Badge :variant="subscription.status === 'active' ? 'success' : 'pending'" class="text-sm">
                     {{ subscription.status === 'active' ? 'Active' : 'Inactive' }}
-                  </UBadge>
+                  </Badge>
                 </div>
-                <div class="space-y-2 pt-2 border-t dark:border-gray-700">
+                <div class="space-y-2 pt-2 border-t border-border">
                   <div class="flex items-center gap-2 text-sm">
-                    <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-500" />
-                    <span>All Exchanges (4)</span>
+                    <Icon name="i-heroicons-check-circle" class="w-4 h-4 text-green-400" />
+                    <span class="text-foreground">All Exchanges (4)</span>
                   </div>
                   <div class="flex items-center gap-2 text-sm">
-                    <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-500" />
-                    <span>Unlimited Strategies</span>
+                    <Icon name="i-heroicons-check-circle" class="w-4 h-4 text-green-400" />
+                    <span class="text-foreground">Unlimited Strategies</span>
                   </div>
                   <div class="flex items-center gap-2 text-sm">
-                    <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-500" />
-                    <span>Unlimited Webhooks</span>
+                    <Icon name="i-heroicons-check-circle" class="w-4 h-4 text-green-400" />
+                    <span class="text-foreground">Unlimited Webhooks</span>
                   </div>
                   <div class="flex items-center gap-2 text-sm">
-                    <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-500" />
-                    <span>Priority Support</span>
+                    <Icon name="i-heroicons-check-circle" class="w-4 h-4 text-green-400" />
+                    <span class="text-foreground">Priority Support</span>
                   </div>
                   <div class="flex items-center gap-2 text-sm">
-                    <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-500" />
-                    <span>Advanced Analytics</span>
+                    <Icon name="i-heroicons-check-circle" class="w-4 h-4 text-green-400" />
+                    <span class="text-foreground">Advanced Analytics</span>
                   </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4 pt-2 border-t dark:border-gray-700 text-sm">
+                <div class="grid grid-cols-2 gap-4 pt-2 border-t border-border text-sm">
                   <div>
-                    <p class="text-gray-500 dark:text-gray-400">Next billing:</p>
-                    <p class="font-semibold">{{ subscription.nextBilling || 'Mar 15, 2024' }}</p>
+                    <p class="text-muted-foreground">Next billing:</p>
+                    <p class="font-semibold text-foreground">{{ subscription.nextBilling || 'Mar 15, 2024' }}</p>
                   </div>
                   <div>
-                    <p class="text-gray-500 dark:text-gray-400">Payment method:</p>
-                    <p class="font-semibold">{{ subscription.paymentMethod || '•••• •••• •••• 4242' }}</p>
+                    <p class="text-muted-foreground">Payment method:</p>
+                    <p class="font-semibold text-foreground">{{ subscription.paymentMethod || '•••• •••• •••• 4242' }}</p>
                   </div>
                 </div>
                 <div class="flex gap-2 pt-2">
-                  <UButton
-                    label="Manage Subscription"
-                    icon="i-heroicons-cog-6-tooth"
-                    size="md"
-                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                  <Button
+                    size="sm"
+                    class="flex-1"
                     @click="manageSubscription"
-                  />
-                  <UButton
-                    label="View Invoices"
-                    icon="i-heroicons-document-text"
-                    size="md"
+                  >
+                    <Icon name="i-heroicons-cog-6-tooth" class="w-4 h-4 mr-1" />
+                    Manage Subscription
+                  </Button>
+                  <Button
                     variant="outline"
+                    size="sm"
                     @click="viewInvoices"
-                  />
+                  >
+                    <Icon name="i-heroicons-document-text" class="w-4 h-4 mr-1" />
+                    View Invoices
+                  </Button>
                 </div>
-              </div>
-            </UCard>
+              </CardContent>
+            </Card>
 
             <!-- Upgrade/Downgrade -->
-            <UCard>
-              <template #header>
+            <Card>
+              <CardHeader>
                 <div class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-arrows-up-down" class="w-5 h-5" />
-                  <h3 class="text-lg font-semibold">Change Plan</h3>
+                  <Icon name="i-heroicons-arrows-up-down" class="w-5 h-5 text-muted-foreground" />
+                  <CardTitle>Change Plan</CardTitle>
                 </div>
-              </template>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Free Plan -->
-                <UCard :class="subscription.plan === 'Free' ? 'border-2 border-blue-500' : ''">
-                  <div class="space-y-3">
-                    <div>
-                      <p class="text-xl font-bold">Free</p>
-                      <p class="text-2xl font-bold mt-1">$0<span class="text-sm font-normal">/mo</span></p>
-                    </div>
-                    <div class="space-y-2 text-sm">
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>1 Exchange</span>
+              </CardHeader>
+              <CardContent>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <!-- Free Plan -->
+                  <Card :class="subscription.plan === 'Free' ? 'border-2 border-blue-500' : ''">
+                    <CardContent class="space-y-3">
+                      <div>
+                        <p class="text-xl font-bold text-foreground">Free</p>
+                        <p class="text-2xl font-bold mt-1 text-foreground">$0<span class="text-sm font-normal">/mo</span></p>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>3 Strategies</span>
+                      <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">1 Exchange</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">3 Strategies</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">10 webhooks/hr</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">Community Support</span>
+                        </div>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>10 webhooks/hr</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>Community Support</span>
-                      </div>
-                    </div>
-                    <UButton
-                      v-if="subscription.plan !== 'Free'"
-                      label="Downgrade"
-                      size="sm"
-                      variant="outline"
-                      class="w-full"
-                      @click="changePlan('Free')"
-                    />
-                    <UButton
-                      v-else
-                      label="Current Plan"
-                      size="sm"
-                      disabled
-                      class="w-full"
-                    />
-                  </div>
-                </UCard>
+                      <Button
+                        v-if="subscription.plan !== 'Free'"
+                        variant="outline"
+                        size="sm"
+                        class="w-full"
+                        @click="changePlan('Free')"
+                      >
+                        Downgrade
+                      </Button>
+                      <Button
+                        v-else
+                        size="sm"
+                        disabled
+                        class="w-full"
+                      >
+                        Current Plan
+                      </Button>
+                    </CardContent>
+                  </Card>
 
-                <!-- Basic Plan -->
-                <UCard :class="subscription.plan === 'Basic' ? 'border-2 border-blue-500' : ''">
-                  <div class="space-y-3">
-                    <div>
-                      <p class="text-xl font-bold">Basic</p>
-                      <p class="text-2xl font-bold mt-1">$29<span class="text-sm font-normal">/mo</span></p>
-                    </div>
-                    <div class="space-y-2 text-sm">
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>2 Exchanges</span>
+                  <!-- Basic Plan -->
+                  <Card :class="subscription.plan === 'Basic' ? 'border-2 border-blue-500' : ''">
+                    <CardContent class="space-y-3">
+                      <div>
+                        <p class="text-xl font-bold text-foreground">Basic</p>
+                        <p class="text-2xl font-bold mt-1 text-foreground">$29<span class="text-sm font-normal">/mo</span></p>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>10 Strategies</span>
+                      <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">2 Exchanges</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">10 Strategies</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">100 webhooks/hr</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">Email Support</span>
+                        </div>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>100 webhooks/hr</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>Email Support</span>
-                      </div>
-                    </div>
-                    <UButton
-                      v-if="subscription.plan !== 'Basic'"
-                      :label="subscription.plan === 'Free' ? 'Upgrade' : subscription.plan === 'Pro' ? 'Downgrade' : 'Select'"
-                      size="sm"
-                      :class="subscription.plan === 'Free' ? 'bg-blue-600 hover:bg-blue-700 text-white w-full' : 'variant-outline w-full'"
-                      @click="changePlan('Basic')"
-                    />
-                    <UButton
-                      v-else
-                      label="Current Plan"
-                      size="sm"
-                      disabled
-                      class="w-full"
-                    />
-                  </div>
-                </UCard>
+                      <Button
+                        v-if="subscription.plan !== 'Basic'"
+                        :variant="subscription.plan === 'Free' ? 'default' : 'outline'"
+                        size="sm"
+                        class="w-full"
+                        @click="changePlan('Basic')"
+                      >
+                        {{ subscription.plan === 'Free' ? 'Upgrade' : subscription.plan === 'Pro' ? 'Downgrade' : 'Select' }}
+                      </Button>
+                      <Button
+                        v-else
+                        size="sm"
+                        disabled
+                        class="w-full"
+                      >
+                        Current Plan
+                      </Button>
+                    </CardContent>
+                  </Card>
 
-                <!-- Pro Plan -->
-                <UCard :class="subscription.plan === 'Pro' ? 'border-2 border-gold-500' : ''">
-                  <div class="space-y-3">
-                    <div>
-                      <p class="text-xl font-bold">Pro</p>
-                      <p class="text-2xl font-bold mt-1">$99<span class="text-sm font-normal">/mo</span></p>
-                      <UBadge v-if="subscription.plan === 'Pro'" color="warning" size="sm" class="mt-1">Current</UBadge>
-                    </div>
-                    <div class="space-y-2 text-sm">
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>All Exchanges (4)</span>
+                  <!-- Pro Plan -->
+                  <Card :class="subscription.plan === 'Pro' ? 'border-2 border-yellow-500' : ''">
+                    <CardContent class="space-y-3">
+                      <div>
+                        <p class="text-xl font-bold text-foreground">Pro</p>
+                        <p class="text-2xl font-bold mt-1 text-foreground">$99<span class="text-sm font-normal">/mo</span></p>
+                        <Badge v-if="subscription.plan === 'Pro'" variant="pending" class="text-xs mt-1">Current</Badge>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>Unlimited Strategies</span>
+                      <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">All Exchanges (4)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">Unlimited Strategies</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">Unlimited Webhooks</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">Priority Support</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <Icon name="i-heroicons-check" class="w-4 h-4 text-green-400" />
+                          <span class="text-foreground">Advanced Analytics</span>
+                        </div>
                       </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>Unlimited Webhooks</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>Priority Support</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-check" class="w-4 h-4" />
-                        <span>Advanced Analytics</span>
-                      </div>
-                    </div>
-                    <UButton
-                      v-if="subscription.plan !== 'Pro'"
-                      label="Upgrade"
-                      size="sm"
-                      class="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
-                      @click="changePlan('Pro')"
-                    />
-                    <UButton
-                      v-else
-                      label="Current Plan"
-                      size="sm"
-                      disabled
-                      class="w-full"
-                    />
-                  </div>
-                </UCard>
-              </div>
-              <template #footer>
-                <div class="flex justify-end">
-                  <UButton
-                    label="Compare All Plans"
+                      <Button
+                        v-if="subscription.plan !== 'Pro'"
+                        size="sm"
+                        class="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+                        @click="changePlan('Pro')"
+                      >
+                        Upgrade
+                      </Button>
+                      <Button
+                        v-else
+                        size="sm"
+                        disabled
+                        class="w-full"
+                      >
+                        Current Plan
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <div class="flex justify-end w-full">
+                  <Button
                     variant="ghost"
                     size="sm"
                     @click="comparePlans"
-                  />
-                  <UButton
-                    label="View Enterprise Options"
+                  >
+                    Compare All Plans
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     class="ml-2"
                     @click="viewEnterprise"
-                  />
+                  >
+                    View Enterprise Options
+                  </Button>
                 </div>
-              </template>
-            </UCard>
+              </CardFooter>
+            </Card>
 
             <!-- Billing History -->
-            <UCard>
-              <template #header>
+            <Card>
+              <CardHeader>
                 <div class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-document-text" class="w-5 h-5" />
-                  <h3 class="text-lg font-semibold">Billing History</h3>
+                  <Icon name="i-heroicons-document-text" class="w-5 h-5 text-muted-foreground" />
+                  <CardTitle>Billing History</CardTitle>
                 </div>
-              </template>
-              <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="border-b dark:border-gray-700">
-                      <th class="text-left py-2 px-4 font-semibold">Date</th>
-                      <th class="text-left py-2 px-4 font-semibold">Plan</th>
-                      <th class="text-right py-2 px-4 font-semibold">Amount</th>
-                      <th class="text-left py-2 px-4 font-semibold">Status</th>
-                      <th class="text-right py-2 px-4 font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="invoice in billingHistory" :key="invoice.id" class="border-b dark:border-gray-700">
-                      <td class="py-2 px-4">{{ invoice.date }}</td>
-                      <td class="py-2 px-4">{{ invoice.plan }}</td>
-                      <td class="py-2 px-4 text-right font-semibold">${{ invoice.amount }}</td>
-                      <td class="py-2 px-4">
-                        <UBadge :color="invoice.status === 'paid' ? 'success' : 'warning'" size="sm">
-                          {{ invoice.status === 'paid' ? 'Paid' : 'Pending' }}
-                        </UBadge>
-                      </td>
-                      <td class="py-2 px-4 text-right">
-                        <UButton
-                          icon="i-heroicons-arrow-down-tray"
-                          size="xs"
-                          variant="ghost"
-                          @click="downloadInvoice(invoice.id)"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <template #footer>
-                <div class="flex justify-end">
-                  <UButton
-                    label="View All Invoices"
+              </CardHeader>
+              <CardContent>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-border">
+                        <th class="text-left py-2 px-4 font-semibold text-foreground">Date</th>
+                        <th class="text-left py-2 px-4 font-semibold text-foreground">Plan</th>
+                        <th class="text-right py-2 px-4 font-semibold text-foreground">Amount</th>
+                        <th class="text-left py-2 px-4 font-semibold text-foreground">Status</th>
+                        <th class="text-right py-2 px-4 font-semibold text-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="invoice in billingHistory" :key="invoice.id" class="border-b border-border">
+                        <td class="py-2 px-4 text-foreground">{{ invoice.date }}</td>
+                        <td class="py-2 px-4 text-foreground">{{ invoice.plan }}</td>
+                        <td class="py-2 px-4 text-right font-semibold text-foreground">${{ invoice.amount }}</td>
+                        <td class="py-2 px-4">
+                          <Badge :variant="invoice.status === 'paid' ? 'success' : 'pending'" class="text-xs">
+                            {{ invoice.status === 'paid' ? 'Paid' : 'Pending' }}
+                          </Badge>
+                        </td>
+                        <td class="py-2 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            @click="downloadInvoice(invoice.id)"
+                          >
+                            <Icon name="i-heroicons-arrow-down-tray" class="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <div class="flex justify-end w-full">
+                  <Button
                     variant="ghost"
                     size="sm"
                     @click="viewAllInvoices"
-                  />
+                  >
+                    View All Invoices
+                  </Button>
                 </div>
-              </template>
-            </UCard>
+              </CardFooter>
+            </Card>
           </div>
       </div>
     </div>
@@ -2061,7 +2106,7 @@ definePageMeta({
 </script>
 
 <style scoped>
-.compact-card :deep(.UCard-body),
+.compact-card :deep(.card-content),
 .compact-card :deep(> div:not(:first-child):not(:last-child)) {
   padding-bottom: 0.5rem !important;
 }

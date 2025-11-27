@@ -1,49 +1,48 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8 p-6">
     <!-- Header -->
     <div class="flex flex-col gap-2">
-      <h1 class="text-3xl font-bold">Trade Settings</h1>
-      <p class="text-gray-500 dark:text-gray-400">
+      <h1 class="text-3xl font-semibold text-foreground">Trade Settings</h1>
+      <p class="text-muted-foreground text-sm">
         Configure how Sparky trades on each exchange. These controls are synced with Supabase and applied by the bot automatically.
       </p>
     </div>
 
     <!-- Exchange Configuration -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <UCard
+      <Card
         v-for="exchange in exchangeConfigs"
         :key="exchange.key"
-        class="space-y-4"
       >
-        <template #header>
+        <CardHeader>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <UIcon :name="exchange.icon" class="w-6 h-6" />
-              <h3 class="text-lg font-semibold">{{ exchange.name }}</h3>
-              <UBadge color="neutral" variant="outline" size="xs" class="ml-auto">
+              <Icon :name="exchange.icon" class="w-5 h-5 text-muted-foreground" />
+              <CardTitle>{{ exchange.name }}</CardTitle>
+              <Badge variant="outline" class="text-xs ml-auto">
                 {{ formatAssetClass(exchange.assetClass) }}
-              </UBadge>
+              </Badge>
             </div>
-            <UBadge color="primary" variant="soft">{{ exchange.status }}</UBadge>
+            <Badge variant="default" class="text-xs">{{ exchange.status }}</Badge>
           </div>
-        </template>
+        </CardHeader>
+        <CardContent class="space-y-6">
 
-        <div class="space-y-6">
           <div class="space-y-3">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-clock" class="w-5 h-5 text-blue-400" />
+              <Icon name="i-heroicons-clock" class="w-5 h-5 text-muted-foreground" />
               <div>
-                <p class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Trading Window</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Tell Sparky when it can enter new positions on this exchange.</p>
+                <p class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Trading Window</p>
+                <p class="text-xs text-muted-foreground">Tell Sparky when it can enter new positions on this exchange.</p>
               </div>
             </div>
-            <div class="rounded-xl border border-blue-500/30 bg-blue-600/5 px-4 py-3 text-sm text-blue-100">
+            <div class="rounded-lg border bg-card px-4 py-3 text-sm">
               <div class="flex items-center justify-between mb-2">
-                <p class="font-semibold text-blue-200">
+                <p class="font-semibold text-foreground">
                   Trading Window
                 </p>
               </div>
-              <p class="font-mono text-xs mb-2">
+              <p class="font-mono text-xs mb-2 text-muted-foreground">
                 <template v-if="isCryptoExchange(exchange)">
                 </template>
                 <template v-else-if="isForexExchange(exchange)">
@@ -53,17 +52,17 @@
                 </template>
               </p>
               <div class="flex items-center gap-2">
-                <UBadge color="primary" variant="soft" size="sm">
+                <Badge variant="default" class="text-xs">
                   {{ getActiveWindow(exchange).title || 'Default' }}
-                </UBadge>
+                </Badge>
               </div>
               <!-- Advanced Toggles -->
-              <div class="mt-3 pt-3 border-t border-blue-500/20">
+              <div class="mt-3 pt-3 border-t border-border">
                 <!-- Crypto: Pause Weekends Toggle -->
                 <div v-if="isCryptoExchange(exchange)" class="flex items-center justify-between toggle-container">
                   <div>
-                    <p class="text-xs font-medium text-blue-200">Pause on Weekends</p>
-                    <p class="text-xs text-blue-300/70">Disable trading on Saturdays and Sundays</p>
+                    <p class="text-xs font-medium text-foreground">Pause on Weekends</p>
+                    <p class="text-xs text-muted-foreground">Disable trading on Saturdays and Sundays</p>
                   </div>
                   <div 
                     class="toggle-wrapper"
@@ -79,8 +78,8 @@
                 <!-- Forex/Stocks: Extended Hours Toggle -->
                 <div v-else-if="isForexExchange(exchange) || isEquitiesExchange(exchange)" class="flex items-center justify-between toggle-container">
                   <div>
-                    <p class="text-xs font-medium text-blue-200">Extended Hours Trading</p>
-                    <p class="text-xs text-blue-300/70">
+                    <p class="text-xs font-medium text-foreground">Extended Hours Trading</p>
+                    <p class="text-xs text-muted-foreground">
                       <template v-if="isForexExchange(exchange)">
                         Allow trading on weekends (broker permitting)
                       </template>
@@ -104,12 +103,12 @@
             </div>
           </div>
 
-          <div class="space-y-3 border-t border-gray-200 dark:border-gray-800 pt-4">
+          <div class="space-y-3 border-t border-border pt-4">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-emerald-400" />
+              <Icon name="i-heroicons-shield-check" class="w-5 h-5 text-muted-foreground" />
               <div>
-                <p class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Risk Controls</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Cap daily exposure and define exit rules.</p>
+                <p class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Risk Controls</p>
+                <p class="text-xs text-muted-foreground">Cap daily exposure and define exit rules.</p>
               </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,9 +121,9 @@
             </div>
           </div>
 
-          <div v-if="exchange.optionsSpecific" class="space-y-4 border-t border-gray-200 dark:border-gray-800 pt-4">
-            <div class="flex items-center gap-2 text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              <UIcon name="i-heroicons-adjustments-vertical" class="w-5 h-5" />
+          <div v-if="exchange.optionsSpecific" class="space-y-4 border-t border-border pt-4">
+            <div class="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              <Icon name="i-heroicons-adjustments-vertical" class="w-5 h-5" />
               Options Controls
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -153,33 +152,34 @@
             </div>
           </div>
 
-        </div>
-
-        <template #footer>
-          <div class="flex items-center justify-between">
-            <p class="text-xs text-gray-500 dark:text-gray-400">
+        </CardContent>
+        <CardFooter>
+          <div class="flex items-center justify-between w-full">
+            <p class="text-xs text-muted-foreground">
               Last saved: {{ exchange.lastUpdated }}
             </p>
             <div class="flex gap-2">
-              <UButton
-                label="Reset"
+              <Button
                 variant="ghost"
                 size="sm"
                 :disabled="loading"
                 @click="resetSettings(exchange.key)"
-              />
-              <UButton
-                label="Save Settings"
-                icon="i-heroicons-check"
+              >
+                Reset
+              </Button>
+              <Button
+                variant="default"
                 size="sm"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                :loading="savingKey === exchange.key"
+                :disabled="savingKey === exchange.key"
                 @click="saveSettings(exchange.key)"
-              />
+              >
+                <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                Save Settings
+              </Button>
             </div>
           </div>
-        </template>
-      </UCard>
+        </CardFooter>
+      </Card>
     </div>
   </div>
 </template>

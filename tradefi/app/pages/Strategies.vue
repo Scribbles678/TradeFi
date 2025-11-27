@@ -1,72 +1,70 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8 p-6">
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold">Trading Strategies</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
+        <h1 class="text-3xl font-semibold text-foreground">Trading Strategies</h1>
+        <p class="text-muted-foreground text-sm mt-1">
           Manage your own strategies or explore the marketplace
         </p>
       </div>
       <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div class="bg-gray-900/40 border border-gray-700 rounded-2xl p-1 flex items-center">
-          <button
+        <div class="inline-flex items-center rounded-lg border bg-card p-1">
+          <Button
             v-for="view in strategyViews"
             :key="view.key"
             @click="strategyView = view.key"
-            :class="[
-              'px-4 py-2 text-sm font-semibold rounded-2xl transition-all',
-              strategyView === view.key
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white'
-            ]"
+            :variant="strategyView === view.key ? 'default' : 'ghost'"
+            size="sm"
           >
             {{ view.label }}
-          </button>
+          </Button>
         </div>
-        <UButton
+        <Button
           v-if="strategyView === 'your'"
-          icon="i-heroicons-plus"
-          label="Add Strategy"
-          size="md"
-          class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+          size="sm"
           @click="openAddStrategyModal"
-        />
+        >
+          <Icon name="i-heroicons-plus" class="w-4 h-4 mr-1" />
+          Add Strategy
+        </Button>
       </div>
     </div>
 
     <!-- Marketplace Banner -->
-    <UAlert
-      v-if="strategyView === 'marketplace'"
-      icon="i-heroicons-megaphone"
-      title="Marketplace Strategies (Alpha)"
-      description="Discover entrepreneurs offering their automated alerts for a revenue share. Due diligence recommended before subscribing."
-      color="info"
-      variant="soft"
-    />
+    <Card v-if="strategyView === 'marketplace'" class="border-blue-500/20 bg-blue-500/5">
+      <CardContent class="flex gap-3 py-4">
+        <Icon name="i-heroicons-megaphone" class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p class="font-semibold text-foreground mb-1">Marketplace Strategies (Alpha)</p>
+          <p class="text-sm text-muted-foreground">Discover entrepreneurs offering their automated alerts for a revenue share. Due diligence recommended before subscribing.</p>
+        </div>
+      </CardContent>
+    </Card>
 
     <!-- Strategy List Section -->
     <div v-if="strategyView === 'your'" class="space-y-6">
       <!-- Add New Strategy Card (At Top - Always First) -->
       <Transition name="fade">
-        <UCard
+        <Card
           v-if="showStrategyModal && !editingStrategyId"
           key="add-strategy-card"
           data-add-strategy-card
-          class="w-full max-w-2xl mx-auto shadow-2xl border-2 border-green-500 dark:border-green-400 z-10 hover:shadow-xl transition-all duration-300"
+          class="w-full max-w-2xl mx-auto border-2 border-green-500 z-10"
         >
-        <template #header>
-          <div class="flex items-center justify-between py-2">
-            <h3 class="text-base font-bold text-gray-900 dark:text-white">Add New Strategy</h3>
-            <UButton
-              icon="i-heroicons-x-mark"
-              size="xs"
+        <CardHeader>
+          <div class="flex items-center justify-between">
+            <CardTitle>Add New Strategy</CardTitle>
+            <Button
               variant="ghost"
-              class="text-gray-400 hover:text-gray-600"
+              size="sm"
               @click="cancelAddStrategy()"
-            />
+            >
+              <Icon name="i-heroicons-x-mark" class="w-4 h-4" />
+            </Button>
           </div>
-        </template>
+        </CardHeader>
+        <CardContent>
 
         <form @submit.prevent="saveStrategy" class="space-y-3 px-1">
           <!-- Strategy Name -->
@@ -140,77 +138,79 @@
 
           <!-- Action Buttons -->
           <div class="flex flex-col sm:flex-row justify-end gap-2 pt-1">
-            <UButton
+            <Button
               type="button"
-              label="Cancel"
-              size="sm"
               variant="ghost"
-              class="w-full sm:w-auto text-gray-400 hover:text-gray-600"
-              @click="cancelAddStrategy()"
-            />
-            <UButton
-              type="submit"
-              label="Create Strategy"
               size="sm"
-              icon="i-heroicons-check"
-              class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-              :loading="saving"
-            />
+              class="w-full sm:w-auto"
+              @click="cancelAddStrategy()"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              class="w-full sm:w-auto"
+              :disabled="saving"
+            >
+              <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+              Create Strategy
+            </Button>
           </div>
         </form>
-        </UCard>
+        </CardContent>
+        </Card>
       </Transition>
 
       <!-- Existing Strategy Cards Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <UCard
+        <Card
           v-for="strategy in strategies"
           :key="strategy.id"
           :data-strategy-id="strategy.id"
           :class="[
-            'hover:shadow-xl transition-all duration-300',
             editingStrategyId === strategy.id 
-              ? 'md:col-span-2 lg:col-span-3 shadow-2xl border-2 border-blue-500 dark:border-blue-400 z-10' 
-              : 'hover:scale-[1.02]'
+              ? 'md:col-span-2 lg:col-span-3 border-2 border-blue-500 z-10' 
+              : ''
           ]"
         >
-        <template #header>
+        <CardHeader>
           <!-- Edit Mode Header -->
           <div v-if="editingStrategyId === strategy.id">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Strategy</h3>
-              <UButton
-                icon="i-heroicons-x-mark"
-                size="sm"
+              <CardTitle>Edit Strategy</CardTitle>
+              <Button
                 variant="ghost"
-                class="text-gray-400 hover:text-gray-600"
+                size="sm"
                 @click="cancelEdit()"
-              />
+              >
+                <Icon name="i-heroicons-x-mark" class="w-4 h-4" />
+              </Button>
             </div>
           </div>
           
           <!-- View Mode Header -->
           <div v-else class="flex items-start justify-between gap-3">
             <div class="flex-1">
-              <h4 class="font-bold text-lg text-gray-900 dark:text-white">{{ strategy.name }}</h4>
+              <CardTitle>{{ strategy.name }}</CardTitle>
               <!-- Asset Class Badge(s) -->
               <div v-if="getStrategyAssetClasses(strategy).length > 0" class="mt-2 flex flex-wrap gap-1">
-                <UBadge 
+                <Badge 
                   v-for="assetClass in getStrategyAssetClasses(strategy)"
                   :key="assetClass"
-                  color="neutral" 
                   variant="outline" 
-                  size="xs"
+                  class="text-xs"
                 >
                   {{ assetClass.toUpperCase() }}
-                </UBadge>
+                </Badge>
               </div>
             </div>
-            <UBadge :color="getStatusColor(strategy.status)" size="sm">
+            <Badge :variant="getStatusColor(strategy.status) === 'success' ? 'success' : getStatusColor(strategy.status) === 'warning' ? 'pending' : 'outline'" class="text-xs">
               {{ strategy.status.toUpperCase() }}
-            </UBadge>
+            </Badge>
           </div>
-        </template>
+        </CardHeader>
+        <CardContent>
 
         <!-- Edit Form -->
         <form v-if="editingStrategyId === strategy.id" @submit.prevent="saveStrategy()" class="space-y-3 px-1">
@@ -261,64 +261,66 @@
 
           <!-- Action Buttons -->
           <div class="flex flex-col sm:flex-row justify-end gap-2 pt-1">
-            <UButton
+            <Button
               type="button"
-              label="Cancel"
-              size="sm"
               variant="ghost"
-              class="w-full sm:w-auto text-gray-400 hover:text-gray-600"
-              @click="cancelEdit()"
-            />
-            <UButton
-              type="submit"
-              label="Save Changes"
               size="sm"
-              icon="i-heroicons-check"
-              class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-              :loading="saving"
-            />
+              class="w-full sm:w-auto"
+              @click="cancelEdit()"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              class="w-full sm:w-auto"
+              :disabled="saving"
+            >
+              <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+              Save Changes
+            </Button>
           </div>
         </form>
 
         <!-- View Mode Content -->
         <div v-else class="space-y-4">
           <!-- Description -->
-          <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 min-h-[60px]">
+          <p class="text-sm text-muted-foreground line-clamp-3 min-h-[60px]">
             {{ strategy.description || 'No description provided for this strategy.' }}
           </p>
 
           <!-- Performance Metrics -->
-          <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2.5">
+          <div class="rounded-lg border bg-card p-3 space-y-2.5">
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400 font-medium">Win Rate</span>
+              <span class="text-muted-foreground font-medium">Win Rate</span>
               <span 
                 class="font-bold"
                 :class="{
                   'text-green-400': calculateWinRate(strategy) >= 70,
                   'text-yellow-400': calculateWinRate(strategy) >= 50 && calculateWinRate(strategy) < 70,
                   'text-red-400': calculateWinRate(strategy) < 50,
-                  'text-gray-400': strategy.total_trades === 0
+                  'text-muted-foreground': strategy.total_trades === 0
                 }"
               >
                 {{ calculateWinRate(strategy).toFixed(1) }}%
               </span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400 font-medium">Wins/Total</span>
-              <span class="font-bold text-gray-900 dark:text-white">
+              <span class="text-muted-foreground font-medium">Wins/Total</span>
+              <span class="font-bold text-foreground">
                 {{ strategy.winning_trades || 0 }}/{{ strategy.total_trades || 0 }} trades
               </span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400 font-medium">Total P&L</span>
+              <span class="text-muted-foreground font-medium">Total P&L</span>
               <span 
                 class="font-bold"
-                :class="(strategyPnL[strategy.id] || 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                :class="(strategyPnL[strategy.id] || 0) >= 0 ? 'text-green-400' : 'text-red-400'"
               >
                 {{ (strategyPnL[strategy.id] || 0) >= 0 ? '+' : '' }}${{ (strategyPnL[strategy.id] || 0).toFixed(2) }}
               </span>
             </div>
-            <div class="pt-2 border-t dark:border-gray-700 space-y-2">
+            <div class="pt-2 border-t border-border space-y-2">
               <div class="flex items-center justify-between gap-2">
                 <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">Take Profit (%)</label>
                 <UInput 
@@ -347,10 +349,10 @@
               </div>
               
               <!-- Trailing Stop Loss Section -->
-              <div class="pt-2 border-t dark:border-gray-700 space-y-2">
+              <div class="pt-2 border-t border-border space-y-2">
                 <div class="flex items-center justify-between gap-2">
-                  <label class="text-xs text-gray-600 dark:text-gray-400 font-semibold flex items-center gap-1">
-                    <UIcon name="i-heroicons-arrow-trending-up" class="w-3 h-3" />
+                  <label class="text-xs text-muted-foreground font-semibold flex items-center gap-1">
+                    <Icon name="i-heroicons-arrow-trending-up" class="w-3 h-3" />
                     Trailing Stop Loss
                   </label>
                   <button
@@ -381,7 +383,7 @@
                 </div>
                 
                 <!-- Info text -->
-                <p v-if="trailingStopLoss[strategy.id]?.enabled" class="text-xs text-gray-500 dark:text-gray-500 pl-4">
+                <p v-if="trailingStopLoss[strategy.id]?.enabled" class="text-xs text-muted-foreground pl-4">
                   Stop loss will trail price by {{ trailingStopLoss[strategy.id].trailPercent || 0 }}% as it moves in your favor
                 </p>
               </div>
@@ -389,58 +391,61 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col gap-3 pt-4 border-t dark:border-gray-700">
+          <div class="flex flex-col gap-3 pt-4 border-t border-border">
             <div class="flex gap-2">
               <!-- Toggle Status Button -->
-              <UButton
-                :icon="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'"
-                :label="strategy.status === 'active' ? 'Pause' : 'Activate'"
-                size="md"
-                :class="[
-                  'flex-1 justify-center font-medium text-white',
-                  strategy.status === 'active' 
-                    ? 'bg-yellow-600 hover:bg-yellow-700' 
-                    : 'bg-green-600 hover:bg-green-700'
-                ]"
+              <Button
+                :variant="strategy.status === 'active' ? 'destructive' : 'default'"
+                size="sm"
+                class="flex-1"
                 @click="toggleStatus(strategy.id)"
-              />
+              >
+                <Icon :name="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'" class="w-4 h-4 mr-1" />
+                {{ strategy.status === 'active' ? 'Pause' : 'Activate' }}
+              </Button>
               
               <!-- Edit Button -->
-              <UButton
-                icon="i-heroicons-pencil"
-                label="Edit"
-                size="md"
-                class="flex-1 justify-center font-medium bg-gray-600 hover:bg-gray-700 text-white"
+              <Button
+                variant="outline"
+                size="sm"
+                class="flex-1"
                 @click="startEditStrategy(strategy)"
-              />
+              >
+                <Icon name="i-heroicons-pencil" class="w-4 h-4 mr-1" />
+                Edit
+              </Button>
               
               <!-- Delete Button -->
-              <UButton
-                icon="i-heroicons-trash"
-                label="Delete"
-                size="md"
-                class="flex-1 justify-center font-medium bg-red-600 hover:bg-red-700 text-white"
+              <Button
+                variant="destructive"
+                size="sm"
+                class="flex-1"
                 @click="deleteStrategyConfirm(strategy)"
-              />
+              >
+                <Icon name="i-heroicons-trash" class="w-4 h-4 mr-1" />
+                Delete
+              </Button>
             </div>
           </div>
         </div>
-        </UCard>
+        </CardContent>
+        </Card>
       </div>
 
       <!-- Empty State -->
-      <UCard v-if="strategies.length === 0 && !showStrategyModal" class="w-full">
-        <div class="text-center py-12">
-          <UIcon name="i-heroicons-chart-bar" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p class="text-gray-500 dark:text-gray-400">No strategies yet</p>
-          <UButton
-            label="Add Your First Strategy"
+      <Card v-if="strategies.length === 0 && !showStrategyModal" class="w-full">
+        <CardContent class="text-center py-12">
+          <Icon name="i-heroicons-chart-bar" class="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <p class="text-muted-foreground">No strategies yet</p>
+          <Button
             size="lg"
-            class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+            class="mt-4"
             @click="openAddStrategyModal"
-          />
-        </div>
-      </UCard>
+          >
+            Add Your First Strategy
+          </Button>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- Marketplace Strategies -->
@@ -448,46 +453,45 @@
       v-else
       class="grid grid-cols-1 md:grid-cols-2 gap-6"
     >
-      <UCard
+      <Card
         v-for="strategy in marketplaceStrategies"
         :key="strategy.id"
-        class="border border-yellow-500/20 bg-gradient-to-br from-slate-900/60 to-slate-800/40"
+        class="border-yellow-500/20"
       >
-        <template #header>
+        <CardHeader>
           <div class="flex items-start justify-between gap-3">
             <div>
               <div class="flex items-center gap-2">
-                <UIcon :name="strategy.traderIcon" class="w-5 h-5 text-yellow-400" />
+                <Icon :name="strategy.traderIcon" class="w-5 h-5 text-yellow-400" />
                 <span class="text-xs text-yellow-400 font-semibold uppercase tracking-wide">
                   Featured Trader
                 </span>
               </div>
-              <h3 class="text-xl font-semibold text-white mt-1">{{ strategy.name }}</h3>
-              <p class="text-sm text-gray-400">{{ strategy.tradingStyle }}</p>
+              <CardTitle class="mt-1">{{ strategy.name }}</CardTitle>
+              <p class="text-sm text-muted-foreground">{{ strategy.tradingStyle }}</p>
             </div>
             <div class="text-right space-y-1">
-              <UBadge color="success" size="sm">{{ strategy.royalty }}% Royalty</UBadge>
-              <p class="text-xs text-gray-500">Tracked {{ strategy.trackedDuration }}</p>
+              <Badge variant="success" class="text-xs">{{ strategy.royalty }}% Royalty</Badge>
+              <p class="text-xs text-muted-foreground">Tracked {{ strategy.trackedDuration }}</p>
             </div>
           </div>
-        </template>
-
-        <div class="space-y-4">
-          <p class="text-sm text-gray-300">
+        </CardHeader>
+        <CardContent>
+          <p class="text-sm text-foreground mb-4">
             {{ strategy.description }}
           </p>
 
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div class="bg-black/20 rounded-lg p-3 border border-gray-700/50">
-              <p class="text-xs text-gray-400">Live Trades</p>
-              <p class="text-xl font-bold text-white">{{ strategy.liveTrades }}</p>
+          <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+            <div class="rounded-lg border bg-card p-3">
+              <p class="text-xs text-muted-foreground">Live Trades</p>
+              <p class="text-xl font-bold text-foreground">{{ strategy.liveTrades }}</p>
             </div>
-            <div class="bg-black/20 rounded-lg p-3 border border-gray-700/50">
-              <p class="text-xs text-gray-400">Win Rate</p>
+            <div class="rounded-lg border bg-card p-3">
+              <p class="text-xs text-muted-foreground">Win Rate</p>
               <p class="text-xl font-bold text-green-400">{{ strategy.winRate }}%</p>
             </div>
-            <div class="bg-black/20 rounded-lg p-3 border border-gray-700/50">
-              <p class="text-xs text-gray-400">Total Profit</p>
+            <div class="rounded-lg border bg-card p-3">
+              <p class="text-xs text-muted-foreground">Total Profit</p>
               <p
                 class="text-xl font-bold"
                 :class="strategy.totalProfit >= 0 ? 'text-green-400' : 'text-red-400'"
@@ -495,50 +499,51 @@
                 {{ strategy.totalProfit >= 0 ? '+' : '' }}${{ strategy.totalProfit.toLocaleString() }}
               </p>
             </div>
-            <div class="bg-black/20 rounded-lg p-3 border border-gray-700/50">
-              <p class="text-xs text-gray-400">Tracked Length</p>
-              <p class="text-xl font-bold text-white">{{ strategy.trackedDuration }}</p>
+            <div class="rounded-lg border bg-card p-3">
+              <p class="text-xs text-muted-foreground">Tracked Length</p>
+              <p class="text-xl font-bold text-foreground">{{ strategy.trackedDuration }}</p>
             </div>
           </div>
 
-          <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-700/50">
-            <UBadge
+          <div class="flex flex-wrap gap-2 pt-2 border-t border-border mb-4">
+            <Badge
               v-for="asset in strategy.assetClasses"
               :key="asset"
-              color="neutral"
               variant="outline"
-              size="xs"
+              class="text-xs"
             >
               {{ asset.toUpperCase() }}
-            </UBadge>
+            </Badge>
           </div>
 
           <div class="flex flex-col gap-2 pt-3">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-user-circle" class="w-5 h-5 text-gray-400" />
+              <Icon name="i-heroicons-user-circle" class="w-5 h-5 text-muted-foreground" />
               <div>
-                <p class="text-sm font-semibold text-white">{{ strategy.trader }}</p>
-                <p class="text-xs text-gray-500">{{ strategy.traderExperience }}</p>
+                <p class="text-sm font-semibold text-foreground">{{ strategy.trader }}</p>
+                <p class="text-xs text-muted-foreground">{{ strategy.traderExperience }}</p>
               </div>
             </div>
             <div class="flex gap-2">
-              <UButton
-                label="View Trader Bio"
+              <Button
                 variant="outline"
                 size="sm"
                 @click="viewTraderBio(strategy)"
-              />
-              <UButton
-                label="Request Access"
-                icon="i-heroicons-bolt"
+              >
+                View Trader Bio
+              </Button>
+              <Button
                 size="sm"
                 class="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
                 @click="requestAccess(strategy)"
-              />
+              >
+                <Icon name="i-heroicons-bolt" class="w-4 h-4 mr-1" />
+                Request Access
+              </Button>
             </div>
           </div>
-        </div>
-      </UCard>
+        </CardContent>
+      </Card>
     </div>
 
   </div>

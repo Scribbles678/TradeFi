@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import tailwindcss from '@tailwindcss/vite'
+
 export default defineNuxtConfig({
   devtools: { enabled: process.env.NODE_ENV === 'development' },
 
@@ -9,8 +11,23 @@ export default defineNuxtConfig({
     '@nuxt/icon',
     '@nuxt/image',
     '@nuxt/scripts',
-    '@nuxtjs/supabase'
+    '@nuxtjs/supabase',
+    'shadcn-nuxt',
+    '@nuxtjs/color-mode',
+    'nuxt-charts'
   ],
+
+  colorMode: {
+    classSuffix: '',
+    preference: 'dark', // Default to dark mode (TradeFI brand)
+    fallback: 'dark'
+  },
+
+  fonts: {
+    families: [
+      { name: 'Public Sans', provider: 'google' }
+    ]
+  },
 
   // ESLint is enabled but won't block builds
 
@@ -19,7 +36,7 @@ export default defineNuxtConfig({
     collections: ['heroicons', 'lucide', 'simple-icons']
   },
 
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/tailwind.css'],
 
   future: {
     compatibilityVersion: 4
@@ -83,12 +100,26 @@ export default defineNuxtConfig({
 
   // Add WebSocket configuration
   vite: {
+    plugins: [tailwindcss()],
     server: {
       hmr: {
         port: 3001,
         protocol: 'ws'
       }
     }
+  },
+
+  // ShadCN configuration
+  shadcn: {
+    /**
+     * Prefix for all the imported component
+     */
+    prefix: '',
+    /**
+     * Directory that the component lives in.
+     * @default "./components/ui"
+     */
+    componentDir: '~/components/ui'
   },
 
 })
