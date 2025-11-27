@@ -111,44 +111,150 @@
                 <p class="text-xs text-muted-foreground">Cap daily exposure and define exit rules.</p>
               </div>
             </div>
+            
+            <!-- Risk Controls Form with New Components -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UFormField label="Max Trades per Day" help="0 = unlimited. Sparky stops opening new positions after this count.">
-                <UInput v-model.number="exchange.settings.maxTrades" type="number" min="0" placeholder="e.g. 5" />
-              </UFormField>
-              <UFormField label="Max Position Size (USD)" help="Largest single position size. 0 lets Sparky auto-size.">
-                <UInput v-model.number="exchange.settings.maxPositionSize" type="number" min="0" step="50" placeholder="e.g. 1000" />
-              </UFormField>
+              <!-- Max Trades per Day -->
+              <div class="space-y-2">
+                <Label for="`max-trades-${exchange.key}`">
+                  Max Trades per Day
+                </Label>
+                <Input
+                  :id="`max-trades-${exchange.key}`"
+                  v-model.number="exchange.settings.maxTrades"
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 5"
+                  class="w-full"
+                />
+                <p class="text-xs text-muted-foreground">
+                  0 = unlimited. Sparky stops opening new positions after this count.
+                </p>
+              </div>
+
+              <!-- Max Position Size -->
+              <div class="space-y-2">
+                <Label :for="`max-position-${exchange.key}`">
+                  Max Position Size (USD)
+                </Label>
+                <Input
+                  :id="`max-position-${exchange.key}`"
+                  v-model.number="exchange.settings.maxPositionSize"
+                  type="number"
+                  min="0"
+                  step="50"
+                  placeholder="e.g. 1000"
+                  class="w-full"
+                />
+                <p class="text-xs text-muted-foreground">
+                  Largest single position size. 0 lets Sparky auto-size.
+                </p>
+              </div>
             </div>
           </div>
 
+          <!-- Options-Specific Controls -->
           <div v-if="exchange.optionsSpecific" class="space-y-4 border-t border-border pt-4">
             <div class="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               <Icon name="i-heroicons-adjustments-vertical" class="w-5 h-5" />
               Options Controls
             </div>
+            
+            <!-- Options Form Fields -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UFormField label="Position Size (% buying power)">
-                <UInput v-model.number="exchange.settings.positionSizePercent" type="number" min="1" />
-              </UFormField>
-              <UFormField label="Strike Tolerance (%)">
-                <UInput v-model.number="exchange.settings.strikeTolerancePercent" type="number" min="0.1" step="0.1" />
-              </UFormField>
+              <!-- Position Size Percent -->
+              <div class="space-y-2">
+                <Label :for="`position-size-${exchange.key}`">
+                  Position Size (% buying power)
+                </Label>
+                <Input
+                  :id="`position-size-${exchange.key}`"
+                  v-model.number="exchange.settings.positionSizePercent"
+                  type="number"
+                  min="1"
+                  max="100"
+                  class="w-full"
+                />
+              </div>
+
+              <!-- Strike Tolerance -->
+              <div class="space-y-2">
+                <Label :for="`strike-tolerance-${exchange.key}`">
+                  Strike Tolerance (%)
+                </Label>
+                <Input
+                  :id="`strike-tolerance-${exchange.key}`"
+                  v-model.number="exchange.settings.strikeTolerancePercent"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  class="w-full"
+                />
+              </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UFormField label="Entry Limit Offset (%)" help="How far above the ask to place entry orders.">
-                <UInput v-model.number="exchange.settings.entryLimitOffsetPercent" type="number" min="0.1" step="0.1" />
-              </UFormField>
-              <UFormField label="Max Signal Age (sec)">
-                <UInput v-model.number="exchange.settings.maxSignalAgeSec" type="number" min="1" />
-              </UFormField>
+              <!-- Entry Limit Offset -->
+              <div class="space-y-2">
+                <Label :for="`entry-limit-${exchange.key}`">
+                  Entry Limit Offset (%)
+                </Label>
+                <Input
+                  :id="`entry-limit-${exchange.key}`"
+                  v-model.number="exchange.settings.entryLimitOffsetPercent"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  class="w-full"
+                />
+                <p class="text-xs text-muted-foreground">
+                  How far above the ask to place entry orders.
+                </p>
+              </div>
+
+              <!-- Max Signal Age -->
+              <div class="space-y-2">
+                <Label :for="`max-signal-age-${exchange.key}`">
+                  Max Signal Age (sec)
+                </Label>
+                <Input
+                  :id="`max-signal-age-${exchange.key}`"
+                  v-model.number="exchange.settings.maxSignalAgeSec"
+                  type="number"
+                  min="1"
+                  class="w-full"
+                />
+              </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UFormField label="Max Open Positions per Symbol">
-                <UInput v-model.number="exchange.settings.maxOpenPositions" type="number" min="1" />
-              </UFormField>
-              <UFormField label="Auto Close Outside Window">
-                <USwitch v-model="exchange.settings.autoCloseOutsideWindow" color="primary" />
-              </UFormField>
+              <!-- Max Open Positions -->
+              <div class="space-y-2">
+                <Label :for="`max-open-positions-${exchange.key}`">
+                  Max Open Positions per Symbol
+                </Label>
+                <Input
+                  :id="`max-open-positions-${exchange.key}`"
+                  v-model.number="exchange.settings.maxOpenPositions"
+                  type="number"
+                  min="1"
+                  class="w-full"
+                />
+              </div>
+
+              <!-- Auto Close Toggle -->
+              <div class="space-y-2">
+                <Label :for="`auto-close-${exchange.key}`">
+                  Auto Close Outside Window
+                </Label>
+                <div class="flex items-center h-10">
+                  <USwitch
+                    :id="`auto-close-${exchange.key}`"
+                    v-model="exchange.settings.autoCloseOutsideWindow"
+                    color="primary"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -173,8 +279,9 @@
                 :disabled="savingKey === exchange.key"
                 @click="saveSettings(exchange.key)"
               >
-                <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
-                Save Settings
+                <Icon v-if="savingKey !== exchange.key" name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                <Icon v-else name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
+                {{ savingKey === exchange.key ? 'Saving...' : 'Save Settings' }}
               </Button>
             </div>
           </div>
@@ -646,4 +753,3 @@ definePageMeta({
   transition: transform 0.2s ease;
 }
 </style>
-
