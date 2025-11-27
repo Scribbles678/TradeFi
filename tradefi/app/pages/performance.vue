@@ -97,35 +97,55 @@
           </div>
         </CardHeader>
         <CardContent>
-          <div class="space-y-2 max-h-64 overflow-y-auto">
-            <div
-              v-for="trade in recentTrades.slice(0, 10)"
-              :key="trade.id"
-              class="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
-            >
-              <div class="flex items-center gap-3">
-                <Badge :variant="trade.side === 'BUY' ? 'success' : 'error'" class="text-xs">
-                  {{ trade.side }}
-                </Badge>
-                <span class="font-mono font-semibold">{{ trade.symbol }}</span>
-                <Badge v-if="trade.exchange" variant="outline" class="text-xs">
-                  {{ trade.exchange === 'aster' ? 'Crypto' : trade.exchange === 'oanda' ? 'Forex' : trade.exchange === 'tradier' ? 'Stocks' : trade.exchange }}
-                </Badge>
-                <span class="text-sm text-muted-foreground">
-                  {{ formatTime(trade.exit_time) }}
-                </span>
-              </div>
-              <div class="text-right">
-                <div :class="[
-                  'font-mono font-semibold',
-                  (trade.pnl_usd || 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                ]">
-                  {{ (trade.pnl_usd || 0) >= 0 ? '+' : '' }}${{ (trade.pnl_usd || 0).toFixed(2) }}
-                </div>
-                <div class="text-xs text-muted-foreground">
-                  {{ trade.quantity }} @ ${{ (trade.price || 0).toFixed(2) }}
-                </div>
-              </div>
+          <div class="max-h-64 overflow-y-auto">
+            <Table v-if="recentTrades.length > 0">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Symbol</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead class="text-right">P&L</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow 
+                  v-for="trade in recentTrades.slice(0, 10)" 
+                  :key="trade.id"
+                  class="hover:bg-accent"
+                >
+                  <TableCell class="font-mono font-semibold">
+                    {{ trade.symbol }}
+                  </TableCell>
+                  <TableCell>
+                    <div class="flex items-center gap-2">
+                      <Badge :variant="trade.side === 'BUY' ? 'success' : 'error'" class="text-xs">
+                        {{ trade.side }}
+                      </Badge>
+                      <Badge v-if="trade.exchange" variant="outline" class="text-xs">
+                        {{ trade.exchange === 'aster' ? 'Crypto' : trade.exchange === 'oanda' ? 'Forex' : trade.exchange === 'tradier' ? 'Stocks' : trade.exchange }}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell class="text-muted-foreground text-sm">
+                    {{ formatTime(trade.exit_time) }}
+                  </TableCell>
+                  <TableCell class="text-right">
+                    <div :class="[
+                      'font-mono font-semibold',
+                      (trade.pnl_usd || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                    ]">
+                      {{ (trade.pnl_usd || 0) >= 0 ? '+' : '' }}${{ (trade.pnl_usd || 0).toFixed(2) }}
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                      {{ trade.quantity }} @ ${{ (trade.price || 0).toFixed(2) }}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+            
+            <div v-else class="text-center py-8 text-muted-foreground">
+              No trades yet
             </div>
           </div>
         </CardContent>
