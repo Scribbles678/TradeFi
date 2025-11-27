@@ -18,7 +18,7 @@
 
     <!-- Tabs -->
     <Tabs default-value="overview" class="w-full">
-      <TabsList class="w-full justify-start overflow-x-auto">
+      <TabsList>
         <TabsTrigger
           v-for="tab in tabs"
           :key="tab.key"

@@ -12,17 +12,17 @@
     </div>
 
     <!-- Asset Class Filter -->
-    <div class="flex gap-2 flex-wrap">
-      <Button
-        v-for="asset in assetClasses"
-        :key="asset.value"
-        @click="selectAssetClass(asset.value)"
-        :variant="selectedAssetClass === asset.value ? 'default' : 'outline'"
-        size="sm"
-      >
-        {{ asset.label }}
-      </Button>
-    </div>
+    <Tabs :model-value="selectedAssetClass" @update:model-value="selectAssetClass">
+      <TabsList>
+        <TabsTrigger
+          v-for="asset in assetClasses"
+          :key="asset.value"
+          :value="asset.value"
+        >
+          {{ asset.label }}
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
 
     <!-- Real-Time Stats Overview -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
