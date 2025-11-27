@@ -37,87 +37,60 @@
         class="compact-card"
       >
         <CardHeader>
-          <div class="flex items-start justify-between py-1 gap-3">
-            <div class="flex items-start gap-2 flex-1 min-w-0">
-              <Icon :name="card.icon" class="w-5 h-5 mt-0.5 flex-shrink-0 text-muted-foreground" />
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <CardTitle class="text-base">{{ card.name }}</CardTitle>
-                  <div class="flex items-center gap-1.5">
-                    <Icon 
-                      :name="getCredentialStatus(card.key).icon" 
-                      :class="{
-                        'text-green-400': getCredentialStatus(card.key).color === 'success',
-                        'text-yellow-400': getCredentialStatus(card.key).color === 'warning',
-                        'text-red-400': getCredentialStatus(card.key).color === 'error',
-                        'text-muted-foreground': getCredentialStatus(card.key).color === 'neutral'
-                      }"
-                      class="w-4 h-4"
-                    />
-                    <Badge 
-                      :variant="getCredentialStatus(card.key).color === 'success' ? 'success' : getCredentialStatus(card.key).color === 'error' ? 'error' : 'outline'" 
-                      class="text-xs"
-                    >
-                      {{ getCredentialStatus(card.key).label }}
-                    </Badge>
-                  </div>
+          <div class="flex items-start gap-3">
+            <Icon :name="card.icon" class="w-5 h-5 mt-0.5 flex-shrink-0 text-muted-foreground" />
+            <div class="flex-1 min-w-0 space-y-2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <CardTitle class="text-base">{{ card.name }}</CardTitle>
+                <div class="flex items-center gap-1.5">
+                  <Icon 
+                    :name="getCredentialStatus(card.key).icon" 
+                    :class="{
+                      'text-green-400': getCredentialStatus(card.key).color === 'success',
+                      'text-yellow-400': getCredentialStatus(card.key).color === 'warning',
+                      'text-red-400': getCredentialStatus(card.key).color === 'error',
+                      'text-muted-foreground': getCredentialStatus(card.key).color === 'neutral'
+                    }"
+                    class="w-4 h-4"
+                  />
+                  <Badge 
+                    :variant="getCredentialStatus(card.key).color === 'success' ? 'success' : getCredentialStatus(card.key).color === 'error' ? 'error' : 'outline'" 
+                    class="text-xs"
+                  >
+                    {{ getCredentialStatus(card.key).label }}
+                  </Badge>
                 </div>
-                <p class="text-xs text-muted-foreground mt-0.5">
+              </div>
+              <div class="flex items-center justify-between gap-3 flex-wrap">
+                <p class="text-xs text-muted-foreground">
                   Last tested: {{ formatLastTested(credentialForms[card.key].lastTested) }}
                 </p>
+                <!-- Environment Buttons (Live/Paper) - Only show for non-aster exchanges -->
+                <div v-if="card.key !== 'aster'" class="flex items-center gap-2">
+                  <button
+                    @click="switchEnvironment(card.key, false)"
+                    :class="[
+                      'px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200',
+                      !credentialForms[card.key].isLive 
+                        ? 'bg-card text-green-400 border-2 border-green-400' 
+                        : 'bg-card text-muted-foreground border border-border hover:border-foreground/20'
+                    ]"
+                  >
+                    📄 Paper
+                  </button>
+                  <button
+                    @click="switchEnvironment(card.key, true)"
+                    :class="[
+                      'px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-200',
+                      credentialForms[card.key].isLive 
+                        ? 'bg-card text-green-400 border-2 border-green-400' 
+                        : 'bg-card text-muted-foreground border border-border hover:border-foreground/20'
+                    ]"
+                  >
+                    🔴 Live
+                  </button>
+                </div>
               </div>
-            </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <!-- Environment Buttons (Live/Paper) - Only show for non-aster exchanges -->
-              <div v-if="card.key !== 'aster'" class="flex items-center gap-2">
-                <button
-                  @click="switchEnvironment(card.key, false)"
-                  :class="[
-                    'px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200',
-                    !credentialForms[card.key].isLive 
-                      ? 'bg-card text-green-400 border-2 border-green-400' 
-                      : 'bg-card text-muted-foreground border border-border hover:border-foreground/20'
-                  ]"
-                >
-                  📄 Paper
-                </button>
-                <button
-                  @click="switchEnvironment(card.key, true)"
-                  :class="[
-                    'px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200',
-                    credentialForms[card.key].isLive 
-                      ? 'bg-card text-green-400 border-2 border-green-400' 
-                      : 'bg-card text-muted-foreground border border-border hover:border-foreground/20'
-                  ]"
-                >
-                  🔴 Live
-                </button>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                :disabled="testingCredential === card.key || !isCredentialConnected(card.key)"
-                @click="testConnection(card.key)"
-              >
-                <Icon name="i-heroicons-beaker" class="w-4 h-4 mr-1" />
-                Test
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                :disabled="deletingCredential === card.key"
-                @click="deleteCredential(card.key)"
-              >
-                Delete
-              </Button>
-              <Button
-                size="sm"
-                :disabled="savingCredential === card.key"
-                @click="saveCredential(card.key)"
-              >
-                <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
-                Save
-              </Button>
             </div>
           </div>
         </CardHeader>
@@ -209,6 +182,36 @@
                 </button>
               </div>
             </UFormField>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center justify-end gap-2 pt-4 border-t border-border">
+            <Button
+              variant="ghost"
+              size="sm"
+              :disabled="testingCredential === card.key || !isCredentialConnected(card.key)"
+              @click="testConnection(card.key)"
+            >
+              <Icon name="i-heroicons-beaker" class="w-4 h-4 mr-1" />
+              Test
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              :disabled="deletingCredential === card.key"
+              @click="deleteCredential(card.key)"
+            >
+              <Icon name="i-heroicons-trash" class="w-4 h-4 mr-1" />
+              Delete
+            </Button>
+            <Button
+              size="sm"
+              :disabled="savingCredential === card.key"
+              @click="saveCredential(card.key)"
+            >
+              <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+              Save
+            </Button>
           </div>
 
         </div>
