@@ -197,8 +197,8 @@
           
           <!-- View Mode Header -->
           <div v-else class="flex items-start justify-between gap-3">
-            <div class="flex-1 min-w-0">
-              <CardTitle class="break-words overflow-wrap-anywhere">{{ strategy.name }}</CardTitle>
+            <div class="flex-1 min-w-0 overflow-hidden">
+              <CardTitle class="break-all">{{ strategy.name }}</CardTitle>
               <!-- Asset Class Badge(s) -->
               <div v-if="getStrategyAssetClasses(strategy).length > 0" class="mt-2 flex flex-wrap gap-1">
                 <Badge 
