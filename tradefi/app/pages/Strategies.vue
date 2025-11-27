@@ -399,35 +399,38 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex items-center justify-end gap-2 pt-4 border-t border-border">
+          <div class="grid grid-cols-3 gap-2 pt-4 border-t border-border">
             <!-- Toggle Status Button -->
             <Button
               :variant="strategy.status === 'active' ? 'destructive' : 'default'"
               size="sm"
+              class="w-full"
               @click="toggleStatus(strategy.id)"
             >
-              <Icon :name="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'" class="w-4 h-4 mr-1" />
-              {{ strategy.status === 'active' ? 'Pause' : 'Activate' }}
+              <Icon :name="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'" class="w-4 h-4" />
+              <span class="ml-1 hidden xl:inline">{{ strategy.status === 'active' ? 'Pause' : 'Activate' }}</span>
             </Button>
             
             <!-- Edit Button -->
             <Button
               variant="outline"
               size="sm"
+              class="w-full"
               @click="startEditStrategy(strategy)"
             >
-              <Icon name="i-heroicons-pencil" class="w-4 h-4 mr-1" />
-              Edit
+              <Icon name="i-heroicons-pencil" class="w-4 h-4" />
+              <span class="ml-1 hidden xl:inline">Edit</span>
             </Button>
             
             <!-- Delete Button -->
             <Button
               variant="destructive"
               size="sm"
+              class="w-full"
               @click="deleteStrategyConfirm(strategy)"
             >
-              <Icon name="i-heroicons-trash" class="w-4 h-4 mr-1" />
-              Delete
+              <Icon name="i-heroicons-trash" class="w-4 h-4" />
+              <span class="ml-1 hidden xl:inline">Delete</span>
             </Button>
           </div>
         </div>
