@@ -399,41 +399,36 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col gap-3 pt-4 border-t border-border">
-            <div class="flex gap-2">
-              <!-- Toggle Status Button -->
-              <Button
-                :variant="strategy.status === 'active' ? 'destructive' : 'default'"
-                size="sm"
-                class="flex-1"
-                @click="toggleStatus(strategy.id)"
-              >
-                <Icon :name="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'" class="w-4 h-4 mr-1" />
-                {{ strategy.status === 'active' ? 'Pause' : 'Activate' }}
-              </Button>
-              
-              <!-- Edit Button -->
-              <Button
-                variant="outline"
-                size="sm"
-                class="flex-1"
-                @click="startEditStrategy(strategy)"
-              >
-                <Icon name="i-heroicons-pencil" class="w-4 h-4 mr-1" />
-                Edit
-              </Button>
-              
-              <!-- Delete Button -->
-              <Button
-                variant="destructive"
-                size="sm"
-                class="flex-1"
-                @click="deleteStrategyConfirm(strategy)"
-              >
-                <Icon name="i-heroicons-trash" class="w-4 h-4 mr-1" />
-                Delete
-              </Button>
-            </div>
+          <div class="flex items-center justify-end gap-2 pt-4 border-t border-border">
+            <!-- Toggle Status Button -->
+            <Button
+              :variant="strategy.status === 'active' ? 'destructive' : 'default'"
+              size="sm"
+              @click="toggleStatus(strategy.id)"
+            >
+              <Icon :name="strategy.status === 'active' ? 'i-heroicons-pause' : 'i-heroicons-play'" class="w-4 h-4 mr-1" />
+              {{ strategy.status === 'active' ? 'Pause' : 'Activate' }}
+            </Button>
+            
+            <!-- Edit Button -->
+            <Button
+              variant="outline"
+              size="sm"
+              @click="startEditStrategy(strategy)"
+            >
+              <Icon name="i-heroicons-pencil" class="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+            
+            <!-- Delete Button -->
+            <Button
+              variant="destructive"
+              size="sm"
+              @click="deleteStrategyConfirm(strategy)"
+            >
+              <Icon name="i-heroicons-trash" class="w-4 h-4 mr-1" />
+              Delete
+            </Button>
           </div>
         </div>
         </CardContent>
