@@ -68,26 +68,28 @@
 
         <form @submit.prevent="saveStrategy" class="space-y-3 px-1">
           <!-- Strategy Name -->
-          <UFormField label="Strategy Name" class="mb-2">
-            <UInput 
+          <div class="space-y-2 mb-2">
+            <Label for="strategy-name">Strategy Name</Label>
+            <Input 
+              id="strategy-name"
               v-model="strategyForm.name" 
               placeholder="e.g., Momentum Breakout Strategy"
-              icon="i-heroicons-tag"
               autofocus
               required
-              size="sm"
             />
-          </UFormField>
+          </div>
 
           <!-- Description -->
-          <UFormField label="Description" class="mb-2">
+          <div class="space-y-2 mb-2">
+            <Label for="strategy-description">Description</Label>
             <UTextarea
+              id="strategy-description"
               v-model="strategyForm.description"
               placeholder="Describe your strategy's approach, entry/exit conditions, etc."
               :rows="2"
               size="sm"
             />
-          </UFormField>
+          </div>
 
           <!-- Asset Class - Multi-select Pills -->
           <div class="space-y-1.5">
@@ -114,26 +116,30 @@
 
           <!-- Risk Controls -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t dark:border-gray-700">
-            <UFormField label="Take Profit Target (%)" help="Percent gain that triggers profit-taking.">
-              <UInput 
+            <div class="space-y-2">
+              <Label for="take-profit">Take Profit Target (%)</Label>
+              <Input 
+                id="take-profit"
                 v-model.number="strategyForm.take_profit_percent" 
                 type="number" 
                 min="0" 
                 step="0.1" 
-                placeholder="e.g. 2" 
-                size="sm"
+                placeholder="e.g. 2"
               />
-            </UFormField>
-            <UFormField label="Stop Loss Limit (%)" help="Percent drawdown where Sparky exits the trade.">
-              <UInput 
+              <p class="text-xs text-muted-foreground">Percent gain that triggers profit-taking.</p>
+            </div>
+            <div class="space-y-2">
+              <Label for="stop-loss">Stop Loss Limit (%)</Label>
+              <Input 
+                id="stop-loss"
                 v-model.number="strategyForm.stop_loss_percent" 
                 type="number" 
                 min="0" 
                 step="0.1" 
-                placeholder="e.g. 1" 
-                size="sm"
+                placeholder="e.g. 1"
               />
-            </UFormField>
+              <p class="text-xs text-muted-foreground">Percent drawdown where Sparky exits the trade.</p>
+            </div>
           </div>
 
           <!-- Action Buttons -->
@@ -215,26 +221,28 @@
         <!-- Edit Form -->
         <form v-if="editingStrategyId === strategy.id" @submit.prevent="saveStrategy()" class="space-y-3 px-1">
           <!-- Strategy Name -->
-          <UFormField label="Strategy Name" class="mb-2">
-            <UInput 
+          <div class="space-y-2 mb-2">
+            <Label for="edit-strategy-name">Strategy Name</Label>
+            <Input 
+              id="edit-strategy-name"
               v-model="strategyForm.name" 
               placeholder="e.g., Momentum Breakout Strategy"
-              icon="i-heroicons-tag"
               autofocus
               required
-              size="sm"
             />
-          </UFormField>
+          </div>
 
           <!-- Description -->
-          <UFormField label="Description" class="mb-2">
+          <div class="space-y-2 mb-2">
+            <Label for="edit-strategy-description">Description</Label>
             <UTextarea
+              id="edit-strategy-description"
               v-model="strategyForm.description"
               placeholder="Describe your strategy's approach, entry/exit conditions, etc."
               :rows="2"
               size="sm"
             />
-          </UFormField>
+          </div>
 
           <!-- Asset Class - Multi-select Pills -->
           <div class="space-y-1.5">
