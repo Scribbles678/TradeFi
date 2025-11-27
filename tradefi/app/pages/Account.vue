@@ -771,6 +771,7 @@
               </Card>
             </div>
           </div>
+      </TabsContent>
 
       <!-- Webhook Tab -->
       <TabsContent value="webhook" class="space-y-6">
