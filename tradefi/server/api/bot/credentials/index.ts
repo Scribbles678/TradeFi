@@ -76,22 +76,58 @@ export default defineEventHandler(async (event) => {
   switch (method) {
     case 'GET': {
       // Only return production credentials (ignore practice/paper)
-      const { data, error } = await supabase
-        .from('bot_credentials')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('environment', 'production')
-        .order('label', { ascending: true })
+      try {
+        if (!user?.id) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Invalid user ID'
+          })
+        }
 
-      if (error) {
+        const { data, error } = await supabase
+          .from('bot_credentials')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('environment', 'production')
+          .order('label', { ascending: true })
+        
+        // Log for debugging in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Credentials query result:', {
+            userId: user.id,
+            dataCount: data?.length || 0,
+            error: error?.message || null
+          })
+        }
+
+        if (error) {
+          console.error('Database error loading credentials:', {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            userId: user.id
+          })
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to load bot credentials',
+            data: error.message
+          })
+        }
+
+        return { data: data || [] }
+      } catch (err: any) {
+        // Re-throw if it's already a createError
+        if (err.statusCode) {
+          throw err
+        }
+        console.error('Unexpected error in GET credentials:', err)
         throw createError({
           statusCode: 500,
-          statusMessage: 'Failed to load bot credentials',
-          data: error.message
+          statusMessage: 'Internal server error',
+          data: err.message
         })
       }
-
-      return { data }
     }
 
     case 'POST': {
