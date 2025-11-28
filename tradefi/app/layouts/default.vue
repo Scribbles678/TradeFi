@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Bell, Moon, Sun } from 'lucide-vue-next'
+import { Moon, Sun } from 'lucide-vue-next'
 
 const route = useRoute()
 const colorMode = useColorMode()
@@ -7,14 +7,37 @@ const colorMode = useColorMode()
 function getPageTitle() {
   const path = route.path
   
+  // Main pages
   if (path === '/') return 'Dashboard'
   if (path === '/performance') return 'Performance'
   if (path === '/trade-settings') return 'Trade Settings'
   if (path === '/strategies') return 'Strategies'
-  if (path === '/account') return 'Account'
   
-  // Fallback to capitalized route name
-  return path.substring(1).charAt(0).toUpperCase() + path.substring(2) || 'Page'
+  // Account pages
+  if (path === '/account') return 'Account Overview'
+  if (path === '/account/exchange-accounts') return 'Exchanges'
+  if (path === '/account/webhook') return 'Webhook'
+  if (path === '/account/subscription') return 'Subscription'
+  
+  // Fallback: try to get title from menu items
+  const { MenuItems } = useMenuItems()
+  const allMenuItems = [...MenuItems.value.navTrading, ...MenuItems.value.navAccount]
+  const menuItem = allMenuItems.find(item => item.url === path)
+  if (menuItem) {
+    return menuItem.title
+  }
+  
+  // Final fallback: capitalize route segments
+  const segments = path.split('/').filter(Boolean)
+  if (segments.length > 0) {
+    return segments.map(seg => 
+      seg.split('-').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ')
+    ).join(' > ')
+  }
+  
+  return 'Page'
 }
 
 function toggleColorMode() {
@@ -30,6 +53,7 @@ function toggleColorMode() {
   
   <!-- Main layout with template sidebar -->
   <div v-else class="bg-muted">
+    <Toaster />
     <SidebarProvider>
       <AppSidebar variant="inset" />
       
@@ -61,12 +85,7 @@ function toggleColorMode() {
             <Badge variant="success" class="text-xs">
               Connected
             </Badge>
-            <Button
-              variant="outline"
-              size="icon"
-            >
-              <Bell class="h-4 w-4" />
-            </Button>
+            <NotificationCenter />
             <Button
               variant="outline"
               size="icon"

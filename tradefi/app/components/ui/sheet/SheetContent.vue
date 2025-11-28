@@ -11,10 +11,11 @@ import {
 } from 'reka-ui'
 
 import SheetOverlay from './SheetOverlay.vue'
+import { cn } from '~/utils/cn'
 
 interface SheetContentProps extends DialogContentProps {
   class?: HTMLAttributes['class']
-  side?: 'top' | 'right' | 'bottom' | 'left'
+  side?: 'top' | 'right' | 'bottom' | 'left' | 'center'
 }
 
 defineOptions({
@@ -37,7 +38,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     <DialogContent
       data-slot="sheet-content"
       :class="cn(
-        'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+        'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-2xl border border-border transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
         side === 'right'
           && 'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm',
         side === 'left'
@@ -46,6 +47,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
           && 'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
         side === 'bottom'
           && 'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t',
+        side === 'center'
+          && 'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] h-auto max-h-[90vh] w-full max-w-lg border-2 border-border/50 rounded-lg bg-card shadow-2xl',
         props.class)"
       v-bind="{ ...forwarded, ...$attrs }"
     >

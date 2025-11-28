@@ -6,9 +6,6 @@
         <h1 class="text-3xl font-semibold text-foreground">Dashboard Overview</h1>
         <p class="text-muted-foreground text-sm mt-1">Real-time analytics across all trading bots</p>
       </div>
-      <Badge :variant="isConnected ? 'success' : 'error'" class="text-sm px-3 py-1">
-        {{ isConnected ? 'Connected' : 'Disconnected' }}
-      </Badge>
     </div>
 
     <!-- Real-Time Stats Overview -->
@@ -343,7 +340,6 @@ const assetClasses = [
 ];
 
 // State
-const isConnected = ref(true);
 const selectedAssetClass = ref<'all' | AssetClass>('all');
 const isLoading = ref(false);
 const openPositions = ref<Position[]>([]);
@@ -451,7 +447,6 @@ async function loadBalances() {
 // Load data
 async function loadData() {
   try {
-    isConnected.value = true;
     
     // Always load all data (no filtering)
     const assetFilter = undefined;
@@ -620,7 +615,6 @@ async function loadData() {
     todaysStats.value = stats;
   } catch (error) {
     console.error('Error loading data:', error);
-    isConnected.value = false;
   }
 }
 

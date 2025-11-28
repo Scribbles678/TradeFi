@@ -3,8 +3,10 @@ import {
   TrendingUp,
   Settings,
   BarChart3,
-  Key,
-  User
+  User,
+  Wallet,
+  Link2,
+  CreditCard
 } from 'lucide-vue-next'
 
 import { useRoute } from 'vue-router'
@@ -20,7 +22,7 @@ export const useMenuItems = () => {
       email: user.value?.email || 'user@example.com',
       avatar: user.value?.user_metadata?.avatar_url || ''
     },
-    navMain: [
+    navTrading: [
       {
         title: 'Dashboard',
         url: '/',
@@ -44,18 +46,32 @@ export const useMenuItems = () => {
         url: '/strategies',
         icon: BarChart3,
         isActive: route.path === '/strategies'
-      },
+      }
+    ],
+    navAccount: [
       {
-        title: 'API Keys',
-        url: '/api-keys',
-        icon: Key,
-        isActive: route.path === '/api-keys'
-      },
-      {
-        title: 'Account',
+        title: 'Overview',
         url: '/account',
         icon: User,
         isActive: route.path === '/account'
+      },
+      {
+        title: 'Exchanges',
+        url: '/account/exchange-accounts',
+        icon: Wallet,
+        isActive: route.path === '/account/exchange-accounts'
+      },
+      {
+        title: 'Webhook',
+        url: '/account/webhook',
+        icon: Link2,
+        isActive: route.path === '/account/webhook'
+      },
+      {
+        title: 'Subscription',
+        url: '/account/subscription',
+        icon: CreditCard,
+        isActive: route.path === '/account/subscription'
       }
     ]
   }))

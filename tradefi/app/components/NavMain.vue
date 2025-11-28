@@ -2,7 +2,7 @@
 import type { LucideIcon } from 'lucide-vue-next'
 import { ChevronRight } from 'lucide-vue-next'
 
-defineProps<{
+withDefaults(defineProps<{
   items: {
     title: string
     url: string
@@ -13,12 +13,15 @@ defineProps<{
       url: string
     }[]
   }[]
-}>()
+  label?: string
+}>(), {
+  label: 'Trading'
+})
 </script>
 
 <template>
   <SidebarGroup>
-    <SidebarGroupLabel>Trading</SidebarGroupLabel>
+    <SidebarGroupLabel>{{ label }}</SidebarGroupLabel>
     <SidebarMenu>
       <template
         v-for="item in items"

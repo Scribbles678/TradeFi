@@ -26,12 +26,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get user's API credentials from database
+    // Get user's API credentials from database (production only)
     const supabase = await serverSupabaseClient(event)
     const { data: credentials, error: credError } = await supabase
       .from('bot_credentials')
       .select('api_key, account_id, base_url')
       .eq('exchange', 'oanda')
+      .eq('environment', 'production')
+      .eq('user_id', user.id)
       .single()
 
     if (credError || !credentials) {

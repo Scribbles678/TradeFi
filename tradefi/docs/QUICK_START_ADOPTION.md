@@ -324,7 +324,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
       <div class="flex items-center gap-3 px-2 py-2">
         <div class="bg-background text-primary flex aspect-square size-8 items-center justify-center rounded-lg shrink-0">
           <img 
-            src="/Sparky.png" 
+            src="/Sparkyv2.png" 
             alt="TradeFI Logo" 
             class="h-6 w-6 object-contain"
           />

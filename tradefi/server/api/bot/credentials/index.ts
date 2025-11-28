@@ -29,10 +29,12 @@ export default defineEventHandler(async (event) => {
 
   switch (method) {
     case 'GET': {
+      // Only return production credentials (ignore practice/paper)
       const { data, error } = await supabase
         .from('bot_credentials')
         .select('*')
         .eq('user_id', user.id)
+        .eq('environment', 'production')
         .order('label', { ascending: true })
 
       if (error) {
@@ -58,12 +60,12 @@ export default defineEventHandler(async (event) => {
 
       const normalized = normalizePayload(payload)
 
-      // Query by exchange AND environment to support separate Live/Paper credentials
+      // Query by exchange (always use production environment)
       const { data: existing } = await supabase
         .from('bot_credentials')
         .select('*')
         .eq('exchange', normalized.exchange)
-        .eq('environment', normalized.fields.environment)
+        .eq('environment', 'production') // Always use production
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -130,12 +132,12 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Delete by exchange AND environment to support separate Live/Paper credentials
+      // Delete by exchange (always delete production environment)
       const { error } = await supabase
         .from('bot_credentials')
         .delete()
         .eq('exchange', exchange)
-        .eq('environment', environment)
+        .eq('environment', 'production') // Always delete production
         .eq('user_id', user.id)
 
       if (error) {
@@ -166,7 +168,7 @@ function normalizePayload(payload: BotCredentialPayload) {
     exchange: payload.exchange,
     fields: {
       label: payload.label || defaultLabel,
-      environment: payload.environment || 'production',
+      environment: 'production', // Always use production
       account_id: payload.accountId || null,
       api_key: payload.apiKey || null,
       api_secret: payload.apiSecret || null,

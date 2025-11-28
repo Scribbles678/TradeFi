@@ -6,9 +6,6 @@
         <h1 class="text-3xl font-semibold text-foreground">Performance Analytics</h1>
         <p class="text-muted-foreground text-sm mt-1">Deep dive into your trading performance</p>
       </div>
-      <Badge :variant="isConnected ? 'success' : 'error'" class="text-sm px-3 py-1">
-        {{ isConnected ? 'Connected' : 'Disconnected' }}
-      </Badge>
     </div>
 
     <!-- Performance Overview Cards -->
@@ -165,7 +162,6 @@ const assetClasses = [
 ]
 
 // State
-const isConnected = ref(true)
 const selectedAssetClass = ref<'all' | AssetClass>('all')
 const allTrades = ref<any[]>([])
 const todaysStats = ref({
