@@ -32,6 +32,14 @@ export default defineEventHandler(async (event) => {
       
       if (!sessionError && session?.user) {
         user = session.user
+        // Validate user has ID
+        if (!user?.id) {
+          console.error('Session user missing ID:', { user, session })
+          throw createError({
+            statusCode: 401,
+            statusMessage: 'Invalid session - user ID missing'
+          })
+        }
       } else {
         // Fallback: try getUser() (requires valid access token in header)
         const { data: { user: sessionUser }, error } = await clientSupabase.auth.getUser()
@@ -52,6 +60,14 @@ export default defineEventHandler(async (event) => {
           })
         }
         user = sessionUser
+        // Validate user has ID
+        if (!user?.id) {
+          console.error('getUser() returned user without ID:', { user })
+          throw createError({
+            statusCode: 401,
+            statusMessage: 'Invalid user - user ID missing'
+          })
+        }
       }
     } catch (err: any) {
       // Don't re-throw if it's already a createError
@@ -73,16 +89,24 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Validate user has an ID
+  if (!user.id) {
+    console.error('User object missing ID:', {
+      user: user,
+      hasId: !!user.id,
+      userId: user.id,
+      userKeys: Object.keys(user || {})
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid user ID - user object is missing ID property'
+    })
+  }
+
   switch (method) {
     case 'GET': {
       // Only return production credentials (ignore practice/paper)
       try {
-        if (!user?.id) {
-          throw createError({
-            statusCode: 400,
-            statusMessage: 'Invalid user ID'
-          })
-        }
 
         const { data, error } = await supabase
           .from('bot_credentials')

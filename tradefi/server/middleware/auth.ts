@@ -6,8 +6,13 @@ export default defineEventHandler(async (event) => {
     const user = await serverSupabaseUser(event)
     
     if (user) {
-      event.context.user = user
-      return
+      // Validate user has ID before setting
+      if (user.id) {
+        event.context.user = user
+        return
+      } else {
+        console.error('serverSupabaseUser returned user without ID:', { user })
+      }
     }
     
     // Fallback: try to get user from session using serverSupabaseClient
@@ -16,14 +21,14 @@ export default defineEventHandler(async (event) => {
     // Try getSession() first (reads from cookies)
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (!sessionError && session?.user) {
+    if (!sessionError && session?.user?.id) {
       event.context.user = session.user
       return
     }
     
     // Last resort: try getUser() (requires valid access token)
     const { data: { user: sessionUser }, error } = await supabase.auth.getUser()
-    if (!error && sessionUser) {
+    if (!error && sessionUser?.id) {
       event.context.user = sessionUser
     } else {
       // No user found - this is OK, some routes don't require auth
