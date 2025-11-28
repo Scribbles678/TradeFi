@@ -12,7 +12,7 @@
     </div>
 
     <!-- Performance Overview Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <!-- Total P&L -->
       <Card>
         <CardContent class="text-center space-y-6 h-full flex flex-col justify-center py-6">
@@ -27,19 +27,6 @@
             ]">
               {{ totalPnL >= 0 ? '+' : '' }}${{ totalPnL.toFixed(2) }}
             </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <!-- Win Rate -->
-      <Card>
-        <CardContent class="text-center space-y-6 h-full flex flex-col justify-center py-6">
-          <div class="flex items-center justify-center gap-2">
-            <Icon name="i-heroicons-trophy" class="w-5 h-5 text-muted-foreground" />
-            <p class="text-sm text-muted-foreground font-medium">Win Rate</p>
-          </div>
-          <div>
-            <p class="text-4xl font-bold text-green-400">{{ winRate.toFixed(1) }}%</p>
           </div>
         </CardContent>
       </Card>
@@ -71,6 +58,19 @@
       </Card>
     </div>
 
+    <!-- Win Rate by Strategy Chart - Full Width -->
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Win Rate by Strategy</CardTitle>
+          <CardDescription>Last 30 Days</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ChartsWinRateByStrategy :strategies="activeStrategies" />
+      </CardContent>
+    </Card>
+
     <!-- Strategy Performance Chart - Full Width -->
     <Card>
       <CardHeader>
@@ -99,41 +99,18 @@
       </CardContent>
     </Card>
 
-    <!-- Advanced Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Sharpe Ratio -->
-      <Card>
-        <CardContent class="text-center space-y-4 py-6">
-          <div class="flex items-center justify-center gap-2">
-            <Icon name="i-heroicons-chart-bar-square" class="w-5 h-5 text-muted-foreground" />
-            <p class="text-sm text-muted-foreground font-medium">Sharpe Ratio</p>
-          </div>
-          <p class="text-3xl font-bold text-foreground">{{ sharpeRatio.toFixed(2) }}</p>
-        </CardContent>
-      </Card>
-
-      <!-- Max Drawdown -->
-      <Card>
-        <CardContent class="text-center space-y-4 py-6">
-          <div class="flex items-center justify-center gap-2">
-            <Icon name="i-heroicons-arrow-trending-down" class="w-5 h-5 text-muted-foreground" />
-            <p class="text-sm text-muted-foreground font-medium">Max Drawdown</p>
-          </div>
-          <p class="text-3xl font-bold text-red-400">{{ maxDrawdown.toFixed(2) }}%</p>
-        </CardContent>
-      </Card>
-
-      <!-- Average Hold Time -->
-      <Card>
-        <CardContent class="text-center space-y-4 py-6">
-          <div class="flex items-center justify-center gap-2">
-            <Icon name="i-heroicons-clock" class="w-5 h-5 text-muted-foreground" />
-            <p class="text-sm text-muted-foreground font-medium">Avg Hold Time</p>
-          </div>
-          <p class="text-3xl font-bold text-foreground">{{ averageHoldTime }}</p>
-        </CardContent>
-      </Card>
-    </div>
+    <!-- Signals by Strategy Chart - Full Width -->
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Signals</CardTitle>
+          <CardDescription>Webhook Signal Frequency by Strategy - Last 30 Days</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ChartsSignalsByStrategy :strategies="activeStrategies" />
+      </CardContent>
+    </Card>
 
     <!-- Asset Class Performance -->
     <Card>
@@ -227,33 +204,6 @@ const recentTrades = computed(() => {
 const totalPnL = computed(() => todaysStats.value.todayPnL)
 const winRate = computed(() => todaysStats.value.winRate)
 const totalTrades = computed(() => todaysStats.value.totalTrades)
-
-// Advanced metrics (calculated from trades)
-const sharpeRatio = computed(() => {
-  // Simplified Sharpe ratio calculation
-  // In a real implementation, you'd calculate this from historical returns
-  return 1.2
-})
-
-const maxDrawdown = computed(() => {
-  // Simplified max drawdown calculation
-  return 5.8
-})
-
-const averageHoldTime = computed(() => {
-  // Calculate average hold time from trades
-  if (recentTrades.value.length === 0) return '0h'
-  
-  const totalHours = recentTrades.value.reduce((sum, trade) => {
-    const entryTime = new Date(trade.entry_time || trade.created_at)
-    const exitTime = new Date(trade.exit_time)
-    const hours = (exitTime.getTime() - entryTime.getTime()) / (1000 * 60 * 60)
-    return sum + hours
-  }, 0)
-  
-  const avgHours = totalHours / recentTrades.value.length
-  return avgHours < 24 ? `${avgHours.toFixed(1)}h` : `${(avgHours / 24).toFixed(1)}d`
-})
 
 const bestStrategy = computed(() => {
   // This would be calculated from actual strategy data
