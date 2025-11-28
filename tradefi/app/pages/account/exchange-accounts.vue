@@ -93,21 +93,6 @@
                 ${{ getBalance(card.key)?.toFixed(2) ?? '---' }}
               </p>
             </div>
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p class="text-muted-foreground">{{ getAvailableLabel(card.key) }}</p>
-                <p class="font-semibold text-foreground">${{ getAvailable(card.key)?.toFixed(2) ?? '---' }}</p>
-              </div>
-              <div>
-                <p class="text-muted-foreground">Unrealized P&L</p>
-                <p :class="[
-                  'font-semibold',
-                  (getUnrealizedPnl(card.key) ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                ]">
-                  {{ (getUnrealizedPnl(card.key) ?? 0) >= 0 ? '+' : '' }}${{ getUnrealizedPnl(card.key)?.toFixed(2) ?? '0.00' }}
-                </p>
-              </div>
-            </div>
             <div class="pt-2 border-t border-border">
               <p class="text-xs text-muted-foreground">Market: <span class="font-semibold text-foreground">{{ card.marketHours }}</span></p>
               <p v-if="!isCredentialConnected(card.key)" class="text-xs text-muted-foreground mt-1">
@@ -270,10 +255,16 @@
             :key="exchangeId"
           >
             <div 
-              v-if="balance && !balance.success && !balance.disabled && credentialForms[exchangeId]?.id"
+              v-if="balance && !balance.success && !balance.disabled && credentialForms[exchangeId]?.id && !balance.checking"
               class="text-sm text-foreground"
             >
-              <span class="font-semibold">{{ credentialTitle(exchangeId) }}:</span> {{ balance.error || 'Unknown error' }}
+              <span class="font-semibold">{{ credentialTitle(exchangeId) }}:</span> {{ balance.error || 'Connection failed' }}
+            </div>
+            <div 
+              v-if="balance && !balance.success && !balance.disabled && credentialForms[exchangeId]?.id && balance.checking"
+              class="text-sm text-muted-foreground"
+            >
+              <span class="font-semibold">{{ credentialTitle(exchangeId) }}:</span> Checking connection...
             </div>
           </template>
         </div>
@@ -676,6 +667,9 @@ const expandedCards = ref<Record<string, boolean>>({})
 
 // Balance state - now dynamic
 const exchangeBalances = ref<Record<string, ExchangeBalance>>({})
+// Track when credentials were last saved to suppress initial errors
+const credentialSaveTimes = ref<Record<string, number>>({})
+const CHECKING_GRACE_PERIOD = 5000 // 5 seconds grace period after saving credentials
 
 // Initialize balances for known exchanges
 function initializeBalance(exchangeId: string) {
@@ -940,7 +934,9 @@ const filteredExchanges = computed(() => {
 const hasErrors = computed(() => {
   return Object.entries(exchangeBalances.value).some(([exchangeId, balance]) => {
     // Only show errors for exchanges that have saved credentials
+    // Don't show errors if we're still checking (grace period)
     if (!balance || balance.disabled || !credentialForms[exchangeId]?.id) return false
+    if (balance.checking) return false // Don't show as error while checking
     return !balance.success
   })
 })
@@ -981,14 +977,39 @@ async function loadBalances() {
     
     // Load balances for all exchanges with credentials
     const balancePromises = exchangesWithCreds.map(async (exchangeId) => {
+      const now = Date.now()
+      const lastSaved = credentialSaveTimes.value[exchangeId] || 0
+      const isInGracePeriod = (now - lastSaved) < CHECKING_GRACE_PERIOD
+      
       try {
         const balance = await $fetch(`/api/balance/${exchangeId}`)
-        exchangeBalances.value[exchangeId] = balance as ExchangeBalance
-        return { exchangeId, balance }
+        exchangeBalances.value[exchangeId] = {
+          ...balance as ExchangeBalance,
+          checking: false,
+          lastChecked: now
+        }
+        return { exchangeId, balance: exchangeBalances.value[exchangeId] }
       } catch (e: any) {
         // Handle disabled exchanges (like tastytrade)
         const disabled = exchangeId === 'tastytrade'
-        exchangeBalances.value[exchangeId] = { success: false, error: e.message, disabled } as ExchangeBalance
+        
+        // If in grace period, show as "checking" instead of error
+        if (isInGracePeriod && !disabled) {
+          exchangeBalances.value[exchangeId] = {
+            success: false,
+            checking: true,
+            disabled,
+            lastChecked: now
+          } as ExchangeBalance
+        } else {
+          exchangeBalances.value[exchangeId] = {
+            success: false,
+            error: e.message,
+            disabled,
+            checking: false,
+            lastChecked: now
+          } as ExchangeBalance
+        }
         return { exchangeId, balance: exchangeBalances.value[exchangeId] }
       }
     })
@@ -1089,9 +1110,17 @@ async function saveCredential(key: string) {
 
     applyCredential(response.credential)
     
+    // Track when credentials were saved to suppress initial errors
+    credentialSaveTimes.value[key] = Date.now()
+    
     if (credentialForms[key]) {
       credentialForms[key].testStatus = null
       credentialForms[key].lastTested = null
+    }
+    
+    // Set checking state for this exchange
+    if (exchangeBalances.value[key]) {
+      exchangeBalances.value[key].checking = true
     }
     
     toast.add({
@@ -1100,6 +1129,11 @@ async function saveCredential(key: string) {
       color: 'success',
       icon: 'i-heroicons-check-circle'
     })
+    
+    // Trigger balance check after a short delay
+    setTimeout(() => {
+      loadBalances()
+    }, 1000)
   } catch (error) {
     console.error('Error saving credential:', error)
     toast.add({
