@@ -89,9 +89,15 @@
           <CardContent v-if="!expandedCards[card.key]" class="space-y-4">
             <div>
               <p class="text-sm text-muted-foreground">{{ getBalanceLabel(card.key) }}</p>
-              <p class="text-2xl font-bold mt-1 text-foreground">
-                ${{ getBalance(card.key)?.toFixed(2) ?? '---' }}
-              </p>
+              <div class="flex items-center gap-2 mt-1">
+                <div v-if="isBalanceLoading(card.key)" class="flex items-center gap-2">
+                  <Icon name="i-heroicons-arrow-path" class="w-5 h-5 text-muted-foreground animate-spin" />
+                  <span class="text-sm text-muted-foreground">Loading...</span>
+                </div>
+                <p v-else class="text-2xl font-bold text-foreground">
+                  ${{ getBalance(card.key)?.toFixed(2) ?? '---' }}
+                </p>
+              </div>
             </div>
             <div class="pt-2 border-t border-border">
               <p class="text-xs text-muted-foreground">Market: <span class="font-semibold text-foreground">{{ card.marketHours }}</span></p>
@@ -889,6 +895,18 @@ function getBalanceLabel(key: string): string {
 function getBalance(key: string): number | null {
   const data = getBalanceData(key)
   return data?.balance ?? null
+}
+
+function isBalanceLoading(key: string): boolean {
+  const data = getBalanceData(key)
+  if (!data) {
+    // If no data exists, check if we're in grace period
+    const now = Date.now()
+    const pageLoad = pageLoadTime.value || 0
+    return pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
+  }
+  // Check if balance is in checking state
+  return data.checking === true
 }
 
 function getAvailableLabel(key: string): string {
