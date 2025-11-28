@@ -255,7 +255,7 @@
             :key="exchangeId"
           >
             <div 
-              v-if="balance && !balance.success && !balance.disabled && credentialForms[exchangeId]?.id && !balance.checking"
+              v-if="balance && !balance.success && !balance.disabled && credentialForms[exchangeId]?.id && !balance.checking && !isInGracePeriod"
               class="text-sm text-foreground"
             >
               <span class="font-semibold">{{ credentialTitle(exchangeId) }}:</span> {{ balance.error || 'Connection failed' }}
@@ -678,7 +678,15 @@ const INITIAL_LOAD_GRACE_PERIOD = 20000 // 20 seconds grace period for initial p
 // Initialize balances for known exchanges
 function initializeBalance(exchangeId: string) {
   if (!exchangeBalances.value[exchangeId]) {
-    exchangeBalances.value[exchangeId] = { success: false, disabled: false }
+    const now = Date.now()
+    const pageLoad = pageLoadTime.value || 0
+    const isInInitialLoadGracePeriod = pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
+    
+    exchangeBalances.value[exchangeId] = { 
+      success: false, 
+      disabled: false,
+      checking: isInInitialLoadGracePeriod // Set to checking if in grace period
+    }
   }
   return exchangeBalances.value[exchangeId]
 }
@@ -935,13 +943,36 @@ const filteredExchanges = computed(() => {
   )
 })
 
+// Helper to check if we're in any grace period
+const isInGracePeriod = computed(() => {
+  const now = Date.now()
+  const pageLoad = pageLoadTime.value || 0
+  return pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
+})
+
 const hasErrors = computed(() => {
+  const now = Date.now()
+  const pageLoad = pageLoadTime.value || 0
+  const isInInitialLoadGracePeriod = pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
+  
   return Object.entries(exchangeBalances.value).some(([exchangeId, balance]) => {
     // Only show errors for exchanges that have saved credentials
-    // Don't show errors if we're still checking (grace period)
     if (!balance || balance.disabled || !credentialForms[exchangeId]?.id) return false
-    if (balance.checking) return false // Don't show as error while checking
-    return !balance.success
+    
+    // Don't show errors if we're still checking (grace period)
+    if (balance.checking) return false
+    
+    // Don't show errors during initial load grace period
+    if (isInInitialLoadGracePeriod) return false
+    
+    // Don't show errors if the last check was recent (within grace period)
+    if (balance.lastChecked) {
+      const timeSinceCheck = now - balance.lastChecked
+      if (timeSinceCheck < INITIAL_LOAD_GRACE_PERIOD) return false
+    }
+    
+    // Only show if there's an actual error (not just checking)
+    return !balance.success && balance.error && !balance.checking
   })
 })
 
@@ -1008,7 +1039,8 @@ async function loadBalances() {
             success: false,
             checking: true,
             disabled,
-            lastChecked: now
+            lastChecked: now,
+            error: undefined // Clear any previous error during grace period
           } as ExchangeBalance
         } else {
           exchangeBalances.value[exchangeId] = {
