@@ -24,9 +24,13 @@ CREATE TABLE IF NOT EXISTS public.trade_settings_exchange (
   auto_close_outside_window boolean DEFAULT true,
   max_open_positions integer DEFAULT 3,
   extra_settings jsonb DEFAULT '{}'::jsonb,
-  CONSTRAINT trade_settings_exchange_exchange_key UNIQUE (exchange)
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  CONSTRAINT trade_settings_exchange_exchange_key UNIQUE (exchange, user_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_trade_settings_exchange_exchange
   ON public.trade_settings_exchange (exchange);
+
+CREATE INDEX IF NOT EXISTS idx_trade_settings_exchange_user_id
+  ON public.trade_settings_exchange (user_id);
 

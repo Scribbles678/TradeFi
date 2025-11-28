@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.strategies (
   symbols text[],
   webhook_secret text,
   notes text,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   CONSTRAINT strategies_status_check CHECK (
     status = ANY (ARRAY['active', 'inactive', 'testing'])
   ),
@@ -39,6 +40,9 @@ CREATE INDEX IF NOT EXISTS idx_strategies_asset_class
 
 CREATE INDEX IF NOT EXISTS idx_strategies_name
   ON public.strategies (name);
+
+CREATE INDEX IF NOT EXISTS idx_strategies_user_id
+  ON public.strategies (user_id);
 
 -- Trigger maintained in Supabase:
 -- CREATE TRIGGER strategies_updated_at BEFORE UPDATE ON strategies

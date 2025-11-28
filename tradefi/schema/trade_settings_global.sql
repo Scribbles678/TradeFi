@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS public.trade_settings_global (
   allow_weekends boolean DEFAULT false,
   news_filter boolean DEFAULT false,
   notes text,
-  extra_settings jsonb DEFAULT '{}'::jsonb
+  extra_settings jsonb DEFAULT '{}'::jsonb,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_trade_settings_global_user_id
+  ON public.trade_settings_global (user_id);
 

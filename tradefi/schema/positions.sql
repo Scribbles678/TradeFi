@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.positions (
   asset_class public.asset_class_type,
   strategy_id uuid REFERENCES strategies(id),
   exchange text,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   CONSTRAINT positions_symbol_key UNIQUE (symbol)
 );
 
@@ -42,4 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_positions_asset_class
 
 CREATE INDEX IF NOT EXISTS idx_positions_strategy_id
   ON public.positions (strategy_id);
+
+CREATE INDEX IF NOT EXISTS idx_positions_user_id
+  ON public.positions (user_id);
 

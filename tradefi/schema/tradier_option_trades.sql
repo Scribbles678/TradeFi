@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS public.tradier_option_trades (
   pnl_usd numeric(18, 4),
   pnl_percent numeric(18, 4),
   config_snapshot jsonb DEFAULT '{}'::jsonb,
-  extra_metadata jsonb DEFAULT '{}'::jsonb
+  extra_metadata jsonb DEFAULT '{}'::jsonb,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_tradier_option_trades_status
@@ -37,4 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_tradier_option_trades_status
 
 CREATE INDEX IF NOT EXISTS idx_tradier_option_trades_option_symbol
   ON public.tradier_option_trades (option_symbol);
+
+CREATE INDEX IF NOT EXISTS idx_tradier_option_trades_user_id
+  ON public.tradier_option_trades (user_id);
 

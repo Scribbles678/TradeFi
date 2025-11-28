@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS public.trades (
   notes text,
   asset_class public.asset_class_type,
   strategy_id uuid REFERENCES strategies(id),
-  exchange text
+  exchange text,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_trades_exchange
@@ -46,4 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_trades_asset_class
 
 CREATE INDEX IF NOT EXISTS idx_trades_strategy_id
   ON public.trades (strategy_id);
+
+CREATE INDEX IF NOT EXISTS idx_trades_user_id
+  ON public.trades (user_id);
 

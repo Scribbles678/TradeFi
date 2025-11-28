@@ -1,5 +1,6 @@
 import { createError, getMethod, readBody, getQuery, defineEventHandler } from 'h3'
 import { useServiceSupabaseClient } from '~/utils/supabase'
+import { serverSupabaseClient } from '#supabase/server'
 
 type BotCredentialPayload = {
   id?: string | null
@@ -17,13 +18,58 @@ type BotCredentialPayload = {
 export default defineEventHandler(async (event) => {
   const method = getMethod(event)
   const supabase = useServiceSupabaseClient()
-  const user = event.context.user
-
-  // Require authentication
+  
+  // Get user from context (set by middleware) or directly from Supabase session
+  let user = event.context.user
+  
+  if (!user) {
+    // Fallback: get user directly from Supabase session
+    try {
+      const clientSupabase = await serverSupabaseClient(event)
+      
+      // First try to get the session (reads from cookies)
+      const { data: { session }, error: sessionError } = await clientSupabase.auth.getSession()
+      
+      if (!sessionError && session?.user) {
+        user = session.user
+      } else {
+        // Fallback: try getUser() (requires valid access token in header)
+        const { data: { user: sessionUser }, error } = await clientSupabase.auth.getUser()
+        
+        if (error || !sessionUser) {
+          // Log more details in development
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Failed to get user:', {
+              sessionError: sessionError?.message,
+              getUserError: error?.message,
+              hasSession: !!session,
+              cookies: event.node.req.headers.cookie ? 'present' : 'missing'
+            })
+          }
+          throw createError({
+            statusCode: 401,
+            statusMessage: 'Unauthorized - Please log in. Make sure you are logged in and your session is active.'
+          })
+        }
+        user = sessionUser
+      }
+    } catch (err: any) {
+      // Don't re-throw if it's already a createError
+      if (err.statusCode) {
+        throw err
+      }
+      console.error('Error getting user:', err)
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - Please log in'
+      })
+    }
+  }
+  
   if (!user) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'Unauthorized'
+      statusMessage: 'Unauthorized - Please log in'
     })
   }
 
