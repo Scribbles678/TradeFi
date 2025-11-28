@@ -477,6 +477,7 @@ interface BotCredentialRecord {
   extra_metadata?: Record<string, any>
   created_at: string
   updated_at: string
+  last_tested?: string | null
 }
 
 interface ExchangeBalance {
@@ -669,7 +670,10 @@ const expandedCards = ref<Record<string, boolean>>({})
 const exchangeBalances = ref<Record<string, ExchangeBalance>>({})
 // Track when credentials were last saved to suppress initial errors
 const credentialSaveTimes = ref<Record<string, number>>({})
+// Track when page first loaded to suppress initial errors
+const pageLoadTime = ref<number | null>(null)
 const CHECKING_GRACE_PERIOD = 5000 // 5 seconds grace period after saving credentials
+const INITIAL_LOAD_GRACE_PERIOD = 20000 // 20 seconds grace period for initial page load
 
 // Initialize balances for known exchanges
 function initializeBalance(exchangeId: string) {
@@ -979,7 +983,12 @@ async function loadBalances() {
     const balancePromises = exchangesWithCreds.map(async (exchangeId) => {
       const now = Date.now()
       const lastSaved = credentialSaveTimes.value[exchangeId] || 0
-      const isInGracePeriod = (now - lastSaved) < CHECKING_GRACE_PERIOD
+      const pageLoad = pageLoadTime.value || 0
+      
+      // Check if we're in grace period (either after saving credentials OR initial page load)
+      const isInSaveGracePeriod = (now - lastSaved) < CHECKING_GRACE_PERIOD
+      const isInInitialLoadGracePeriod = pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
+      const isInGracePeriod = isInSaveGracePeriod || isInInitialLoadGracePeriod
       
       try {
         const balance = await $fetch(`/api/balance/${exchangeId}`)
@@ -1079,6 +1088,12 @@ function applyCredential(record: BotCredentialRecord) {
   target.webhookSecret = record.webhook_secret || ''
   target.extraMetadata = record.extra_metadata || {}
   target.updatedAt = record.updated_at
+  target.lastTested = record.last_tested || null
+  // Set testStatus based on last_tested
+  if (record.last_tested) {
+    // If we have a last_tested timestamp, assume it was successful (we'll update on next test)
+    target.testStatus = 'success'
+  }
 }
 
 async function saveCredential(key: string) {
@@ -1161,9 +1176,25 @@ async function testConnection(key: string) {
     const response = await $fetch<ExchangeBalance>(apiEndpoint)
     
     if (response.success) {
+      const testTimestamp = new Date().toISOString()
+      
       if (credentialForms[key]) {
         credentialForms[key].testStatus = 'success'
-        credentialForms[key].lastTested = new Date().toISOString()
+        credentialForms[key].lastTested = testTimestamp
+      }
+      
+      // Save last_tested to database
+      try {
+        await $fetch('/api/bot/credentials', {
+          method: 'PATCH',
+          body: {
+            exchange: key,
+            last_tested: testTimestamp
+          }
+        })
+      } catch (err) {
+        console.error('Failed to save last_tested timestamp:', err)
+        // Don't fail the test if we can't save the timestamp
       }
       
       // Update balance data dynamically
@@ -1357,6 +1388,8 @@ async function refreshAll() {
 
 // Load on mount and refresh every 30 seconds
 onMounted(() => {
+  // Track when page first loads
+  pageLoadTime.value = Date.now()
   refreshAll()
   setInterval(loadBalances, 30000)
 })

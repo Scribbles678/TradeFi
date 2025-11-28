@@ -226,6 +226,59 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    case 'PATCH': {
+      // Update last_tested timestamp
+      const payload = await readBody<{ exchange: string; last_tested: string }>(event)
+      
+      if (!payload?.exchange) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Exchange is required'
+        })
+      }
+
+      // Find the credential
+      const { data: existing } = await supabase
+        .from('bot_credentials')
+        .select('*')
+        .eq('exchange', payload.exchange)
+        .eq('environment', 'production')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!existing) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Credential not found'
+        })
+      }
+
+      // Update last_tested
+      const { data, error } = await supabase
+        .from('bot_credentials')
+        .update({
+          last_tested: payload.last_tested || new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to update last_tested',
+          data: error.message
+        })
+      }
+
+      return {
+        success: true,
+        credential: data
+      }
+    }
+
     case 'DELETE': {
       const query = getQuery(event)
       const exchange = typeof query.exchange === 'string' ? query.exchange : null
