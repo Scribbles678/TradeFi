@@ -899,14 +899,26 @@ function getBalance(key: string): number | null {
 
 function isBalanceLoading(key: string): boolean {
   const data = getBalanceData(key)
+  const now = Date.now()
+  const pageLoad = pageLoadTime.value || 0
+  const isInInitialLoadGracePeriod = pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
+  
+  // If no data exists, check if we're in grace period
   if (!data) {
-    // If no data exists, check if we're in grace period
-    const now = Date.now()
-    const pageLoad = pageLoadTime.value || 0
-    return pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
+    return isInInitialLoadGracePeriod
   }
-  // Check if balance is in checking state
-  return data.checking === true
+  
+  // If balance is explicitly in checking state, show loading
+  if (data.checking === true) {
+    return true
+  }
+  
+  // If we're in grace period and balance hasn't loaded successfully yet, show loading
+  if (isInInitialLoadGracePeriod && !data.success && !data.balance) {
+    return true
+  }
+  
+  return false
 }
 
 function getAvailableLabel(key: string): string {
@@ -1028,15 +1040,27 @@ async function loadBalances() {
     // Get all exchanges that have credentials
     const exchangesWithCreds = Object.keys(credentialForms).filter(key => credentialForms[key]?.id)
     
+    const now = Date.now()
+    const pageLoad = pageLoadTime.value || 0
+    const isInInitialLoadGracePeriod = pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
+    
+    // Initialize all balances with checking state if in grace period
+    exchangesWithCreds.forEach(exchangeId => {
+      if (!exchangeBalances.value[exchangeId]) {
+        initializeBalance(exchangeId)
+      }
+      // Set checking state if in grace period
+      if (isInInitialLoadGracePeriod) {
+        exchangeBalances.value[exchangeId].checking = true
+      }
+    })
+    
     // Load balances for all exchanges with credentials
     const balancePromises = exchangesWithCreds.map(async (exchangeId) => {
-      const now = Date.now()
       const lastSaved = credentialSaveTimes.value[exchangeId] || 0
-      const pageLoad = pageLoadTime.value || 0
       
       // Check if we're in grace period (either after saving credentials OR initial page load)
       const isInSaveGracePeriod = (now - lastSaved) < CHECKING_GRACE_PERIOD
-      const isInInitialLoadGracePeriod = pageLoad > 0 && (now - pageLoad) < INITIAL_LOAD_GRACE_PERIOD
       const isInGracePeriod = isInSaveGracePeriod || isInInitialLoadGracePeriod
       
       try {
@@ -1437,10 +1461,28 @@ async function refreshAll() {
 }
 
 // Load on mount and refresh every 30 seconds
-onMounted(() => {
-  // Track when page first loads
+onMounted(async () => {
+  // Track when page first loads - set this FIRST before any async operations
   pageLoadTime.value = Date.now()
-  refreshAll()
+  
+  // Load credentials first to know which exchanges have credentials
+  await loadCredentials()
+  
+  // Initialize balances for exchanges with credentials and set checking state
+  Object.keys(credentialForms).forEach(key => {
+    if (credentialForms[key]?.id) {
+      if (!exchangeBalances.value[key]) {
+        initializeBalance(key)
+      }
+      // Set checking state during initial load grace period
+      if (exchangeBalances.value[key]) {
+        exchangeBalances.value[key].checking = true
+      }
+    }
+  })
+  
+  // Now load balances
+  await loadBalances()
   setInterval(loadBalances, 30000)
 })
 
