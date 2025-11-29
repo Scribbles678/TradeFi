@@ -20,9 +20,10 @@
           <div class="flex flex-col gap-3">
             <div class="flex flex-col md:flex-row gap-2 items-stretch">
               <Input
-                v-model="webhookUrl"
-                placeholder="https://your-sparky-bot/webhook"
-                class="flex-1"
+                :model-value="webhookUrl"
+                :readonly="true"
+                placeholder="Generating webhook URL..."
+                class="flex-1 bg-muted/50"
               />
               <Button
                 variant="outline"
@@ -33,24 +34,9 @@
                 Copy URL
               </Button>
             </div>
-            <div class="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                :disabled="savingCredential === 'webhook'"
-                @click="saveWebhookUrl"
-              >
-                <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
-                Save Webhook URL
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                @click="resetWebhookUrl"
-              >
-                <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-1" />
-                Reset to Default
-              </Button>
-            </div>
+            <p class="text-xs text-muted-foreground">
+              This URL points to your Sparky trading bot server. Use this in your TradingView alerts.
+            </p>
           </div>
         </div>
         <div>
@@ -62,11 +48,13 @@
                 :type="showWebhookSecret ? 'text' : 'password'"
                 placeholder="Enter webhook secret"
                 class="flex-1"
+                :disabled="loading"
               />
               <Button
                 variant="ghost"
                 size="sm"
                 @click="showWebhookSecret = !showWebhookSecret"
+                :disabled="loading"
               >
                 <Icon :name="showWebhookSecret ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="w-4 h-4 mr-1" />
                 {{ showWebhookSecret ? 'Hide' : 'Show' }}
@@ -77,21 +65,24 @@
                 variant="outline"
                 size="sm"
                 @click="copyWebhookSecret"
+                :disabled="!webhookSecret || loading"
               >
                 <Icon name="i-heroicons-clipboard-document" class="w-4 h-4 mr-1" />
                 Copy Secret
               </Button>
               <Button
                 size="sm"
-                :disabled="savingCredential === 'webhook'"
+                :disabled="saving || loading || !webhookSecret"
                 @click="saveWebhookSecret"
               >
-                <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
-                Save Secret
+                <Icon v-if="saving" name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
+                <Icon v-else name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                {{ saving ? 'Saving...' : 'Save Secret' }}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                :disabled="saving || loading"
                 @click="regenerateWebhookSecret"
               >
                 <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-1" />
@@ -100,15 +91,16 @@
               <Button
                 variant="ghost"
                 size="sm"
-                :disabled="deletingCredential === 'webhook'"
+                :disabled="deleting || loading || !webhookSecret"
                 @click="deleteWebhookSecret"
               >
-                <Icon name="i-heroicons-trash" class="w-4 h-4 mr-1" />
-                Clear
+                <Icon v-if="deleting" name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
+                <Icon v-else name="i-heroicons-trash" class="w-4 h-4 mr-1" />
+                {{ deleting ? 'Clearing...' : 'Clear' }}
               </Button>
             </div>
             <p class="text-xs text-muted-foreground">
-              ⚠️ Keep your secret secure. Never share it publicly.
+              ⚠️ Keep your secret secure. Never share it publicly. Regenerating will invalidate existing TradingView alerts.
             </p>
           </div>
         </div>
@@ -143,6 +135,7 @@
             <Button
               size="sm"
               @click="copyWebhookTemplate"
+              :disabled="!webhookSecret"
             >
               <Icon name="i-heroicons-clipboard-document" class="w-4 h-4 mr-1" />
               Copy Template
@@ -178,27 +171,38 @@
         </div>
       </CardHeader>
       <CardContent>
-        <div class="space-y-3">
+        <div v-if="loadingActivity" class="flex items-center justify-center py-8">
+          <Icon name="i-heroicons-arrow-path" class="w-5 h-5 text-muted-foreground animate-spin mr-2" />
+          <span class="text-sm text-muted-foreground">Loading activity...</span>
+        </div>
+        <div v-else class="space-y-3">
           <div class="flex items-center justify-between text-sm">
             <span class="text-muted-foreground">Last 24 hours:</span>
-            <span class="font-semibold text-foreground">{{ webhookActivity.received24h || '45' }} webhooks received</span>
+            <span class="font-semibold text-foreground">{{ webhookActivity.received24h || 0 }} webhooks received</span>
           </div>
           <div class="flex items-center justify-between text-sm">
             <span class="text-muted-foreground">Status:</span>
-            <Badge variant="success" class="text-xs">All successful ✓</Badge>
+            <Badge 
+              :variant="webhookActivity.status === 'success' ? 'success' : 'warning'" 
+              class="text-xs"
+            >
+              {{ webhookActivity.status === 'success' ? 'All successful ✓' : 'No activity' }}
+            </Badge>
           </div>
           <div class="flex items-center justify-between text-sm">
             <span class="text-muted-foreground">Last webhook:</span>
-            <span class="font-semibold text-foreground">{{ webhookActivity.lastReceived || '2 minutes ago' }}</span>
+            <span class="font-semibold text-foreground">{{ webhookActivity.lastReceived || 'Never' }}</span>
           </div>
           <div class="pt-2">
             <Button
               variant="outline"
               size="sm"
               @click="testWebhook"
+              :disabled="!webhookSecret || testing"
             >
-              <Icon name="i-heroicons-bolt" class="w-4 h-4 mr-1" />
-              Test Webhook
+              <Icon v-if="testing" name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
+              <Icon v-else name="i-heroicons-bolt" class="w-4 h-4 mr-1" />
+              {{ testing ? 'Testing...' : 'Test Webhook' }}
             </Button>
           </div>
         </div>
@@ -208,39 +212,216 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 interface WebhookActivity {
   received24h: number
   lastReceived: string
+  status: 'success' | 'warning' | 'error'
 }
 
-const runtimeConfig = useRuntimeConfig()
+interface BotCredentialRecord {
+  id: string
+  exchange: string
+  label: string
+  environment: string
+  webhook_secret?: string | null
+  created_at: string
+  updated_at: string
+}
+
 const toast = useToast()
 
-const webhookUrl = ref(runtimeConfig.public?.sparkyWebhookUrl || 'http://localhost:3000/webhook')
+// State
 const webhookSecret = ref('')
 const showWebhookSecret = ref(false)
-const savingCredential = ref<string | null>(null)
-const deletingCredential = ref<string | null>(null)
+const loading = ref(false)
+const saving = ref(false)
+const deleting = ref(false)
+const testing = ref(false)
+const loadingActivity = ref(false)
+const webhookCredentialId = ref<string | null>(null)
+
+// Webhook URL - points to Sparky bot server (Digital Ocean droplet)
+// Configured via SPARKY_WEBHOOK_URL environment variable
+// Falls back to http://134.122.8.18/webhook if env var is not set
+const runtimeConfig = useRuntimeConfig()
+const webhookUrl = computed(() => {
+  return runtimeConfig.public?.sparkyWebhookUrl || 'http://134.122.8.18/webhook'
+})
 
 const webhookTemplate = computed(() => `{
-  "secret": "${webhookSecret.value}",
+  "secret": "${webhookSecret.value || 'YOUR_SECRET_HERE'}",
   "exchange": "aster",
   "action": "buy",
   "symbol": "{{ticker}}"
 }`)
 
 const webhookActivity = ref<WebhookActivity>({
-  received24h: 45,
-  lastReceived: '2 minutes ago'
+  received24h: 0,
+  lastReceived: 'Never',
+  status: 'warning'
 })
 
+// Load webhook credentials from database
+async function loadWebhookCredentials() {
+  loading.value = true
+  try {
+    const response = await $fetch<{ data: BotCredentialRecord[] }>('/api/bot/credentials')
+    const webhookCred = response.data?.find(cred => cred.exchange === 'webhook')
+    
+    if (webhookCred) {
+      webhookCredentialId.value = webhookCred.id
+      webhookSecret.value = webhookCred.webhook_secret || ''
+    }
+  } catch (error) {
+    console.error('Failed to load webhook credentials', error)
+    toast.add({
+      title: 'Unable to load webhook configuration',
+      color: 'error',
+      description: 'Check your connection and try again.'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+// Save webhook secret to database
+async function saveWebhookSecret() {
+  if (!webhookSecret.value.trim()) {
+    toast.add({
+      title: 'Secret required',
+      color: 'error',
+      description: 'Please enter a webhook secret before saving.'
+    })
+    return
+  }
+
+  saving.value = true
+  try {
+    const payload = {
+      exchange: 'webhook',
+      webhookSecret: webhookSecret.value.trim(),
+      label: 'TradingView Webhook'
+    }
+
+    const response = await $fetch<{ success: boolean; credential: BotCredentialRecord }>('/api/bot/credentials', {
+      method: 'POST',
+      body: payload
+    })
+
+    if (response.success) {
+      webhookCredentialId.value = response.credential.id
+      toast.add({
+        title: '✓ Webhook secret saved',
+        description: 'Your webhook secret has been saved successfully.',
+        color: 'success',
+        icon: 'i-heroicons-check-circle'
+      })
+    }
+  } catch (error: any) {
+    console.error('Failed to save webhook secret:', error)
+    toast.add({
+      title: 'Failed to save',
+      color: 'error',
+      description: error?.data || error?.message || 'An error occurred while saving.'
+    })
+  } finally {
+    saving.value = false
+  }
+}
+
+// Regenerate webhook secret - generates new secret AND saves it
+async function regenerateWebhookSecret() {
+  if (!confirm('Are you sure you want to regenerate your webhook secret? This will invalidate your current TradingView alerts. You will need to update all your TradingView alerts with the new secret.')) {
+    return
+  }
+
+  saving.value = true
+  try {
+    // Generate a new secure random secret
+    const newSecret = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 18)}`
+    
+    // Update the local state
+    webhookSecret.value = newSecret
+    
+    // Save it to the database
+    const payload = {
+      exchange: 'webhook',
+      webhookSecret: newSecret,
+      label: 'TradingView Webhook'
+    }
+
+    const response = await $fetch<{ success: boolean; credential: BotCredentialRecord }>('/api/bot/credentials', {
+      method: 'POST',
+      body: payload
+    })
+
+    if (response.success) {
+      webhookCredentialId.value = response.credential.id
+      toast.add({
+        title: '✓ Secret regenerated',
+        description: 'A new webhook secret has been generated and saved. Update your TradingView alerts with the new secret.',
+        color: 'success',
+        icon: 'i-heroicons-check-circle'
+      })
+    }
+  } catch (error: any) {
+    console.error('Failed to regenerate webhook secret:', error)
+    toast.add({
+      title: 'Failed to regenerate',
+      color: 'error',
+      description: error?.data || error?.message || 'An error occurred while regenerating.'
+    })
+  } finally {
+    saving.value = false
+  }
+}
+
+// Delete webhook secret from database
+async function deleteWebhookSecret() {
+  if (!confirm('Clear the stored webhook secret? Existing TradingView alerts will stop working.')) {
+    return
+  }
+
+  deleting.value = true
+  try {
+    await $fetch('/api/bot/credentials', {
+      method: 'DELETE',
+      query: {
+        exchange: 'webhook',
+        environment: 'production'
+      }
+    })
+
+    webhookSecret.value = ''
+    webhookCredentialId.value = null
+    
+    toast.add({
+      title: 'Webhook secret cleared',
+      description: 'The webhook secret has been removed from your account.',
+      color: 'warning',
+      icon: 'i-heroicons-information-circle'
+    })
+  } catch (error: any) {
+    console.error('Failed to delete webhook secret:', error)
+    toast.add({
+      title: 'Failed to clear',
+      color: 'error',
+      description: error?.data || error?.message || 'An error occurred while clearing.'
+    })
+  } finally {
+    deleting.value = false
+  }
+}
+
+// Copy functions
 function copyWebhookUrl() {
   navigator.clipboard.writeText(webhookUrl.value).then(() => {
     toast.add({
       title: 'Webhook URL copied',
-      color: 'success'
+      color: 'success',
+      icon: 'i-heroicons-check-circle'
     })
   }).catch(() => {
     toast.add({
@@ -251,10 +432,19 @@ function copyWebhookUrl() {
 }
 
 function copyWebhookSecret() {
+  if (!webhookSecret.value) {
+    toast.add({
+      title: 'No secret to copy',
+      color: 'warning'
+    })
+    return
+  }
+  
   navigator.clipboard.writeText(webhookSecret.value).then(() => {
     toast.add({
       title: 'Webhook secret copied',
-      color: 'success'
+      color: 'success',
+      icon: 'i-heroicons-check-circle'
     })
   }).catch(() => {
     toast.add({
@@ -265,10 +455,20 @@ function copyWebhookSecret() {
 }
 
 function copyWebhookTemplate() {
+  if (!webhookSecret.value) {
+    toast.add({
+      title: 'Save secret first',
+      color: 'warning',
+      description: 'Please save a webhook secret before copying the template.'
+    })
+    return
+  }
+  
   navigator.clipboard.writeText(webhookTemplate.value).then(() => {
     toast.add({
       title: 'Template copied',
-      color: 'success'
+      color: 'success',
+      icon: 'i-heroicons-check-circle'
     })
   }).catch(() => {
     toast.add({
@@ -278,90 +478,84 @@ function copyWebhookTemplate() {
   })
 }
 
-function resetWebhookUrl() {
-  webhookUrl.value = runtimeConfig.public?.sparkyWebhookUrl || 'http://localhost:3000/webhook'
-}
-
-async function saveWebhookUrl() {
-  savingCredential.value = 'webhook'
-  try {
-    // Save webhook URL logic here
-    toast.add({
-      title: 'Webhook URL saved',
-      color: 'success'
-    })
-  } catch (error) {
-    toast.add({
-      title: 'Failed to save',
-      color: 'error'
-    })
-  } finally {
-    savingCredential.value = null
-  }
-}
-
-async function saveWebhookSecret() {
-  savingCredential.value = 'webhook'
-  try {
-    // Save webhook secret logic here
-    toast.add({
-      title: 'Webhook secret saved',
-      color: 'success'
-    })
-  } catch (error) {
-    toast.add({
-      title: 'Failed to save',
-      color: 'error'
-    })
-  } finally {
-    savingCredential.value = null
-  }
-}
-
-async function regenerateWebhookSecret() {
-  if (!confirm('Are you sure you want to regenerate your webhook secret? This will invalidate your current TradingView alerts.')) {
-    return
-  }
-  webhookSecret.value = crypto.randomUUID?.() || Math.random().toString(36).slice(2, 18)
-}
-
-async function deleteWebhookSecret() {
-  if (!confirm('Clear the stored webhook secret? Existing alerts will stop working.')) {
-    return
-  }
-  deletingCredential.value = 'webhook'
-  try {
-    // Delete webhook secret logic here
-    webhookSecret.value = ''
-    toast.add({
-      title: 'Webhook secret cleared',
-      color: 'warning'
-    })
-  } catch (error) {
-    toast.add({
-      title: 'Failed to clear',
-      color: 'error'
-    })
-  } finally {
-    deletingCredential.value = null
-  }
-}
-
+// Placeholder functions for future implementation
 function viewWebhookGuide() {
-  alert('View Webhook Guide - Coming Soon!')
+  toast.add({
+    title: 'Webhook Guide',
+    description: 'Full webhook setup guide coming soon!',
+    color: 'info'
+  })
 }
 
 function viewWebhookLogs() {
-  alert('View Webhook Logs - Coming Soon!')
+  toast.add({
+    title: 'Webhook Logs',
+    description: 'Webhook activity logs coming soon!',
+    color: 'info'
+  })
 }
 
-function testWebhook() {
-  alert('Test Webhook - Coming Soon!')
+async function testWebhook() {
+  if (!webhookSecret.value) {
+    toast.add({
+      title: 'Secret required',
+      color: 'warning',
+      description: 'Please save a webhook secret before testing.'
+    })
+    return
+  }
+
+  testing.value = true
+  try {
+    // TODO: Implement actual webhook test endpoint
+    // For now, just show a success message
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    toast.add({
+      title: 'Test webhook',
+      description: 'Webhook testing functionality coming soon!',
+      color: 'info'
+    })
+  } catch (error) {
+    toast.add({
+      title: 'Test failed',
+      color: 'error',
+      description: 'An error occurred while testing the webhook.'
+    })
+  } finally {
+    testing.value = false
+  }
 }
+
+// Load webhook activity (placeholder for future implementation)
+async function loadWebhookActivity() {
+  loadingActivity.value = true
+  try {
+    // TODO: Implement actual webhook activity endpoint
+    // For now, use default values
+    await new Promise(resolve => setTimeout(resolve, 500))
+    webhookActivity.value = {
+      received24h: 0,
+      lastReceived: 'Never',
+      status: 'warning'
+    }
+  } catch (error) {
+    console.error('Failed to load webhook activity:', error)
+  } finally {
+    loadingActivity.value = false
+  }
+}
+
+// Load on mount
+onMounted(async () => {
+  await Promise.all([
+    loadWebhookCredentials(),
+    loadWebhookActivity()
+  ])
+})
 
 definePageMeta({
   title: 'Webhook Configuration',
   description: 'Configure your webhook to receive TradingView alerts'
 })
 </script>
-

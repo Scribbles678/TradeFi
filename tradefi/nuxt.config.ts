@@ -80,7 +80,7 @@ export default defineNuxtConfig({
     public: {
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseKey: process.env.SUPABASE_ANON_KEY,
-      sparkyWebhookUrl: process.env.SPARKY_WEBHOOK_URL || 'http://localhost:3000/webhook'
+      sparkyWebhookUrl: process.env.SPARKY_WEBHOOK_URL || 'http://134.122.8.18/webhook'
     }
   },
 
