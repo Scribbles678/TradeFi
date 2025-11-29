@@ -74,47 +74,34 @@ export default defineEventHandler(async (event) => {
     return { invoices: [] }
   }
 
-  try {
-    const query = getQuery(event)
+  const query = getQuery(event)
   const limit = parseInt(query.limit as string) || 10
 
-  try {
-    // Fetch invoices from Stripe
-    const invoices = await stripe.invoices.list({
-      customer: subscription.stripe_customer_id,
-      limit,
-      expand: ['data.subscription']
-    })
+  // Fetch invoices from Stripe
+  const invoices = await stripe.invoices.list({
+    customer: subscription.stripe_customer_id,
+    limit,
+    expand: ['data.subscription']
+  })
 
-    // Format invoices for frontend
-    const formattedInvoices = invoices.data.map((invoice) => {
-      const subscription = invoice.subscription as Stripe.Subscription | null
-      const planName = subscription?.metadata?.plan || 'Unknown'
-      
-      return {
-        id: invoice.id,
-        number: invoice.number,
-        date: new Date(invoice.created * 1000).toISOString(),
-        plan: planName,
-        amount: (invoice.amount_paid / 100).toFixed(2),
-        status: invoice.status === 'paid' ? 'paid' : invoice.status === 'open' ? 'pending' : 'failed',
-        invoice_pdf: invoice.invoice_pdf,
-        hosted_invoice_url: invoice.hosted_invoice_url
-      }
-    })
-
-    return { invoices: formattedInvoices }
-  } catch (error: any) {
-    console.error('[Stripe Invoices] Error:', error)
-    if (error.statusCode) {
-      throw error
+  // Format invoices for frontend
+  const formattedInvoices = invoices.data.map((invoice) => {
+    const subscription = invoice.subscription as Stripe.Subscription | null
+    const planName = subscription?.metadata?.plan || 'Unknown'
+    
+    return {
+      id: invoice.id,
+      number: invoice.number,
+      date: new Date(invoice.created * 1000).toISOString(),
+      plan: planName,
+      amount: (invoice.amount_paid / 100).toFixed(2),
+      status: invoice.status === 'paid' ? 'paid' : invoice.status === 'open' ? 'pending' : 'failed',
+      invoice_pdf: invoice.invoice_pdf,
+      hosted_invoice_url: invoice.hosted_invoice_url
     }
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to fetch invoices',
-      data: error.message || 'Unknown error'
-    })
-  }
+  })
+
+  return { invoices: formattedInvoices }
   } catch (error: any) {
     console.error('[Stripe Invoices] Unhandled error:', error)
     if (error.statusCode) {
@@ -123,7 +110,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 500,
       statusMessage: 'Internal server error',
-      data: error.message
+      data: error.message || 'Unknown error'
     })
   }
 })
