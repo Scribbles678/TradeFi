@@ -78,6 +78,8 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+
+  try {
     const body = await readBody<{ return_url?: string }>(event)
     const returnUrl = body?.return_url || `${process.env.SITE_URL || 'http://localhost:3001'}/account/subscription`
 

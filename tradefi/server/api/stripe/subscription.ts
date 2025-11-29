@@ -18,15 +18,27 @@ export default defineEventHandler(async (event) => {
     // Validate Stripe is configured
     if (!config.stripeSecretKey) {
       console.error('[Stripe Subscription] Stripe secret key not configured')
+      console.error('[Stripe Subscription] Config keys:', Object.keys(config))
       throw createError({
         statusCode: 500,
-        statusMessage: 'Stripe is not configured'
+        statusMessage: 'Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.',
+        data: 'Missing STRIPE_SECRET_KEY'
       })
     }
 
-  const stripe = new Stripe(config.stripeSecretKey, {
-    apiVersion: '2024-11-20.acacia'
-  })
+    // Validate Stripe key format
+    if (!config.stripeSecretKey.startsWith('sk_')) {
+      console.error('[Stripe Subscription] Invalid Stripe secret key format')
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Invalid Stripe secret key format. Key should start with "sk_test_" or "sk_live_"',
+        data: 'Invalid key format'
+      })
+    }
+
+    const stripe = new Stripe(config.stripeSecretKey, {
+      apiVersion: '2024-11-20.acacia'
+    })
 
   // Get authenticated user
   const clientSupabase = await serverSupabaseClient(event)

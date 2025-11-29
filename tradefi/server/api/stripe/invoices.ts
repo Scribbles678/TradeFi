@@ -74,7 +74,8 @@ export default defineEventHandler(async (event) => {
     return { invoices: [] }
   }
 
-  const query = getQuery(event)
+  try {
+    const query = getQuery(event)
   const limit = parseInt(query.limit as string) || 10
 
   try {
