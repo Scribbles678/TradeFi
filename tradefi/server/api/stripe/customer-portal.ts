@@ -77,31 +77,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  try {
+  const body = await readBody<{ return_url?: string }>(event)
+  const returnUrl = body?.return_url || `${process.env.SITE_URL || 'http://localhost:3001'}/account/subscription`
 
-  try {
-    const body = await readBody<{ return_url?: string }>(event)
-    const returnUrl = body?.return_url || `${process.env.SITE_URL || 'http://localhost:3001'}/account/subscription`
+  // Create Customer Portal session
+  const portalSession = await stripe.billingPortal.sessions.create({
+    customer: subscription.stripe_customer_id,
+    return_url: returnUrl
+  })
 
-    // Create Customer Portal session
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
-      return_url: returnUrl
-    })
-
-    return {
-      url: portalSession.url
-    }
-  } catch (error: any) {
-    console.error('[Stripe Customer Portal] Error:', error)
-    if (error.statusCode) {
-      throw error
-    }
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to create customer portal session',
-      data: error.message || 'Unknown error'
-    })
+  return {
+    url: portalSession.url
   }
   } catch (error: any) {
     console.error('[Stripe Customer Portal] Unhandled error:', error)
@@ -111,7 +97,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 500,
       statusMessage: 'Internal server error',
-      data: error.message
+      data: error.message || 'Unknown error'
     })
   }
 })
