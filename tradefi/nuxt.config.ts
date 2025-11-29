@@ -77,10 +77,14 @@ export default defineNuxtConfig({
     sparkyBotUrl: process.env.SPARKY_BOT_URL || 'http://localhost:3000',
     // Supabase service role key stays server-side only
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    // Stripe (server-side only)
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     public: {
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseKey: process.env.SUPABASE_ANON_KEY,
-      sparkyWebhookUrl: process.env.SPARKY_WEBHOOK_URL || 'http://134.122.8.18/webhook'
+      sparkyWebhookUrl: process.env.SPARKY_WEBHOOK_URL || 'http://134.122.8.18/webhook',
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY
     }
   },
 

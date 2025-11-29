@@ -170,41 +170,97 @@
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent class="space-y-4">
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-3 gap-4 pb-4 border-b border-border">
+          <div class="text-center">
+            <p class="text-2xl font-bold text-foreground">{{ webhookActivity.received24h || 0 }}</p>
+            <p class="text-xs text-muted-foreground mt-1">Last 24 hours</p>
+          </div>
+          <div class="text-center">
+            <Badge 
+              :variant="webhookActivity.status === 'success' ? 'success' : webhookActivity.status === 'error' ? 'error' : 'warning'" 
+              class="text-xs"
+            >
+              {{ webhookActivity.status === 'success' ? 'All successful' : webhookActivity.status === 'error' ? 'Errors found' : 'No activity' }}
+            </Badge>
+            <p class="text-xs text-muted-foreground mt-1">Status</p>
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-semibold text-foreground">{{ webhookActivity.lastReceived || 'Never' }}</p>
+            <p class="text-xs text-muted-foreground mt-1">Last webhook</p>
+          </div>
+        </div>
+
+        <!-- Recent Webhook Requests Table -->
         <div v-if="loadingActivity" class="flex items-center justify-center py-8">
           <Icon name="i-heroicons-arrow-path" class="w-5 h-5 text-muted-foreground animate-spin mr-2" />
           <span class="text-sm text-muted-foreground">Loading activity...</span>
         </div>
-        <div v-else class="space-y-3">
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">Last 24 hours:</span>
-            <span class="font-semibold text-foreground">{{ webhookActivity.received24h || 0 }} webhooks received</span>
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">Status:</span>
-            <Badge 
-              :variant="webhookActivity.status === 'success' ? 'success' : 'warning'" 
-              class="text-xs"
+        <div v-else-if="recentWebhooks.length === 0" class="text-center py-8 text-muted-foreground">
+          <Icon name="i-heroicons-inbox" class="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p class="text-sm">No webhook activity yet</p>
+          <p class="text-xs mt-1">Webhook requests will appear here once received</p>
+        </div>
+        <Table v-else>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Time</TableHead>
+              <TableHead>Exchange</TableHead>
+              <TableHead>Action</TableHead>
+              <TableHead>Symbol</TableHead>
+              <TableHead class="text-right">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow 
+              v-for="webhook in recentWebhooks" 
+              :key="webhook.id"
+              class="hover:bg-accent"
             >
-              {{ webhookActivity.status === 'success' ? 'All successful ✓' : 'No activity' }}
-            </Badge>
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">Last webhook:</span>
-            <span class="font-semibold text-foreground">{{ webhookActivity.lastReceived || 'Never' }}</span>
-          </div>
-          <div class="pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              @click="testWebhook"
-              :disabled="!webhookSecret || testing"
-            >
-              <Icon v-if="testing" name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
-              <Icon v-else name="i-heroicons-bolt" class="w-4 h-4 mr-1" />
-              {{ testing ? 'Testing...' : 'Test Webhook' }}
-            </Button>
-          </div>
+              <TableCell class="text-sm text-muted-foreground">
+                {{ formatWebhookTime(webhook.created_at) }}
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline" class="text-xs">
+                  {{ webhook.exchange || 'unknown' }}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  :variant="webhook.action === 'buy' ? 'success' : webhook.action === 'sell' ? 'error' : 'outline'" 
+                  class="text-xs uppercase"
+                >
+                  {{ webhook.action || 'unknown' }}
+                </Badge>
+              </TableCell>
+              <TableCell class="font-mono font-semibold text-sm">
+                {{ webhook.symbol || '—' }}
+              </TableCell>
+              <TableCell class="text-right">
+                <Badge 
+                  :variant="webhook.status === 'processed' ? 'success' : webhook.status === 'failed' ? 'error' : webhook.status === 'rate_limited' ? 'warning' : 'outline'" 
+                  class="text-xs"
+                >
+                  {{ formatStatus(webhook.status) }}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+
+        <!-- Actions -->
+        <div class="flex gap-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            @click="testWebhook"
+            :disabled="!webhookSecret || testing"
+          >
+            <Icon v-if="testing" name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
+            <Icon v-else name="i-heroicons-bolt" class="w-4 h-4 mr-1" />
+            {{ testing ? 'Testing...' : 'Test Webhook' }}
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -218,6 +274,17 @@ interface WebhookActivity {
   received24h: number
   lastReceived: string
   status: 'success' | 'warning' | 'error'
+}
+
+interface WebhookRequest {
+  id: string
+  exchange: string
+  action: string
+  symbol: string
+  status: 'pending' | 'processed' | 'failed' | 'rate_limited'
+  created_at: string
+  processed_at?: string | null
+  error_message?: string | null
 }
 
 interface BotCredentialRecord {
@@ -241,6 +308,7 @@ const deleting = ref(false)
 const testing = ref(false)
 const loadingActivity = ref(false)
 const webhookCredentialId = ref<string | null>(null)
+const recentWebhooks = ref<WebhookRequest[]>([])
 
 // Webhook URL - points to Sparky bot server (Digital Ocean droplet)
 // Configured via SPARKY_WEBHOOK_URL environment variable
@@ -527,23 +595,76 @@ async function testWebhook() {
   }
 }
 
-// Load webhook activity (placeholder for future implementation)
+// Load webhook activity from database
 async function loadWebhookActivity() {
   loadingActivity.value = true
   try {
-    // TODO: Implement actual webhook activity endpoint
-    // For now, use default values
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // Fetch recent webhook requests (last 10)
+    const response = await $fetch<{ data: WebhookRequest[] }>('/api/webhook/activity', {
+      query: {
+        limit: 10
+      }
+    }).catch(() => ({ data: [] }))
+
+    recentWebhooks.value = response.data || []
+
+    // Calculate summary stats
+    const now = new Date()
+    const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const last24hCount = recentWebhooks.value.filter(w => new Date(w.created_at) >= last24h).length
+    
+    const lastWebhook = recentWebhooks.value[0]
+    const lastReceived = lastWebhook 
+      ? formatWebhookTime(lastWebhook.created_at)
+      : 'Never'
+
+    const hasErrors = recentWebhooks.value.some(w => w.status === 'failed' || w.status === 'rate_limited')
+    const status = hasErrors ? 'error' : recentWebhooks.value.length > 0 ? 'success' : 'warning'
+
+    webhookActivity.value = {
+      received24h: last24hCount,
+      lastReceived,
+      status
+    }
+  } catch (error) {
+    console.error('Failed to load webhook activity:', error)
     webhookActivity.value = {
       received24h: 0,
       lastReceived: 'Never',
       status: 'warning'
     }
-  } catch (error) {
-    console.error('Failed to load webhook activity:', error)
+    recentWebhooks.value = []
   } finally {
     loadingActivity.value = false
   }
+}
+
+// Format webhook time
+function formatWebhookTime(timestamp: string): string {
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+// Format status for display
+function formatStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    'processed': 'Processed',
+    'pending': 'Pending',
+    'failed': 'Failed',
+    'rate_limited': 'Rate Limited'
+  }
+  return statusMap[status] || status
 }
 
 // Load on mount

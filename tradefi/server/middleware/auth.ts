@@ -6,12 +6,20 @@ export default defineEventHandler(async (event) => {
     const user = await serverSupabaseUser(event)
     
     if (user) {
-      // Validate user has ID before setting
-      if (user.id) {
-        event.context.user = user
+      // Normalize user ID - JWT tokens use 'sub' field, database users use 'id'
+      const userId = (user as any).id || (user as any).sub
+      
+      if (userId) {
+        // Normalize user object to always have 'id' field
+        event.context.user = {
+          ...user,
+          id: userId
+        }
         return
       } else {
-        console.error('serverSupabaseUser returned user without ID:', { user })
+        if (process.env.NODE_ENV === 'development') {
+          console.error('serverSupabaseUser returned user without ID or sub:', { user })
+        }
       }
     }
     
@@ -21,15 +29,29 @@ export default defineEventHandler(async (event) => {
     // Try getSession() first (reads from cookies)
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (!sessionError && session?.user?.id) {
-      event.context.user = session.user
-      return
+    if (!sessionError && session?.user) {
+      const userId = session.user.id || (session.user as any).sub
+      if (userId) {
+        event.context.user = {
+          ...session.user,
+          id: userId
+        }
+        return
+      }
     }
     
     // Last resort: try getUser() (requires valid access token)
     const { data: { user: sessionUser }, error } = await supabase.auth.getUser()
-    if (!error && sessionUser?.id) {
-      event.context.user = sessionUser
+    if (!error && sessionUser) {
+      const userId = sessionUser.id || (sessionUser as any).sub
+      if (userId) {
+        event.context.user = {
+          ...sessionUser,
+          id: userId
+        }
+      } else {
+        event.context.user = null
+      }
     } else {
       // No user found - this is OK, some routes don't require auth
       event.context.user = null

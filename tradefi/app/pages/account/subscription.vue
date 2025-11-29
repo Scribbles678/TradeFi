@@ -149,9 +149,11 @@
                 :variant="subscription.plan === 'Free' ? 'default' : 'outline'"
                 size="sm"
                 class="w-full mt-4"
+                :disabled="loading"
                 @click="changePlan('Basic')"
               >
-                {{ subscription.plan === 'Free' ? 'Signup' : subscription.plan === 'Premium' || subscription.plan === 'Pro' ? 'Downgrade' : 'Select' }}
+                <Icon v-if="loading" name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
+                {{ subscription.plan === 'Free' ? 'Subscribe' : subscription.plan === 'Premium' || subscription.plan === 'Pro' ? 'Downgrade' : 'Select' }}
               </Button>
               <Button
                 v-else
@@ -205,9 +207,11 @@
                 v-if="subscription.plan !== 'Premium'"
                 size="sm"
                 class="w-full mt-4 bg-background text-foreground hover:bg-background/90 border border-border"
+                :disabled="loading"
                 @click="changePlan('Premium')"
               >
-                {{ subscription.plan === 'Free' || subscription.plan === 'Basic' ? 'Signup' : 'Downgrade' }}
+                <Icon v-if="loading" name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
+                {{ subscription.plan === 'Free' || subscription.plan === 'Basic' ? 'Subscribe' : 'Downgrade' }}
               </Button>
               <Button
                 v-else
@@ -273,8 +277,10 @@
                 v-if="subscription.plan !== 'Pro'"
                 size="sm"
                 class="w-full mt-4"
+                :disabled="loading"
                 @click="changePlan('Pro')"
               >
+                <Icon v-if="loading" name="i-heroicons-arrow-path" class="w-4 h-4 mr-1 animate-spin" />
                 {{ subscription.plan === 'Free' || subscription.plan === 'Basic' || subscription.plan === 'Premium' ? 'Upgrade' : 'Select' }}
               </Button>
               <Button
@@ -403,7 +409,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 interface Subscription {
   plan: string
@@ -411,6 +417,10 @@ interface Subscription {
   cost: string
   nextBilling: string
   paymentMethod?: string
+  stripe_customer_id?: string
+  stripe_subscription_id?: string
+  current_period_end?: string
+  cancel_at_period_end?: boolean
 }
 
 interface BillingInvoice {
@@ -421,52 +431,179 @@ interface BillingInvoice {
   status: 'paid' | 'pending'
 }
 
+const toast = useToast()
+const loading = ref(false)
 const subscription = ref<Subscription>({
-  plan: 'Premium',
+  plan: 'Free',
   status: 'active',
-  cost: '39.00',
-  nextBilling: 'Mar 15, 2024',
-  paymentMethod: '•••• •••• •••• 4242'
+  cost: '0.00',
+  nextBilling: '—',
+  paymentMethod: undefined
 })
 
-const billingHistory = ref<BillingInvoice[]>([
-  { id: '1', date: 'Feb 15, 2024', plan: 'Pro', amount: '59.00', status: 'paid' },
-  { id: '2', date: 'Jan 15, 2024', plan: 'Pro', amount: '59.00', status: 'paid' },
-  { id: '3', date: 'Dec 15, 2023', plan: 'Basic', amount: '19.00', status: 'paid' }
-])
+const billingHistory = ref<BillingInvoice[]>([])
 
-function changePlan(plan: string) {
-  if (!confirm(`Are you sure you want to change to the ${plan} plan?`)) {
-    return
-  }
-  subscription.value.plan = plan
-  if (plan === 'Free') {
-    subscription.value.cost = '0.00'
-  } else if (plan === 'Basic') {
-    subscription.value.cost = '19.00'
-  } else if (plan === 'Premium') {
-    subscription.value.cost = '39.00'
-  } else if (plan === 'Pro') {
-    subscription.value.cost = '59.00'
-  }
-  alert(`Plan changed to ${plan} - Coming Soon! (This is a placeholder)`)
+// Plan pricing map
+const planPricing: Record<string, string> = {
+  'Free': '0.00',
+  'Basic': '19.00',
+  'Premium': '39.00',
+  'Pro': '59.00'
 }
 
-function manageSubscription() {
-  alert('Manage Subscription - Coming Soon!')
+// Load subscription from database
+async function loadSubscription() {
+  loading.value = true
+  try {
+    const response = await $fetch<{ subscription: Subscription }>('/api/stripe/subscription')
+    
+    if (response.subscription) {
+      const sub = response.subscription
+      subscription.value = {
+        plan: sub.plan || 'Free',
+        status: sub.status || 'active',
+        cost: planPricing[sub.plan || 'Free'] || '0.00',
+        nextBilling: sub.current_period_end 
+          ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '—',
+        paymentMethod: '•••• •••• •••• 4242', // TODO: Get from Stripe
+        stripe_customer_id: sub.stripe_customer_id,
+        stripe_subscription_id: sub.stripe_subscription_id,
+        current_period_end: sub.current_period_end,
+        cancel_at_period_end: sub.cancel_at_period_end
+      }
+    }
+  } catch (error: any) {
+    console.error('Failed to load subscription:', error)
+    // Default to Free plan if error
+    subscription.value = {
+      plan: 'Free',
+      status: 'active',
+      cost: '0.00',
+      nextBilling: '—'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// Create checkout session and redirect to Stripe
+async function changePlan(plan: string) {
+  if (plan === 'Free') {
+    // Downgrade to Free - cancel subscription
+    if (!confirm(`Are you sure you want to cancel your subscription and downgrade to Free?`)) {
+      return
+    }
+    
+    try {
+      await $fetch('/api/stripe/subscription', {
+        method: 'DELETE'
+      })
+      
+      toast.add({
+        title: 'Subscription canceled',
+        description: 'Your subscription has been canceled. You now have Free plan access.',
+        color: 'success',
+        icon: 'i-heroicons-check-circle'
+      })
+      
+      await loadSubscription()
+    } catch (error: any) {
+      toast.add({
+        title: 'Failed to cancel subscription',
+        description: error?.data || error?.message || 'An error occurred',
+        color: 'error'
+      })
+    }
+    return
+  }
+
+  if (plan === subscription.value.plan) {
+    return // Already on this plan
+  }
+
+  loading.value = true
+  try {
+    const response = await $fetch<{ url: string }>('/api/stripe/create-checkout', {
+      method: 'POST',
+      body: { plan }
+    })
+
+    if (response.url) {
+      // Redirect to Stripe Checkout
+      window.location.href = response.url
+    }
+  } catch (error: any) {
+    console.error('Failed to create checkout session:', error)
+    toast.add({
+      title: 'Failed to start checkout',
+      description: error?.data || error?.message || 'An error occurred while creating the checkout session.',
+      color: 'error'
+    })
+    loading.value = false
+  }
+}
+
+async function manageSubscription() {
+  // Open Stripe Customer Portal
+  // TODO: Implement Stripe Customer Portal
+  toast.add({
+    title: 'Manage Subscription',
+    description: 'Stripe Customer Portal coming soon!',
+    color: 'info'
+  })
 }
 
 function viewInvoices() {
-  alert('View Invoices - Coming Soon!')
+  // TODO: Fetch invoices from Stripe
+  toast.add({
+    title: 'View Invoices',
+    description: 'Invoice management coming soon!',
+    color: 'info'
+  })
 }
 
 function downloadInvoice(invoiceId: string) {
-  alert(`Download Invoice ${invoiceId} - Coming Soon!`)
+  // TODO: Download invoice from Stripe
+  toast.add({
+    title: 'Download Invoice',
+    description: `Invoice ${invoiceId} download coming soon!`,
+    color: 'info'
+  })
 }
 
 function viewAllInvoices() {
-  alert('View All Invoices - Coming Soon!')
+  viewInvoices()
 }
+
+// Handle success/cancel redirects from Stripe
+onMounted(async () => {
+  const route = useRoute()
+  
+  // Check for success/cancel query params
+  if (route.query.success === 'true') {
+    toast.add({
+      title: 'Payment successful!',
+      description: 'Your subscription has been activated.',
+      color: 'success',
+      icon: 'i-heroicons-check-circle'
+    })
+    // Remove query params
+    await navigateTo('/account/subscription', { replace: true })
+    await loadSubscription()
+  } else if (route.query.canceled === 'true') {
+    toast.add({
+      title: 'Checkout canceled',
+      description: 'Your subscription was not changed.',
+      color: 'warning'
+    })
+    // Remove query params
+    await navigateTo('/account/subscription', { replace: true })
+  } else {
+    // Normal load
+    await loadSubscription()
+  }
+})
 
 definePageMeta({
   title: 'Subscription',
