@@ -10,17 +10,19 @@ import { serverSupabaseClient } from '#supabase/server'
  * DELETE: Cancel subscription immediately
  */
 export default defineEventHandler(async (event) => {
-  const method = getMethod(event)
-  const config = useRuntimeConfig()
-  const supabase = useServiceSupabaseClient()
+  try {
+    const method = getMethod(event)
+    const config = useRuntimeConfig()
+    const supabase = useServiceSupabaseClient()
 
-  // Validate Stripe is configured
-  if (!config.stripeSecretKey) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Stripe is not configured'
-    })
-  }
+    // Validate Stripe is configured
+    if (!config.stripeSecretKey) {
+      console.error('[Stripe Subscription] Stripe secret key not configured')
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Stripe is not configured'
+      })
+    }
 
   const stripe = new Stripe(config.stripeSecretKey, {
     apiVersion: '2024-11-20.acacia'
@@ -79,26 +81,46 @@ export default defineEventHandler(async (event) => {
       if (subscription.stripe_customer_id) {
         try {
           const customer = await stripe.customers.retrieve(subscription.stripe_customer_id)
-          if (customer && !customer.deleted) {
-            // Get default payment method
-            const paymentMethods = await stripe.paymentMethods.list({
-              customer: subscription.stripe_customer_id,
-              type: 'card'
-            })
+          if (customer && !customer.deleted && typeof customer === 'object' && 'invoice_settings' in customer) {
+            // Try to get default payment method from customer's invoice settings
+            const defaultPaymentMethodId = (customer as Stripe.Customer).invoice_settings?.default_payment_method
             
-            if (paymentMethods.data.length > 0) {
-              const pm = paymentMethods.data[0]
-              paymentMethod = {
-                brand: pm.card?.brand || 'card',
-                last4: pm.card?.last4 || '****',
-                exp_month: pm.card?.exp_month,
-                exp_year: pm.card?.exp_year
+            if (defaultPaymentMethodId && typeof defaultPaymentMethodId === 'string') {
+              const pm = await stripe.paymentMethods.retrieve(defaultPaymentMethodId)
+              if (pm && pm.card) {
+                paymentMethod = {
+                  brand: pm.card.brand || 'card',
+                  last4: pm.card.last4 || '****',
+                  exp_month: pm.card.exp_month,
+                  exp_year: pm.card.exp_year
+                }
+              }
+            } else if (subscription.stripe_subscription_id) {
+              // Fallback: Get payment method from subscription
+              try {
+                const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)
+                const defaultPaymentMethodId = stripeSubscription.default_payment_method
+                
+                if (defaultPaymentMethodId && typeof defaultPaymentMethodId === 'string') {
+                  const pm = await stripe.paymentMethods.retrieve(defaultPaymentMethodId)
+                  if (pm && pm.card) {
+                    paymentMethod = {
+                      brand: pm.card.brand || 'card',
+                      last4: pm.card.last4 || '****',
+                      exp_month: pm.card.exp_month,
+                      exp_year: pm.card.exp_year
+                    }
+                  }
+                }
+              } catch (subError) {
+                // Subscription might not exist yet, ignore
+                console.error('Error fetching payment method from subscription:', subError)
               }
             }
           }
-        } catch (stripeError) {
-          console.error('Error fetching payment method:', stripeError)
-          // Don't fail if payment method fetch fails
+        } catch (stripeError: any) {
+          console.error('Error fetching payment method:', stripeError?.message || stripeError)
+          // Don't fail if payment method fetch fails - it's optional
         }
       }
 
@@ -255,6 +277,17 @@ export default defineEventHandler(async (event) => {
         statusCode: 405,
         statusMessage: 'Method Not Allowed'
       })
+  }
+  } catch (error: any) {
+    console.error('[Stripe Subscription] Unhandled error:', error)
+    if (error.statusCode) {
+      throw error
+    }
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Internal server error',
+      data: error.message
+    })
   }
 })
 

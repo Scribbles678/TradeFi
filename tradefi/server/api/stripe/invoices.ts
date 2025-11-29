@@ -8,25 +8,27 @@ import { serverSupabaseClient } from '#supabase/server'
  * GET /api/stripe/invoices?limit=10
  */
 export default defineEventHandler(async (event) => {
-  const method = event.node.req.method
-  
-  if (method !== 'GET') {
-    throw createError({
-      statusCode: 405,
-      statusMessage: 'Method Not Allowed'
-    })
-  }
+  try {
+    const method = event.node.req.method
+    
+    if (method !== 'GET') {
+      throw createError({
+        statusCode: 405,
+        statusMessage: 'Method Not Allowed'
+      })
+    }
 
-  const config = useRuntimeConfig()
-  const supabase = useServiceSupabaseClient()
+    const config = useRuntimeConfig()
+    const supabase = useServiceSupabaseClient()
 
-  // Validate Stripe is configured
-  if (!config.stripeSecretKey) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Stripe is not configured'
-    })
-  }
+    // Validate Stripe is configured
+    if (!config.stripeSecretKey) {
+      console.error('[Stripe Invoices] Stripe secret key not configured')
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Stripe is not configured'
+      })
+    }
 
   const stripe = new Stripe(config.stripeSecretKey, {
     apiVersion: '2024-11-20.acacia'
@@ -102,10 +104,24 @@ export default defineEventHandler(async (event) => {
 
     return { invoices: formattedInvoices }
   } catch (error: any) {
-    console.error('Error fetching invoices:', error)
+    console.error('[Stripe Invoices] Error:', error)
+    if (error.statusCode) {
+      throw error
+    }
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to fetch invoices',
+      data: error.message || 'Unknown error'
+    })
+  }
+  } catch (error: any) {
+    console.error('[Stripe Invoices] Unhandled error:', error)
+    if (error.statusCode) {
+      throw error
+    }
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Internal server error',
       data: error.message
     })
   }

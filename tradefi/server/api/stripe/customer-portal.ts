@@ -9,25 +9,27 @@ import { serverSupabaseClient } from '#supabase/server'
  * Body: { return_url: string }
  */
 export default defineEventHandler(async (event) => {
-  const method = event.node.req.method
-  
-  if (method !== 'POST') {
-    throw createError({
-      statusCode: 405,
-      statusMessage: 'Method Not Allowed'
-    })
-  }
+  try {
+    const method = event.node.req.method
+    
+    if (method !== 'POST') {
+      throw createError({
+        statusCode: 405,
+        statusMessage: 'Method Not Allowed'
+      })
+    }
 
-  const config = useRuntimeConfig()
-  const supabase = useServiceSupabaseClient()
+    const config = useRuntimeConfig()
+    const supabase = useServiceSupabaseClient()
 
-  // Validate Stripe is configured
-  if (!config.stripeSecretKey) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Stripe is not configured'
-    })
-  }
+    // Validate Stripe is configured
+    if (!config.stripeSecretKey) {
+      console.error('[Stripe Customer Portal] Stripe secret key not configured')
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Stripe is not configured'
+      })
+    }
 
   const stripe = new Stripe(config.stripeSecretKey, {
     apiVersion: '2024-11-20.acacia'
@@ -89,10 +91,24 @@ export default defineEventHandler(async (event) => {
       url: portalSession.url
     }
   } catch (error: any) {
-    console.error('Error creating customer portal session:', error)
+    console.error('[Stripe Customer Portal] Error:', error)
+    if (error.statusCode) {
+      throw error
+    }
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to create customer portal session',
+      data: error.message || 'Unknown error'
+    })
+  }
+  } catch (error: any) {
+    console.error('[Stripe Customer Portal] Unhandled error:', error)
+    if (error.statusCode) {
+      throw error
+    }
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Internal server error',
       data: error.message
     })
   }

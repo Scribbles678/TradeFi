@@ -85,9 +85,30 @@ export default defineEventHandler(async (event) => {
     // This allows different Price IDs for test/live mode
     const priceIdFromEnv = process.env[`STRIPE_PRICE_ID_${plan.toUpperCase()}`]
     
-    // Option 2: Look up product by name/metadata (alternative approach)
+    // Validate Price ID format (should start with 'price_')
     let priceId = priceIdFromEnv
+    if (priceIdFromEnv && !priceIdFromEnv.startsWith('price_')) {
+      console.warn(`[Stripe Create Checkout] STRIPE_PRICE_ID_${plan.toUpperCase()} appears to be a Product ID (${priceIdFromEnv}), not a Price ID. Looking up price...`)
+      // If it's a product ID, try to find the price
+      try {
+        const prices = await stripe.prices.list({
+          product: priceIdFromEnv,
+          active: true,
+          limit: 1
+        })
+        if (prices.data.length > 0) {
+          priceId = prices.data[0].id
+          console.log(`[Stripe Create Checkout] Found price ${priceId} for product ${priceIdFromEnv}`)
+        } else {
+          priceId = null // Will trigger lookup by name
+        }
+      } catch (productError) {
+        console.error(`[Stripe Create Checkout] Error looking up price for product ${priceIdFromEnv}:`, productError)
+        priceId = null // Will trigger lookup by name
+      }
+    }
 
+    // Option 2: Look up product by name/metadata (alternative approach)
     if (!priceId) {
       // Try to find product by name in Stripe
       try {
@@ -214,6 +235,7 @@ export default defineEventHandler(async (event) => {
       url: checkoutSession.url
     }
   } catch (error: any) {
+    console.error('[Stripe Create Checkout] Error:', error)
     if (error.statusCode) {
       throw error
     }
@@ -221,7 +243,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to create checkout session',
-      data: error.message
+      data: error.message || 'Unknown error'
     })
   }
 })
