@@ -63,11 +63,49 @@ export default defineEventHandler(async (event) => {
         })
       }
 
+      // If no subscription, return Free plan
+      if (!subscription) {
+        return {
+          subscription: {
+            plan: 'Free',
+            status: 'active',
+            cost: '0.00'
+          }
+        }
+      }
+
+      // Fetch payment method from Stripe if customer exists
+      let paymentMethod = null
+      if (subscription.stripe_customer_id) {
+        try {
+          const customer = await stripe.customers.retrieve(subscription.stripe_customer_id)
+          if (customer && !customer.deleted) {
+            // Get default payment method
+            const paymentMethods = await stripe.paymentMethods.list({
+              customer: subscription.stripe_customer_id,
+              type: 'card'
+            })
+            
+            if (paymentMethods.data.length > 0) {
+              const pm = paymentMethods.data[0]
+              paymentMethod = {
+                brand: pm.card?.brand || 'card',
+                last4: pm.card?.last4 || '****',
+                exp_month: pm.card?.exp_month,
+                exp_year: pm.card?.exp_year
+              }
+            }
+          }
+        } catch (stripeError) {
+          console.error('Error fetching payment method:', stripeError)
+          // Don't fail if payment method fetch fails
+        }
+      }
+
       return {
-        subscription: subscription || {
-          plan: 'Free',
-          status: 'active',
-          cost: '0.00'
+        subscription: {
+          ...subscription,
+          paymentMethod
         }
       }
     }

@@ -20,8 +20,9 @@
             <p class="text-2xl font-bold text-foreground">{{ subscription.plan || 'Pro' }}</p>
             <p class="text-sm text-muted-foreground mt-1">${{ subscription.cost || '39.00' }}/month</p>
           </div>
-          <Badge :variant="subscription.status === 'active' ? 'success' : 'pending'" class="text-sm">
-            {{ subscription.status === 'active' ? 'Active' : 'Inactive' }}
+          <Badge :variant="getStatusVariant(subscription.status)" class="text-sm">
+            {{ formatStatus(subscription.status) }}
+            <span v-if="subscription.cancel_at_period_end" class="ml-1 text-xs">(Cancels at period end)</span>
           </Badge>
         </div>
         <div class="space-y-2 pt-2 border-t border-border">
@@ -72,7 +73,10 @@
           </div>
           <div>
             <p class="text-muted-foreground">Payment method:</p>
-            <p class="font-semibold text-foreground">{{ subscription.paymentMethod || '•••• •••• •••• 4242' }}</p>
+            <p v-if="subscription.paymentMethod" class="font-semibold text-foreground">
+              {{ formatPaymentMethod(subscription.paymentMethod) }}
+            </p>
+            <p v-else class="font-semibold text-foreground text-muted-foreground">No payment method on file</p>
           </div>
         </div>
         <div class="flex gap-2 pt-2">
@@ -416,7 +420,12 @@ interface Subscription {
   status: string
   cost: string
   nextBilling: string
-  paymentMethod?: string
+  paymentMethod?: {
+    brand?: string
+    last4?: string
+    exp_month?: number
+    exp_year?: number
+  } | null
   stripe_customer_id?: string
   stripe_subscription_id?: string
   current_period_end?: string
@@ -466,7 +475,7 @@ async function loadSubscription() {
         nextBilling: sub.current_period_end 
           ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           : '—',
-        paymentMethod: '•••• •••• •••• 4242', // TODO: Get from Stripe
+        paymentMethod: sub.paymentMethod || null,
         stripe_customer_id: sub.stripe_customer_id,
         stripe_subscription_id: sub.stripe_subscription_id,
         current_period_end: sub.current_period_end,
@@ -545,35 +554,115 @@ async function changePlan(plan: string) {
 }
 
 async function manageSubscription() {
-  // Open Stripe Customer Portal
-  // TODO: Implement Stripe Customer Portal
-  toast.add({
-    title: 'Manage Subscription',
-    description: 'Stripe Customer Portal coming soon!',
-    color: 'info'
-  })
+  loading.value = true
+  try {
+    const response = await $fetch<{ url: string }>('/api/stripe/customer-portal', {
+      method: 'POST',
+      body: {
+        return_url: window.location.href
+      }
+    })
+
+    if (response.url) {
+      // Redirect to Stripe Customer Portal
+      window.location.href = response.url
+    }
+  } catch (error: any) {
+    console.error('Failed to create customer portal session:', error)
+    toast.add({
+      title: 'Failed to open customer portal',
+      description: error?.data || error?.message || 'An error occurred',
+      color: 'error'
+    })
+    loading.value = false
+  }
+}
+
+async function loadBillingHistory() {
+  try {
+    const response = await $fetch<{ invoices: BillingInvoice[] }>('/api/stripe/invoices', {
+      query: { limit: 10 }
+    })
+    
+    if (response.invoices) {
+      billingHistory.value = response.invoices.map(inv => ({
+        id: inv.id,
+        date: new Date(inv.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        plan: inv.plan,
+        amount: inv.amount,
+        status: inv.status
+      }))
+    }
+  } catch (error: any) {
+    console.error('Failed to load billing history:', error)
+    // Don't show error toast, just log it
+  }
 }
 
 function viewInvoices() {
-  // TODO: Fetch invoices from Stripe
-  toast.add({
-    title: 'View Invoices',
-    description: 'Invoice management coming soon!',
-    color: 'info'
-  })
+  // Open Stripe Customer Portal to view all invoices
+  manageSubscription()
 }
 
-function downloadInvoice(invoiceId: string) {
-  // TODO: Download invoice from Stripe
-  toast.add({
-    title: 'Download Invoice',
-    description: `Invoice ${invoiceId} download coming soon!`,
-    color: 'info'
-  })
+async function downloadInvoice(invoiceId: string) {
+  try {
+    const response = await $fetch<{ url: string; hosted_invoice_url?: string }>('/api/stripe/invoice-download', {
+      query: { invoice_id: invoiceId }
+    })
+
+    if (response.url) {
+      // Open invoice PDF in new tab
+      window.open(response.url, '_blank')
+    } else if (response.hosted_invoice_url) {
+      // Fallback to hosted invoice URL
+      window.open(response.hosted_invoice_url, '_blank')
+    }
+  } catch (error: any) {
+    console.error('Failed to download invoice:', error)
+    toast.add({
+      title: 'Failed to download invoice',
+      description: error?.data || error?.message || 'An error occurred',
+      color: 'error'
+    })
+  }
 }
 
 function viewAllInvoices() {
   viewInvoices()
+}
+
+// Helper functions
+function formatPaymentMethod(pm: { brand?: string; last4?: string; exp_month?: number; exp_year?: number }): string {
+  if (!pm || !pm.last4) return 'No payment method'
+  const brand = pm.brand ? pm.brand.charAt(0).toUpperCase() + pm.brand.slice(1) : 'Card'
+  const exp = pm.exp_month && pm.exp_year ? ` ${pm.exp_month}/${pm.exp_year.toString().slice(-2)}` : ''
+  return `${brand} •••• ${pm.last4}${exp}`
+}
+
+function formatStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    'active': 'Active',
+    'canceled': 'Canceled',
+    'past_due': 'Past Due',
+    'trialing': 'Trialing',
+    'incomplete': 'Incomplete',
+    'incomplete_expired': 'Expired',
+    'unpaid': 'Unpaid'
+  }
+  return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+function getStatusVariant(status: string): string {
+  const variantMap: Record<string, string> = {
+    'active': 'success',
+    'trialing': 'active',
+    'canceled': 'inactive',
+    'past_due': 'pending',
+    'incomplete': 'pending',
+    'incomplete_expired': 'error',
+    'unpaid': 'error'
+  }
+  return variantMap[status] || 'outline'
 }
 
 // Handle success/cancel redirects from Stripe
@@ -602,6 +691,7 @@ onMounted(async () => {
   } else {
     // Normal load
     await loadSubscription()
+    await loadBillingHistory()
   }
 })
 
