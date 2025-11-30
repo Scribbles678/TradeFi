@@ -374,6 +374,83 @@
               </CardContent>
             </Card>
     </div>
+
+    <!-- Usage Details Sheet -->
+    <Sheet v-model:open="showUsageDetails">
+      <SheetContent class="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Usage & Limits Details</SheetTitle>
+          <SheetDescription>
+            View detailed information about your connected exchanges, strategies, and webhook usage
+          </SheetDescription>
+        </SheetHeader>
+
+        <div class="space-y-6 mt-6">
+          <!-- Connected Exchanges -->
+          <div>
+            <h3 class="text-lg font-semibold mb-3 text-foreground">Connected Exchanges</h3>
+            <div v-if="usageDetails.exchanges.length === 0" class="text-sm text-muted-foreground py-4">
+              No exchanges connected
+            </div>
+            <div v-else class="space-y-2">
+              <div
+                v-for="exchange in usageDetails.exchanges"
+                :key="exchange.exchange"
+                class="flex items-center justify-between p-3 rounded-lg border bg-card"
+              >
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-foreground">{{ formatExchangeName(exchange.exchange) }}</p>
+                    <p class="text-xs text-muted-foreground mt-0.5">
+                      {{ exchange.webhookCount }} webhook{{ exchange.webhookCount !== 1 ? 's' : '' }} this month
+                    </p>
+                  </div>
+                  <Badge :variant="exchange.isActive ? 'success' : 'outline'">
+                    {{ exchange.isActive ? 'Active' : 'Inactive' }}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Strategies -->
+          <div>
+            <h3 class="text-lg font-semibold mb-3 text-foreground">Strategies</h3>
+            <div v-if="usageDetails.strategies.length === 0" class="text-sm text-muted-foreground py-4">
+              No strategies created
+            </div>
+            <div v-else class="space-y-2">
+              <div
+                v-for="strategy in usageDetails.strategies"
+                :key="strategy.id"
+                class="flex items-center justify-between p-3 rounded-lg border bg-card"
+              >
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-foreground truncate">{{ strategy.name }}</p>
+                    <p class="text-xs text-muted-foreground mt-0.5">
+                      Created {{ new Date(strategy.createdAt).toLocaleDateString() }}
+                    </p>
+                  </div>
+                  <Badge :variant="strategy.isActive ? 'success' : 'outline'">
+                    {{ strategy.status === 'active' ? 'Active' : strategy.status === 'testing' ? 'Testing' : 'Inactive' }}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Webhook Summary -->
+          <div>
+            <h3 class="text-lg font-semibold mb-3 text-foreground">Webhook Summary</h3>
+            <div class="p-4 rounded-lg border bg-card">
+              <p class="text-sm text-muted-foreground">Total webhooks this month</p>
+              <p class="text-2xl font-bold mt-1 text-foreground">{{ usageDetails.totalWebhooks }}</p>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   </div>
 </template>
 
@@ -682,8 +759,84 @@ function cancelEditProfile() {
   editProfileName.value = userProfile.value.name
 }
 
+// Usage Details Sheet
+const showUsageDetails = ref(false)
+const usageDetails = ref<{
+  exchanges: Array<{
+    exchange: string
+    isActive: boolean
+    lastTested: string | null
+    createdAt: string
+    webhookCount: number
+  }>
+  strategies: Array<{
+    id: string
+    name: string
+    status: string
+    isActive: boolean
+    createdAt: string
+  }>
+  totalWebhooks: number
+  webhookCountsByExchange: Record<string, number>
+}>({
+  exchanges: [],
+  strategies: [],
+  totalWebhooks: 0,
+  webhookCountsByExchange: {}
+})
+
+async function loadUsageDetails() {
+  try {
+    const response = await $fetch<{
+      exchanges: Array<{
+        exchange: string
+        isActive: boolean
+        lastTested: string | null
+        createdAt: string
+        webhookCount: number
+      }>
+      strategies: Array<{
+        id: string
+        name: string
+        status: string
+        isActive: boolean
+        createdAt: string
+      }>
+      totalWebhooks: number
+      webhookCountsByExchange: Record<string, number>
+    }>('/api/account/usage-details')
+    
+    if (response) {
+      usageDetails.value = response
+    }
+  } catch (error: any) {
+    console.error('Failed to load usage details:', error)
+    const toast = useToast()
+    toast.add({
+      title: 'Error',
+      description: 'Failed to load usage details',
+      variant: 'destructive'
+    })
+  }
+}
+
 function viewUsageDetails() {
-  alert('Usage Details - Coming Soon!')
+  showUsageDetails.value = true
+  loadUsageDetails()
+}
+
+function formatExchangeName(exchange: string): string {
+  const nameMap: Record<string, string> = {
+    'aster': 'Aster DEX',
+    'oanda': 'OANDA',
+    'tradier': 'Tradier',
+    'tastytrade': 'Tasty Trade',
+    'alpaca': 'Alpaca',
+    'binance': 'Binance',
+    'coinbase': 'Coinbase Pro',
+    'interactive-brokers': 'Interactive Brokers'
+  }
+  return nameMap[exchange.toLowerCase()] || exchange.charAt(0).toUpperCase() + exchange.slice(1).replace(/-/g, ' ')
 }
 
 // Helper functions for subscription status
