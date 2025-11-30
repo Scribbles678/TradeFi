@@ -385,7 +385,12 @@ interface Subscription {
   status: string
   cost: string
   nextBilling: string
-  paymentMethod?: string
+  paymentMethod?: string | {
+    brand?: string
+    last4?: string
+    exp_month?: number
+    exp_year?: number
+  } | undefined
   current_period_end?: string
 }
 
@@ -458,55 +463,26 @@ async function loadUserProfile() {
   }
 }
 
-// Subscription - Load from API
-const subscription = ref<Subscription>({
-  plan: 'Free',
-  status: 'active',
-  cost: '0.00',
-  nextBilling: '—',
-  paymentMethod: undefined
-})
+// Subscription - Use shared composable for better performance
+const { subscription: sharedSubscription, loadSubscription: loadSharedSubscription } = useSubscription()
 
-// Plan pricing map
-const planPricing: Record<string, string> = {
-  'Free': '0.00',
-  'Basic': '19.00',
-  'Premium': '39.00',
-  'Pro': '59.00'
-}
+// Use shared subscription state
+const subscription = computed(() => sharedSubscription.value)
 
-// Load subscription from API
-async function loadSubscription() {
+// Load subscription (uses cached data if available)
+async function loadSubscription(force = false) {
   try {
-    const response = await $fetch<{ subscription: Subscription }>('/api/stripe/subscription')
-    
-    if (response.subscription) {
-      const sub = response.subscription
-      subscription.value = {
-        plan: sub.plan || 'Free',
-        status: sub.status || 'active',
-        cost: planPricing[sub.plan || 'Free'] || '0.00',
-        nextBilling: sub.nextBilling || (sub.current_period_end 
-          ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          : '—'),
-        paymentMethod: sub.paymentMethod || undefined
-      }
-    }
+    await loadSharedSubscription(force)
   } catch (error: any) {
     console.error('Failed to load subscription:', error)
-    // Default to Free plan if error
-    subscription.value = {
-      plan: 'Free',
-      status: 'active',
-      cost: '0.00',
-      nextBilling: '—'
-    }
   }
 }
 
-// Helper to format payment method
-function formatPaymentMethod(pm: { brand?: string; last4?: string; exp_month?: number; exp_year?: number }): string {
-  if (!pm || !pm.last4) return 'No payment method'
+// Helper to format payment method (handles both string and object formats)
+function formatPaymentMethod(pm: string | { brand?: string; last4?: string; exp_month?: number; exp_year?: number } | undefined): string {
+  if (!pm) return 'No payment method'
+  if (typeof pm === 'string') return pm
+  if (!pm.last4) return 'No payment method'
   const brand = pm.brand ? pm.brand.charAt(0).toUpperCase() + pm.brand.slice(1) : 'Card'
   const exp = pm.exp_month && pm.exp_year ? ` ${pm.exp_month}/${pm.exp_year.toString().slice(-2)}` : ''
   return `${brand} •••• ${pm.last4}${exp}`
@@ -740,7 +716,7 @@ function getSubscriptionStatusVariant(status: string): string {
 // Load on mount
 onMounted(() => {
   loadUserProfile()
-  loadSubscription()
+  loadSubscription(false) // Use cache for instant display
   loadUsage()
   loadSystemHealth()
   loadBalances()

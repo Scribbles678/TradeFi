@@ -94,7 +94,7 @@ async function handleSignOut() {
               <Settings />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem @click="router.push('/account')">
+            <DropdownMenuItem @click="router.push('/account/subscription')">
               <CreditCard />
               Billing
             </DropdownMenuItem>

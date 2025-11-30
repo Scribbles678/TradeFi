@@ -74,7 +74,7 @@
           <div>
             <p class="text-muted-foreground">Payment method:</p>
             <p v-if="subscription.paymentMethod" class="font-semibold text-foreground">
-              {{ formatPaymentMethod(subscription.paymentMethod) }}
+              {{ typeof subscription.paymentMethod === 'string' ? subscription.paymentMethod : formatPaymentMethod(subscription.paymentMethod) }}
             </p>
             <p v-else class="font-semibold text-foreground text-muted-foreground">No payment method on file</p>
           </div>
@@ -420,7 +420,7 @@ interface Subscription {
   status: string
   cost: string
   nextBilling: string
-  paymentMethod?: {
+  paymentMethod?: string | {
     brand?: string
     last4?: string
     exp_month?: number
@@ -442,55 +442,20 @@ interface BillingInvoice {
 
 const toast = useToast()
 const loading = ref(false)
-const subscription = ref<Subscription>({
-  plan: 'Free',
-  status: 'active',
-  cost: '0.00',
-  nextBilling: '—',
-  paymentMethod: undefined
-})
+const { subscription: sharedSubscription, loadSubscription: loadSharedSubscription } = useSubscription()
+
+// Use shared subscription state for better performance
+const subscription = computed(() => sharedSubscription.value)
 
 const billingHistory = ref<BillingInvoice[]>([])
 
-// Plan pricing map
-const planPricing: Record<string, string> = {
-  'Free': '0.00',
-  'Basic': '19.00',
-  'Premium': '39.00',
-  'Pro': '59.00'
-}
-
-// Load subscription from database
-async function loadSubscription() {
+// Load subscription (uses cached data if available)
+async function loadSubscription(force = false) {
   loading.value = true
   try {
-    const response = await $fetch<{ subscription: Subscription }>('/api/stripe/subscription')
-    
-    if (response.subscription) {
-      const sub = response.subscription
-      subscription.value = {
-        plan: sub.plan || 'Free',
-        status: sub.status || 'active',
-        cost: planPricing[sub.plan || 'Free'] || '0.00',
-        nextBilling: sub.current_period_end 
-          ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          : '—',
-        paymentMethod: sub.paymentMethod || null,
-        stripe_customer_id: sub.stripe_customer_id,
-        stripe_subscription_id: sub.stripe_subscription_id,
-        current_period_end: sub.current_period_end,
-        cancel_at_period_end: sub.cancel_at_period_end
-      }
-    }
+    await loadSharedSubscription(force)
   } catch (error: any) {
     console.error('Failed to load subscription:', error)
-    // Default to Free plan if error
-    subscription.value = {
-      plan: 'Free',
-      status: 'active',
-      cost: '0.00',
-      nextBilling: '—'
-    }
   } finally {
     loading.value = false
   }
@@ -679,7 +644,7 @@ onMounted(async () => {
     })
     // Remove query params
     await navigateTo('/account/subscription', { replace: true })
-    await loadSubscription()
+    await loadSubscription(true) // Force reload after successful payment
   } else if (route.query.canceled === 'true') {
     toast.add({
       title: 'Checkout canceled',
@@ -689,8 +654,8 @@ onMounted(async () => {
     // Remove query params
     await navigateTo('/account/subscription', { replace: true })
   } else {
-    // Normal load
-    await loadSubscription()
+    // Normal load - use cached data if available (instant display)
+    await loadSubscription(false) // false = use cache if available
     await loadBillingHistory()
   }
 })
