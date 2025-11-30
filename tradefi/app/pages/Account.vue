@@ -29,9 +29,17 @@
                   </div>
                 </CardHeader>
                 <CardContent class="space-y-4">
-                  <div>
+                  <div v-if="!isEditingProfile">
                     <p class="text-sm text-muted-foreground">Name</p>
                     <p class="text-lg font-semibold mt-1 text-foreground">{{ userProfile.name }}</p>
+                  </div>
+                  <div v-else>
+                    <p class="text-sm text-muted-foreground mb-2">Name</p>
+                    <Input
+                      v-model="editProfileName"
+                      placeholder="Enter your name"
+                      class="w-full"
+                    />
                   </div>
                   <div>
                     <p class="text-sm text-muted-foreground">Email</p>
@@ -41,15 +49,36 @@
                     <p class="text-sm text-muted-foreground">Member Since</p>
                     <p class="text-lg font-semibold mt-1 text-foreground">{{ userProfile.joinDate }}</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="w-full"
-                    @click="editProfile"
-                  >
-                    <Icon name="i-heroicons-pencil" class="w-4 h-4 mr-1" />
-                    Edit Profile
-                  </Button>
+                  <div v-if="!isEditingProfile" class="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="flex-1"
+                      @click="editProfile"
+                    >
+                      <Icon name="i-heroicons-pencil" class="w-4 h-4 mr-1" />
+                      Edit Profile
+                    </Button>
+                  </div>
+                  <div v-else class="flex gap-2">
+                    <Button
+                      size="sm"
+                      class="flex-1"
+                      @click="editProfile"
+                    >
+                      <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                      Save
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="flex-1"
+                      @click="cancelEditProfile"
+                    >
+                      <Icon name="i-heroicons-x-mark" class="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -65,19 +94,23 @@
                   <div>
                     <p class="text-sm text-muted-foreground">Current Plan</p>
                     <div class="flex items-center gap-2 mt-1">
-                      <p class="text-lg font-semibold text-foreground">{{ subscription.plan || 'Pro' }}</p>
-                      <Badge :variant="subscription.status === 'active' ? 'success' : 'pending'" class="text-xs">
-                        {{ subscription.status === 'active' ? 'Active' : 'Inactive' }}
+                      <p class="text-lg font-semibold text-foreground">{{ subscription.plan }}</p>
+                      <Badge :variant="getSubscriptionStatusVariant(subscription.status)" class="text-xs">
+                        {{ formatSubscriptionStatus(subscription.status) }}
                       </Badge>
                     </div>
                   </div>
                   <div>
                     <p class="text-sm text-muted-foreground">Next Billing Date</p>
-                    <p class="text-lg font-semibold mt-1 text-foreground">{{ subscription.nextBilling || 'Mar 15, 2024' }}</p>
+                    <p class="text-lg font-semibold mt-1 text-foreground">{{ subscription.nextBilling }}</p>
                   </div>
                   <div>
                     <p class="text-sm text-muted-foreground">Monthly Cost</p>
-                    <p class="text-lg font-semibold mt-1 text-foreground">${{ subscription.cost || '99.00' }}/mo</p>
+                    <p class="text-lg font-semibold mt-1 text-foreground">${{ subscription.cost }}/mo</p>
+                  </div>
+                  <div v-if="subscription.paymentMethod">
+                    <p class="text-sm text-muted-foreground">Payment Method</p>
+                    <p class="text-lg font-semibold mt-1 text-foreground">{{ subscription.paymentMethod }}</p>
                   </div>
                   <Button
                     size="sm"
@@ -353,6 +386,7 @@ interface Subscription {
   cost: string
   nextBilling: string
   paymentMethod?: string
+  current_period_end?: string
 }
 
 interface Usage {
@@ -375,49 +409,184 @@ interface ExchangeBalance {
 // Get authenticated user
 const user = useSupabaseUser()
 
-// User Profile (from Supabase Auth)
-const userProfile = computed(() => {
-  if (!user.value) return { name: '', email: '', joinDate: '' }
-  
-  const createdAt = user.value.created_at ? new Date(user.value.created_at) : new Date()
-  const joinDate = createdAt.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  })
-  
-  return {
-    name: user.value.email?.split('@')[0] || 'User',
-    email: user.value.email || '',
-    joinDate
+// User Profile - Load from API
+const userProfile = ref({
+  name: '',
+  email: '',
+  joinDate: '',
+  avatar_url: null as string | null
+})
+
+// Load user profile from API
+async function loadUserProfile() {
+  try {
+    const response = await $fetch<{ profile: { full_name: string; email: string; created_at: string; avatar_url?: string | null } }>('/api/account/profile')
+    
+    if (response.profile) {
+      const createdAt = response.profile.created_at ? new Date(response.profile.created_at) : new Date()
+      const joinDate = createdAt.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      })
+      
+      userProfile.value = {
+        name: response.profile.full_name || response.profile.email?.split('@')[0] || 'User',
+        email: response.profile.email || '',
+        joinDate,
+        avatar_url: response.profile.avatar_url || null
+      }
+    }
+  } catch (error: any) {
+    console.error('Failed to load user profile:', error)
+    // Fallback to auth user data
+    if (user.value) {
+      const createdAt = user.value.created_at ? new Date(user.value.created_at) : new Date()
+      const joinDate = createdAt.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      })
+      
+      userProfile.value = {
+        name: user.value.email?.split('@')[0] || 'User',
+        email: user.value.email || '',
+        joinDate,
+        avatar_url: user.value.user_metadata?.avatar_url || null
+      }
+    }
   }
-})
+}
 
-// Subscription (Mock Data)
+// Subscription - Load from API
 const subscription = ref<Subscription>({
-  plan: 'Pro',
+  plan: 'Free',
   status: 'active',
-  cost: '99.00',
-  nextBilling: 'Mar 15, 2024',
-  paymentMethod: '•••• •••• •••• 4242'
+  cost: '0.00',
+  nextBilling: '—',
+  paymentMethod: undefined
 })
 
-// Usage (Mock Data)
+// Plan pricing map
+const planPricing: Record<string, string> = {
+  'Free': '0.00',
+  'Basic': '19.00',
+  'Premium': '39.00',
+  'Pro': '59.00'
+}
+
+// Load subscription from API
+async function loadSubscription() {
+  try {
+    const response = await $fetch<{ subscription: Subscription }>('/api/stripe/subscription')
+    
+    if (response.subscription) {
+      const sub = response.subscription
+      subscription.value = {
+        plan: sub.plan || 'Free',
+        status: sub.status || 'active',
+        cost: planPricing[sub.plan || 'Free'] || '0.00',
+        nextBilling: sub.current_period_end 
+          ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '—',
+        paymentMethod: sub.paymentMethod 
+          ? formatPaymentMethod(sub.paymentMethod)
+          : undefined
+      }
+    }
+  } catch (error: any) {
+    console.error('Failed to load subscription:', error)
+    // Default to Free plan if error
+    subscription.value = {
+      plan: 'Free',
+      status: 'active',
+      cost: '0.00',
+      nextBilling: '—'
+    }
+  }
+}
+
+// Helper to format payment method
+function formatPaymentMethod(pm: { brand?: string; last4?: string; exp_month?: number; exp_year?: number }): string {
+  if (!pm || !pm.last4) return 'No payment method'
+  const brand = pm.brand ? pm.brand.charAt(0).toUpperCase() + pm.brand.slice(1) : 'Card'
+  const exp = pm.exp_month && pm.exp_year ? ` ${pm.exp_month}/${pm.exp_year.toString().slice(-2)}` : ''
+  return `${brand} •••• ${pm.last4}${exp}`
+}
+
+// Usage - Load from API
 const usage = ref<Usage>({
-  exchangesUsed: 3,
-  exchangesLimit: 4,
-  strategiesUsed: 8,
-  strategiesLimit: Infinity,
-  webhooksUsed: 1245,
-  webhooksLimit: Infinity
+  exchangesUsed: 0,
+  exchangesLimit: 1,
+  strategiesUsed: 0,
+  strategiesLimit: 2,
+  webhooksUsed: 0,
+  webhooksLimit: 5
 })
+
+// Load usage statistics from API
+async function loadUsage() {
+  try {
+    const response = await $fetch<{ usage: Usage }>('/api/account/usage')
+    
+    if (response.usage) {
+      usage.value = response.usage
+    }
+  } catch (error: any) {
+    console.error('Failed to load usage:', error)
+    // Keep default values on error
+  }
+}
 
 // System Health
 const systemHealth = ref({
-  botOnline: true,
-  lastWebhook: '2 min ago',
+  botOnline: false,
+  lastWebhook: 'Never',
   alertsCount: 0
 })
+
+// Load system health data
+async function loadSystemHealth() {
+  // Load bot status
+  try {
+    const healthResponse = await $fetch<{ success: boolean; bot?: any }>('/api/sparky/health')
+    systemHealth.value.botOnline = healthResponse.success && healthResponse.bot?.status === 'ok'
+  } catch (error) {
+    console.error('Error loading bot health:', error)
+    systemHealth.value.botOnline = false
+  }
+
+  // Load last webhook
+  try {
+    const webhookResponse = await $fetch<{ data: Array<{ created_at: string }> }>('/api/webhook/activity', {
+      query: { limit: 1 }
+    })
+    
+    if (webhookResponse.data && webhookResponse.data.length > 0) {
+      const lastWebhookTime = new Date(webhookResponse.data[0].created_at)
+      const now = new Date()
+      const diffMs = now.getTime() - lastWebhookTime.getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMs / 3600000)
+      const diffDays = Math.floor(diffMs / 86400000)
+
+      if (diffMins < 1) {
+        systemHealth.value.lastWebhook = 'Just now'
+      } else if (diffMins < 60) {
+        systemHealth.value.lastWebhook = `${diffMins} min ago`
+      } else if (diffHours < 24) {
+        systemHealth.value.lastWebhook = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+      } else {
+        systemHealth.value.lastWebhook = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+      }
+    } else {
+      systemHealth.value.lastWebhook = 'Never'
+    }
+  } catch (error) {
+    console.error('Error loading last webhook:', error)
+    systemHealth.value.lastWebhook = 'Never'
+  }
+}
 
 // State for balances (for connectedExchangesCount)
 const asterBalance = ref<ExchangeBalance>({ success: false })
@@ -491,19 +660,93 @@ async function loadBalances() {
   }
 }
 
-// Placeholder Functions
-function editProfile() {
-  alert('Edit Profile - Coming Soon!')
+// Edit Profile Function
+const isEditingProfile = ref(false)
+const editProfileName = ref('')
+
+async function editProfile() {
+  if (isEditingProfile.value) {
+    // Save profile
+    try {
+      await $fetch('/api/account/profile', {
+        method: 'PUT',
+        body: {
+          full_name: editProfileName.value
+        }
+      })
+      
+      await loadUserProfile()
+      isEditingProfile.value = false
+      
+      useToast().add({
+        title: 'Profile updated',
+        description: 'Your profile has been updated successfully.',
+        color: 'success',
+        icon: 'i-heroicons-check-circle'
+      })
+    } catch (error: any) {
+      useToast().add({
+        title: 'Failed to update profile',
+        description: error?.data || error?.message || 'An error occurred',
+        color: 'error'
+      })
+    }
+  } else {
+    // Start editing
+    editProfileName.value = userProfile.value.name
+    isEditingProfile.value = true
+  }
+}
+
+function cancelEditProfile() {
+  isEditingProfile.value = false
+  editProfileName.value = userProfile.value.name
 }
 
 function viewUsageDetails() {
   alert('Usage Details - Coming Soon!')
 }
 
+// Helper functions for subscription status
+function formatSubscriptionStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    'active': 'Active',
+    'canceled': 'Canceled',
+    'past_due': 'Past Due',
+    'trialing': 'Trialing',
+    'incomplete': 'Incomplete',
+    'incomplete_expired': 'Expired',
+    'unpaid': 'Unpaid'
+  }
+  return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+function getSubscriptionStatusVariant(status: string): string {
+  const variantMap: Record<string, string> = {
+    'active': 'success',
+    'trialing': 'active',
+    'canceled': 'inactive',
+    'past_due': 'pending',
+    'incomplete': 'pending',
+    'incomplete_expired': 'error',
+    'unpaid': 'error'
+  }
+  return variantMap[status] || 'outline'
+}
+
 // Load on mount
 onMounted(() => {
+  loadUserProfile()
+  loadSubscription()
+  loadUsage()
+  loadSystemHealth()
   loadBalances()
+  
+  // Refresh balances every 30 seconds
   setInterval(loadBalances, 30000)
+  
+  // Refresh system health every 60 seconds
+  setInterval(loadSystemHealth, 60000)
 })
 
 definePageMeta({
