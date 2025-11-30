@@ -431,9 +431,9 @@
       </Card>
     </div>
 
-    <!-- Marketplace Strategies -->
+    <!-- Marketplace Strategies (Hidden - Coming Soon) -->
     <div
-      v-else
+      v-if="false"
       class="grid grid-cols-1 md:grid-cols-2 gap-6"
     >
       <Card
