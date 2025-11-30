@@ -5,23 +5,11 @@
       <div>
         <h1 class="text-3xl font-semibold text-foreground">Trading Strategies</h1>
         <p class="text-muted-foreground text-sm mt-1">
-          Manage your own strategies or explore the marketplace
+          Manage your trading strategies
         </p>
       </div>
       <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div class="inline-flex items-center rounded-lg border bg-card p-1">
-          <Button
-            v-for="view in strategyViews"
-            :key="view.key"
-            @click="strategyView = view.key"
-            :variant="strategyView === view.key ? 'default' : 'ghost'"
-            size="sm"
-          >
-            {{ view.label }}
-          </Button>
-        </div>
         <Button
-          v-if="strategyView === 'your'"
           size="sm"
           @click="openAddStrategyModal"
         >
@@ -31,19 +19,8 @@
       </div>
     </div>
 
-    <!-- Marketplace Banner -->
-    <Card v-if="strategyView === 'marketplace'" class="border-blue-500/20 bg-blue-500/5">
-      <CardContent class="flex gap-3 py-4">
-        <Icon name="i-heroicons-megaphone" class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p class="font-semibold text-foreground mb-1">Marketplace Strategies (Alpha)</p>
-          <p class="text-sm text-muted-foreground">Discover entrepreneurs offering their automated alerts for a revenue share. Due diligence recommended before subscribing.</p>
-        </div>
-      </CardContent>
-    </Card>
-
     <!-- Strategy List Section -->
-    <div v-if="strategyView === 'your'" class="space-y-6">
+    <div class="space-y-6">
       <!-- Add New Strategy Card (At Top - Always First) -->
       <Transition name="fade">
         <Card
@@ -568,13 +545,14 @@ import {
   type AssetClass
 } from '~/utils/supabase';
 
-// View toggle
-const strategyViews = [
-  { key: 'your' as const, label: 'Your Strategies' },
-  { key: 'marketplace' as const, label: 'Marketplace Strategies' }
-];
+// View toggle (Marketplace feature hidden for now)
+// const strategyViews = [
+//   { key: 'your' as const, label: 'Your Strategies' },
+//   { key: 'marketplace' as const, label: 'Marketplace Strategies' }
+// ];
 
-const strategyView = ref<'your' | 'marketplace'>('your');
+// Always show 'your' strategies view (marketplace feature disabled)
+const strategyView = ref<'your'>('your');
 
 // State
 const strategies = ref<Strategy[]>([]);
