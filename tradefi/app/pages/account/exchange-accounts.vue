@@ -1,29 +1,32 @@
 <template>
-  <div class="space-y-8 p-6">
+  <div class="space-y-6 sm:space-y-8 p-4 sm:p-6">
     <!-- Header -->
-    <div class="flex items-center justify-between gap-4 flex-wrap">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-semibold text-foreground">Exchanges</h1>
+        <h1 class="text-2xl sm:text-3xl font-semibold text-foreground">Exchanges</h1>
         <p class="text-muted-foreground text-sm mt-1">
           Manage your exchange connections, view balances, and configure API keys
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-shrink-0">
         <Button
           size="sm"
           @click="showAddExchangeSheet = true"
+          class="flex-1 sm:flex-initial"
         >
-          <Icon name="i-heroicons-plus" class="w-4 h-4 mr-1" />
-          Add Exchange
+          <Icon name="i-heroicons-plus" class="w-4 h-4 sm:mr-1" />
+          <span class="hidden sm:inline">Add Exchange</span>
+          <span class="sm:hidden">Add</span>
         </Button>
         <Button
           variant="outline"
           size="sm"
           @click="refreshAll"
           :disabled="isLoading || credentialsLoading"
+          class="flex-1 sm:flex-initial"
         >
-          <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-1" />
-          Refresh
+          <Icon name="i-heroicons-arrow-path" class="w-4 h-4 sm:mr-1" />
+          <span class="hidden sm:inline">Refresh</span>
         </Button>
       </div>
     </div>
@@ -42,7 +45,7 @@
     </Card>
 
     <!-- Exchange Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
       <Card
         v-for="card in allExchangeCards"
         :key="card.key"
@@ -51,19 +54,19 @@
       >
         <Collapsible v-model:open="expandedCards[card.key]">
           <!-- Card Header (Always Visible) -->
-          <CardHeader>
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-3 flex-1 min-w-0">
-                <Icon :name="card.icon" class="w-6 h-6 flex-shrink-0" :class="card.iconColor" />
+          <CardHeader class="px-4 sm:px-6">
+            <div class="flex items-start justify-between gap-2 sm:gap-3">
+              <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                <Icon :name="card.icon" class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" :class="card.iconColor" />
                 <div class="flex-1 min-w-0">
-                  <CardTitle class="text-lg">{{ card.name }}</CardTitle>
-                  <p class="text-xs text-muted-foreground mt-0.5">{{ card.assetClass }}</p>
+                  <CardTitle class="text-base sm:text-lg truncate">{{ card.name }}</CardTitle>
+                  <p class="text-xs text-muted-foreground mt-0.5 truncate">{{ card.assetClass }}</p>
                 </div>
               </div>
-              <div class="flex items-center gap-2 flex-shrink-0">
+              <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <Badge 
                   :variant="getExchangeStatus(card.key).color === 'success' ? 'success' : getExchangeStatus(card.key).color === 'error' ? 'error' : 'outline'" 
-                  class="text-xs"
+                  class="text-xs hidden sm:inline-flex"
                 >
                   {{ getExchangeStatus(card.key).label }}
                 </Badge>
@@ -71,37 +74,46 @@
                   <Button 
                     variant="outline" 
                     size="sm"
-                    class="gap-1.5"
+                    class="gap-1 sm:gap-1.5 px-2 sm:px-3"
                   >
-                    <Icon name="i-heroicons-key" class="w-3.5 h-3.5" />
+                    <Icon name="i-heroicons-key" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span class="hidden sm:inline">{{ isCredentialConnected(card.key) ? 'Configure' : 'Add API Keys' }}</span>
                     <Icon 
                       :name="expandedCards[card.key] ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" 
-                      class="w-3.5 h-3.5" 
+                      class="w-3.5 h-3.5 sm:w-4 sm:h-4" 
                     />
                   </Button>
                 </CollapsibleTrigger>
               </div>
             </div>
+            <!-- Badge on mobile (below title) -->
+            <div class="sm:hidden mt-2">
+              <Badge 
+                :variant="getExchangeStatus(card.key).color === 'success' ? 'success' : getExchangeStatus(card.key).color === 'error' ? 'error' : 'outline'" 
+                class="text-xs"
+              >
+                {{ getExchangeStatus(card.key).label }}
+              </Badge>
+            </div>
           </CardHeader>
 
           <!-- Balance Summary (Collapsed View) -->
-          <CardContent v-if="!expandedCards[card.key]" class="space-y-4">
+          <CardContent v-if="!expandedCards[card.key]" class="space-y-4 px-4 sm:px-6">
             <div>
               <p class="text-sm text-muted-foreground">{{ getBalanceLabel(card.key) }}</p>
               <div class="flex items-center gap-2 mt-1">
                 <div v-if="isBalanceLoading(card.key)" class="flex items-center gap-2">
-                  <Icon name="i-heroicons-arrow-path" class="w-5 h-5 text-muted-foreground animate-spin" />
+                  <Icon name="i-heroicons-arrow-path" class="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground animate-spin" />
                   <span class="text-sm text-muted-foreground">Loading...</span>
                 </div>
-                <p v-else class="text-2xl font-bold text-foreground">
+                <p v-else class="text-xl sm:text-2xl font-bold text-foreground break-all">
                   ${{ getBalance(card.key)?.toFixed(2) ?? '---' }}
                 </p>
               </div>
             </div>
             <div class="pt-2 border-t border-border">
-              <p class="text-xs text-muted-foreground">Market: <span class="font-semibold text-foreground">{{ card.marketHours }}</span></p>
-              <p v-if="!isCredentialConnected(card.key)" class="text-xs text-muted-foreground mt-1">
+              <p class="text-xs text-muted-foreground break-words">Market: <span class="font-semibold text-foreground">{{ card.marketHours }}</span></p>
+              <p v-if="!isCredentialConnected(card.key)" class="text-xs text-muted-foreground mt-1 break-words">
                 Click to expand and configure API keys
               </p>
             </div>
@@ -109,7 +121,7 @@
 
           <!-- Credential Form (Expanded View) -->
           <CollapsibleContent>
-            <CardContent v-if="credentialForms[card.key]" class="space-y-4 pt-0">
+            <CardContent v-if="credentialForms[card.key]" class="space-y-4 pt-0 px-4 sm:px-6">
               <!-- Connection Status & Last Tested -->
               <div class="flex items-center gap-2 pb-3 border-b border-border">
                 <Icon 
@@ -129,7 +141,7 @@
 
               <!-- Credential Form Fields -->
               <div class="space-y-3">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div class="space-y-2">
                     <Label>Label</Label>
                     <Input
@@ -214,32 +226,35 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex items-center justify-end gap-2 pt-4 border-t border-border">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-4 border-t border-border">
                   <Button
                     variant="ghost"
                     size="sm"
                     :disabled="testingCredential === card.key || !isCredentialConnected(card.key)"
                     @click="testConnection(card.key)"
+                    class="w-full sm:w-auto"
                   >
-                    <Icon name="i-heroicons-beaker" class="w-4 h-4 mr-1" />
-                    Test
+                    <Icon name="i-heroicons-beaker" class="w-4 h-4 sm:mr-1" />
+                    <span class="sm:inline">Test</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     :disabled="deletingCredential === card.key"
                     @click="deleteCredential(card.key)"
+                    class="w-full sm:w-auto"
                   >
-                    <Icon name="i-heroicons-trash" class="w-4 h-4 mr-1" />
-                    Delete
+                    <Icon name="i-heroicons-trash" class="w-4 h-4 sm:mr-1" />
+                    <span class="sm:inline">Delete</span>
                   </Button>
                   <Button
                     size="sm"
                     :disabled="savingCredential === card.key"
                     @click="saveCredential(card.key)"
+                    class="w-full sm:w-auto"
                   >
-                    <Icon name="i-heroicons-check" class="w-4 h-4 mr-1" />
-                    Save
+                    <Icon name="i-heroicons-check" class="w-4 h-4 sm:mr-1" />
+                    <span class="sm:inline">Save</span>
                   </Button>
                 </div>
               </div>
