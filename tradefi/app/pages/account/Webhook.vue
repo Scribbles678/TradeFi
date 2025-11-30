@@ -575,20 +575,39 @@ async function testWebhook() {
 
   testing.value = true
   try {
-    // TODO: Implement actual webhook test endpoint
-    // For now, just show a success message
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Create a timeout promise (5 seconds max)
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Webhook test timeout')), 5000)
+    )
+    
+    // Create the actual test request
+    const testPromise = $fetch('/api/webhook/test', {
+      method: 'POST',
+      body: {
+        webhook_secret: webhookSecret.value,
+        test: true
+      }
+    })
+    
+    // Race between the test and timeout
+    await Promise.race([testPromise, timeoutPromise])
     
     toast.add({
-      title: 'Test webhook',
-      description: 'Webhook testing functionality coming soon!',
-      color: 'info'
+      title: 'Webhook test successful',
+      description: 'Your webhook is configured correctly and ready to receive signals.',
+      color: 'success',
+      icon: 'i-heroicons-check-circle'
     })
-  } catch (error) {
+  } catch (error: any) {
+    const isTimeout = error?.message === 'Webhook test timeout' || error?.message?.includes('timeout')
+    
     toast.add({
-      title: 'Test failed',
+      title: isTimeout ? 'Test timeout' : 'Test failed',
       color: 'error',
-      description: 'An error occurred while testing the webhook.'
+      description: isTimeout 
+        ? 'The webhook test timed out. Please check your server connection and try again.'
+        : (error?.data || error?.message || 'An error occurred while testing the webhook.'),
+      icon: 'i-heroicons-x-circle'
     })
   } finally {
     testing.value = false

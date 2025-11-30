@@ -11,16 +11,17 @@ import {
 
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
+import { useUserProfile } from './useUserProfile'
 
 export const useMenuItems = () => {
   const route = useRoute()
-  const user = useSupabaseUser()
+  const { userProfile, loadUserProfile } = useUserProfile()
 
   const MenuItems = computed(() => ({
     user: {
-      name: user.value?.email?.split('@')[0] || 'User',
-      email: user.value?.email || 'user@example.com',
-      avatar: user.value?.user_metadata?.avatar_url || ''
+      name: userProfile.value.name,
+      email: userProfile.value.email,
+      avatar: userProfile.value.avatar
     },
     navTrading: [
       {
@@ -77,7 +78,8 @@ export const useMenuItems = () => {
   }))
 
   return {
-    MenuItems
+    MenuItems,
+    loadUserProfile
   }
 }
 

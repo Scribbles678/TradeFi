@@ -674,6 +674,11 @@ async function editProfile() {
       })
       
       await loadUserProfile()
+      
+      // Refresh NavUser profile in sidebar using shared composable
+      const { loadUserProfile: refreshNavUser } = useUserProfile()
+      await refreshNavUser()
+      
       isEditingProfile.value = false
       
       useToast().add({

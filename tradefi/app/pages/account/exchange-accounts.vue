@@ -1024,7 +1024,10 @@ const hasErrors = computed(() => {
 // Computed: All exchange cards (dynamic - only shows exchanges with saved credentials)
 const allExchangeCards = computed(() => {
   // Only get exchanges that have credentials saved (have an ID)
-  const credentialExchanges = Object.keys(credentialForms).filter(key => credentialForms[key]?.id)
+  // Filter out 'webhook' as it's not an exchange - it's managed on the webhook page
+  const credentialExchanges = Object.keys(credentialForms).filter(key => 
+    credentialForms[key]?.id && key !== 'webhook'
+  )
   
   // Create cards only for exchanges with credentials
   return credentialExchanges.map(exchangeId => {
@@ -1071,7 +1074,10 @@ async function loadBalances() {
     })
     
     // Load balances for all exchanges with credentials
-    const balancePromises = exchangesWithCreds.map(async (exchangeId) => {
+    // Skip 'webhook' as it's not an exchange
+    const validExchanges = exchangesWithCreds.filter(exchangeId => exchangeId !== 'webhook')
+    
+    const balancePromises = validExchanges.map(async (exchangeId) => {
       const lastSaved = credentialSaveTimes.value[exchangeId] || 0
       
       // Check if we're in grace period (either after saving credentials OR initial page load)
@@ -1079,7 +1085,14 @@ async function loadBalances() {
       const isInGracePeriod = isInSaveGracePeriod || isInInitialLoadGracePeriod
       
       try {
-        const balance = await $fetch(`/api/balance/${exchangeId}`)
+        // Add timeout to prevent stuck requests (10 seconds max)
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), 10000)
+        )
+        
+        const balancePromise = $fetch(`/api/balance/${exchangeId}`)
+        const balance = await Promise.race([balancePromise, timeoutPromise]) as any
+        
         exchangeBalances.value[exchangeId] = {
           ...balance as ExchangeBalance,
           checking: false,
@@ -1090,22 +1103,28 @@ async function loadBalances() {
         // Handle disabled exchanges (like tastytrade)
         const disabled = exchangeId === 'tastytrade'
         
-        // If in grace period, show as "checking" instead of error
-        if (isInGracePeriod && !disabled) {
+        // Check if it's a timeout error
+        const isTimeout = e?.message === 'Request timeout' || e?.message?.includes('timeout')
+        
+        // If in grace period, show as "checking" instead of error (unless timeout)
+        if (isInGracePeriod && !disabled && !isTimeout) {
           exchangeBalances.value[exchangeId] = {
             success: false,
             checking: true,
             disabled,
             lastChecked: now,
-            error: undefined // Clear any previous error during grace period
+            error: 'Checking connection...'
           } as ExchangeBalance
         } else {
+          // Clear checking state on error (including timeout)
           exchangeBalances.value[exchangeId] = {
             success: false,
-            error: e.message,
-            disabled,
             checking: false,
-            lastChecked: now
+            disabled,
+            lastChecked: now,
+            error: isTimeout 
+              ? 'Connection timeout - please try again' 
+              : (e?.data || e?.message || 'Connection failed')
           } as ExchangeBalance
         }
         return { exchangeId, balance: exchangeBalances.value[exchangeId] }

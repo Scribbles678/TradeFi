@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import type { SidebarProps } from './ui/sidebar'
+import { onMounted } from 'vue'
+import { useUserProfile } from '~/composables/useUserProfile'
 
 const { MenuItems } = useMenuItems()
+const { loadUserProfile } = useUserProfile()
+
+// Load profile when sidebar mounts
+onMounted(() => {
+  loadUserProfile()
+})
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   collapsible: 'icon'

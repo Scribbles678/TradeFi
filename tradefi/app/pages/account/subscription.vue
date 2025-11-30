@@ -116,7 +116,7 @@
             <CardContent class="space-y-4 p-6">
               <div>
                 <p class="text-2xl font-bold text-foreground">Basic</p>
-                <p class="text-xs text-muted-foreground mt-1">Best for strategies that trade several times per week or month but not every day</p>
+                <p class="text-xs text-muted-foreground mt-1">Enter Description</p>
               </div>
               <div>
                 <p class="text-4xl font-bold text-foreground">$19</p>
