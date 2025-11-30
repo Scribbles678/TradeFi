@@ -60,9 +60,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Plan pricing map
+  const planPricing: Record<string, string> = {
+    'Free': '0.00',
+    'Basic': '19.00',
+    'Premium': '39.00',
+    'Pro': '59.00'
+  }
+
   switch (method) {
     case 'GET': {
-      // Get user's subscription
+      // Get user's subscription from database
       const { data: subscription, error } = await supabase
         .from('subscriptions')
         .select('*')
@@ -77,8 +85,263 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // If no subscription, return Free plan
+      // If subscription exists but has stripe_customer_id, try to sync from Stripe
+      if (subscription?.stripe_customer_id) {
+        try {
+          // Get all active subscriptions for this customer from Stripe
+          const stripeSubscriptions = await stripe.subscriptions.list({
+            customer: subscription.stripe_customer_id,
+            status: 'all', // Get all statuses
+            limit: 10
+          })
+
+          // Find the most recent active subscription (or the one with latest current_period_end)
+          const activeSubscriptions = stripeSubscriptions.data.filter(sub => 
+            sub.status === 'active' || sub.status === 'trialing'
+          )
+
+          if (activeSubscriptions.length > 0) {
+            // Sort by current_period_end (most recent first)
+            activeSubscriptions.sort((a, b) => b.current_period_end - a.current_period_end)
+            const latestSubscription = activeSubscriptions[0]
+
+            // Get plan from metadata or price
+            let plan = latestSubscription.metadata?.plan || 'Free'
+            
+            // If no plan in metadata, try to infer from price
+            if (plan === 'Free' && latestSubscription.items.data.length > 0) {
+              const priceId = latestSubscription.items.data[0].price.id
+              // Check if price ID matches our known plans
+              const priceIdBasic = process.env.STRIPE_PRICE_ID_BASIC
+              const priceIdPremium = process.env.STRIPE_PRICE_ID_PREMIUM
+              const priceIdPro = process.env.STRIPE_PRICE_ID_PRO
+              
+              if (priceId === priceIdBasic) plan = 'Basic'
+              else if (priceId === priceIdPremium) plan = 'Premium'
+              else if (priceId === priceIdPro) plan = 'Pro'
+            }
+
+            // Map Stripe status to our status
+            const statusMap: Record<string, string> = {
+              'active': 'active',
+              'canceled': 'canceled',
+              'past_due': 'past_due',
+              'trialing': 'trialing',
+              'incomplete': 'incomplete',
+              'incomplete_expired': 'canceled',
+              'unpaid': 'past_due'
+            }
+            const status = statusMap[latestSubscription.status] || 'active'
+
+            // Update database with latest Stripe data
+            await supabase
+              .from('subscriptions')
+              .upsert({
+                user_id: userId,
+                plan: plan,
+                status: status,
+                stripe_subscription_id: latestSubscription.id,
+                stripe_customer_id: subscription.stripe_customer_id,
+                stripe_price_id: latestSubscription.items.data[0]?.price.id,
+                current_period_start: new Date(latestSubscription.current_period_start * 1000).toISOString(),
+                current_period_end: new Date(latestSubscription.current_period_end * 1000).toISOString(),
+                cancel_at_period_end: latestSubscription.cancel_at_period_end,
+                canceled_at: latestSubscription.canceled_at ? new Date(latestSubscription.canceled_at * 1000).toISOString() : null,
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'user_id'
+              })
+
+            // Use the synced data
+            const syncedSubscription = {
+              ...subscription,
+              plan: plan,
+              status: status,
+              stripe_subscription_id: latestSubscription.id,
+              current_period_start: new Date(latestSubscription.current_period_start * 1000).toISOString(),
+              current_period_end: new Date(latestSubscription.current_period_end * 1000).toISOString(),
+              cancel_at_period_end: latestSubscription.cancel_at_period_end
+            }
+
+            // Fetch payment method
+            let paymentMethod = null
+            try {
+              const customer = await stripe.customers.retrieve(subscription.stripe_customer_id)
+              if (customer && !customer.deleted && typeof customer === 'object' && 'invoice_settings' in customer) {
+                const defaultPaymentMethodId = (customer as Stripe.Customer).invoice_settings?.default_payment_method
+                
+                if (defaultPaymentMethodId && typeof defaultPaymentMethodId === 'string') {
+                  const pm = await stripe.paymentMethods.retrieve(defaultPaymentMethodId)
+                  if (pm && pm.card) {
+                    paymentMethod = {
+                      brand: pm.card.brand || 'card',
+                      last4: pm.card.last4 || '****',
+                      exp_month: pm.card.exp_month,
+                      exp_year: pm.card.exp_year
+                    }
+                  }
+                } else if (latestSubscription.default_payment_method) {
+                  const pm = await stripe.paymentMethods.retrieve(latestSubscription.default_payment_method as string)
+                  if (pm && pm.card) {
+                    paymentMethod = {
+                      brand: pm.card.brand || 'card',
+                      last4: pm.card.last4 || '****',
+                      exp_month: pm.card.exp_month,
+                      exp_year: pm.card.exp_year
+                    }
+                  }
+                }
+              }
+            } catch (stripeError: any) {
+              console.error('Error fetching payment method:', stripeError?.message || stripeError)
+            }
+
+            // Format payment method string
+            let paymentMethodString: string | undefined = undefined
+            if (paymentMethod && paymentMethod.last4) {
+              const brand = paymentMethod.brand ? paymentMethod.brand.charAt(0).toUpperCase() + paymentMethod.brand.slice(1) : 'Card'
+              const exp = paymentMethod.exp_month && paymentMethod.exp_year 
+                ? ` ${paymentMethod.exp_month}/${paymentMethod.exp_year.toString().slice(-2)}` 
+                : ''
+              paymentMethodString = `${brand} •••• ${paymentMethod.last4}${exp}`
+            }
+
+            return {
+              subscription: {
+                plan: syncedSubscription.plan,
+                status: syncedSubscription.status,
+                cost: planPricing[syncedSubscription.plan] || '0.00',
+                nextBilling: syncedSubscription.current_period_end 
+                  ? new Date(syncedSubscription.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : '—',
+                paymentMethod: paymentMethodString,
+                current_period_end: syncedSubscription.current_period_end,
+                cancel_at_period_end: syncedSubscription.cancel_at_period_end
+              }
+            }
+          }
+        } catch (stripeError: any) {
+          console.error('Error syncing subscription from Stripe:', stripeError)
+          // Continue with database subscription if Stripe sync fails
+        }
+      }
+
+      // If no subscription in database, try to find customer in Stripe
       if (!subscription) {
+        try {
+          // Search for customer by email
+          const clientSupabase = await serverSupabaseClient(event)
+          const { data: { session } } = await clientSupabase.auth.getSession()
+          const userEmail = session?.user?.email
+
+          if (userEmail) {
+            const customers = await stripe.customers.list({
+              email: userEmail,
+              limit: 1
+            })
+
+            if (customers.data.length > 0) {
+              const customer = customers.data[0]
+              
+              // Get subscriptions for this customer
+              const stripeSubscriptions = await stripe.subscriptions.list({
+                customer: customer.id,
+                status: 'all',
+                limit: 10
+              })
+
+              // Find active subscription
+              const activeSubscriptions = stripeSubscriptions.data.filter(sub => 
+                sub.status === 'active' || sub.status === 'trialing'
+              )
+
+              if (activeSubscriptions.length > 0) {
+                activeSubscriptions.sort((a, b) => b.current_period_end - a.current_period_end)
+                const latestSubscription = activeSubscriptions[0]
+
+                // Get plan from metadata or price
+                let plan = latestSubscription.metadata?.plan || 'Free'
+                
+                if (plan === 'Free' && latestSubscription.items.data.length > 0) {
+                  const priceId = latestSubscription.items.data[0].price.id
+                  const priceIdBasic = process.env.STRIPE_PRICE_ID_BASIC
+                  const priceIdPremium = process.env.STRIPE_PRICE_ID_PREMIUM
+                  const priceIdPro = process.env.STRIPE_PRICE_ID_PRO
+                  
+                  if (priceId === priceIdBasic) plan = 'Basic'
+                  else if (priceId === priceIdPremium) plan = 'Premium'
+                  else if (priceId === priceIdPro) plan = 'Pro'
+                }
+
+                const statusMap: Record<string, string> = {
+                  'active': 'active',
+                  'canceled': 'canceled',
+                  'past_due': 'past_due',
+                  'trialing': 'trialing',
+                  'incomplete': 'incomplete',
+                  'incomplete_expired': 'canceled',
+                  'unpaid': 'past_due'
+                }
+                const status = statusMap[latestSubscription.status] || 'active'
+
+                // Create subscription record in database
+                await supabase
+                  .from('subscriptions')
+                  .upsert({
+                    user_id: userId,
+                    plan: plan,
+                    status: status,
+                    stripe_subscription_id: latestSubscription.id,
+                    stripe_customer_id: customer.id,
+                    stripe_price_id: latestSubscription.items.data[0]?.price.id,
+                    current_period_start: new Date(latestSubscription.current_period_start * 1000).toISOString(),
+                    current_period_end: new Date(latestSubscription.current_period_end * 1000).toISOString(),
+                    cancel_at_period_end: latestSubscription.cancel_at_period_end,
+                    canceled_at: latestSubscription.canceled_at ? new Date(latestSubscription.canceled_at * 1000).toISOString() : null,
+                    updated_at: new Date().toISOString()
+                  }, {
+                    onConflict: 'user_id'
+                  })
+
+                // Fetch payment method
+                let paymentMethod = null
+                try {
+                  const defaultPaymentMethodId = latestSubscription.default_payment_method
+                  if (defaultPaymentMethodId && typeof defaultPaymentMethodId === 'string') {
+                    const pm = await stripe.paymentMethods.retrieve(defaultPaymentMethodId)
+                    if (pm && pm.card) {
+                      paymentMethod = {
+                        brand: pm.card.brand || 'card',
+                        last4: pm.card.last4 || '****',
+                        exp_month: pm.card.exp_month,
+                        exp_year: pm.card.exp_year
+                      }
+                    }
+                  }
+                } catch (pmError) {
+                  console.error('Error fetching payment method:', pmError)
+                }
+
+                return {
+                  subscription: {
+                    plan: plan,
+                    status: status,
+                    cost: planPricing[plan] || '0.00',
+                    nextBilling: new Date(latestSubscription.current_period_end * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                    paymentMethod,
+                    current_period_end: new Date(latestSubscription.current_period_end * 1000).toISOString(),
+                    cancel_at_period_end: latestSubscription.cancel_at_period_end
+                  }
+                }
+              }
+            }
+          }
+        } catch (stripeError: any) {
+          console.error('Error syncing subscription from Stripe:', stripeError)
+          // Fall through to return Free plan
+        }
+
+        // If still no subscription found, return Free plan
         return {
           subscription: {
             plan: 'Free',
@@ -136,10 +399,31 @@ export default defineEventHandler(async (event) => {
         }
       }
 
+      // Format subscription response
+      const plan = subscription.plan || 'Free'
+      const status = subscription.status || 'active'
+      
+      // Format payment method string
+      let paymentMethodString: string | undefined = undefined
+      if (paymentMethod && paymentMethod.last4) {
+        const brand = paymentMethod.brand ? paymentMethod.brand.charAt(0).toUpperCase() + paymentMethod.brand.slice(1) : 'Card'
+        const exp = paymentMethod.exp_month && paymentMethod.exp_year 
+          ? ` ${paymentMethod.exp_month}/${paymentMethod.exp_year.toString().slice(-2)}` 
+          : ''
+        paymentMethodString = `${brand} •••• ${paymentMethod.last4}${exp}`
+      }
+      
       return {
         subscription: {
-          ...subscription,
-          paymentMethod
+          plan: plan,
+          status: status,
+          cost: planPricing[plan] || '0.00',
+          nextBilling: subscription.current_period_end 
+            ? new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : '—',
+          paymentMethod: paymentMethodString,
+          current_period_end: subscription.current_period_end,
+          cancel_at_period_end: subscription.cancel_at_period_end
         }
       }
     }

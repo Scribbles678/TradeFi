@@ -486,12 +486,10 @@ async function loadSubscription() {
         plan: sub.plan || 'Free',
         status: sub.status || 'active',
         cost: planPricing[sub.plan || 'Free'] || '0.00',
-        nextBilling: sub.current_period_end 
+        nextBilling: sub.nextBilling || (sub.current_period_end 
           ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          : '—',
-        paymentMethod: sub.paymentMethod 
-          ? formatPaymentMethod(sub.paymentMethod)
-          : undefined
+          : '—'),
+        paymentMethod: sub.paymentMethod || undefined
       }
     }
   } catch (error: any) {
