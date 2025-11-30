@@ -30,18 +30,20 @@ export const useUserProfile = () => {
     
     try {
       const response = await $fetch<{ 
-        id: string
-        name: string
-        email: string
-        joinDate: string
-        avatarUrl: string | null
+        profile: {
+          id: string
+          full_name: string
+          email: string
+          avatar_url: string | null
+          created_at: string
+        }
       }>('/api/account/profile')
       
-      if (response) {
+      if (response?.profile) {
         userProfileState.value = {
-          name: response.name || user.value.email?.split('@')[0] || 'User',
-          email: response.email || user.value.email || 'user@example.com',
-          avatar: response.avatarUrl || user.value.user_metadata?.avatar_url || ''
+          name: response.profile.full_name || user.value.email?.split('@')[0] || 'User',
+          email: response.profile.email || user.value.email || 'user@example.com',
+          avatar: response.profile.avatar_url || user.value.user_metadata?.avatar_url || ''
         }
       }
     } catch (error) {
